@@ -502,20 +502,33 @@ function draw() {
 
   // Luz dinámica de la tele por encima de todo
   const flicker = 0.35 + Math.random() * 0.05;
-  drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 }
 
-function drawLight(x, y, radius, intensity) {
-  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`); // centro amarillo claro
-  gradient.addColorStop(1, 'rgba(255, 255, 200, 0)'); // borde transparente
+function drawLightClipped(x, y, radius, intensity) {
+  if (!bgRect || !bgRect.dw || !bgRect.dh) return;
 
-  ctx.globalCompositeOperation = "lighter"; 
-  ctx.fillStyle = gradient;
+  // Escala el radio con el zoom de la sala para que no se dispare
+  const radiusScaled = radius * (bgRect.dw / roomOriginal.w);
+
+  ctx.save();
+  // Recorta a la “pantalla” (la foto del room)
   ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.rect(bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
+  ctx.clip();
+
+  const g = ctx.createRadialGradient(x, y, 0, x, y, radiusScaled);
+  g.addColorStop(0, `rgba(255, 255, 200, ${intensity})`);
+  g.addColorStop(1, 'rgba(255, 255, 200, 0)');
+
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, radiusScaled, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalCompositeOperation = "source-over"; // volver a normal
+
+  ctx.restore();
+  ctx.globalCompositeOperation = "source-over";
 }
 
 function loop(now){
