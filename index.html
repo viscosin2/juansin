@@ -393,7 +393,7 @@ function update(dt){
 
   // NUEVO: check de pickup de chanclas con área reducida
   if (!hasShoes && sandalsImg) {
-    const reduce = 0.5; // 0.5 = 50% del tamaño original, sube o baja para ajustar
+    const reduce = 0.1; // 0.5 = 50% del tamaño original, sube o baja para ajustar
     const pRect = getPlayerRect();
 
     // Reducir el tamaño del rectángulo del jugador
