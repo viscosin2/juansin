@@ -1,3 +1,5 @@
+sí 😄 aquí lo tienes entero y con la música que arranca en la primera interacción (tecla, clic o toque). No he tocado tus comentarios de obstáculos.
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -135,8 +137,21 @@ const SPRITES = {
 };
 
 let bgMusic = new Audio("assets/sounds/ambient1.mp3");
-bgMusic.loop = true;       // Repetir en bucle
-bgMusic.volume = 0.4;      // Volumen (0.0 a 1.0)
+bgMusic.loop = true;
+bgMusic.volume = 0.4;
+
+// Reproducir música en la primera interacción del usuario
+function enableMusicOnInteraction() {
+  const startMusic = () => {
+    bgMusic.play().catch(err => console.warn("No se pudo reproducir el audio:", err));
+    document.removeEventListener("keydown", startMusic);
+    document.removeEventListener("click", startMusic);
+    document.removeEventListener("touchstart", startMusic);
+  };
+  document.addEventListener("keydown", startMusic);
+  document.addEventListener("click", startMusic);
+  document.addEventListener("touchstart", startMusic);
+}
 
 const BACKGROUND = "assets/locations/room.PNG";
 let bgImg = null;
@@ -159,16 +174,16 @@ let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
 const boundsBase = { x: 20, y: 85, w: 465, h: 235 };
 const obstaclesBase = [
   { x: 230, y: 25, w: 70, h: 50 }, // TV
-  { x: 0, y: 200,w: 100, h: 17}, // Cama
-  { x: 0, y: 200,w: 38, h: 19}, // Planta
-  { x: 400, y: 300,w: 10, h: 2}, // Pelota
+  { x: 0, y: 200, w: 100, h: 17}, // Cama
+  { x: 0, y: 200, w: 38, h: 19}, // Planta
+  { x: 400, y: 300, w: 10, h: 2}, // Pelota
   { x: 5, y: 25, w: 110, h: 50 }, // Estanteria
   { x: 195, y: 170, w: 170, h: 2 }  // Sofa
 ];
 const sofaBase = { x: 170, y: 75, w: 220, h: 180 };    
 const tvOnBase = { x: 200, y: 35, w: 130, h: 90 };
-const bedBase = { x: 3, y: 155, w: 120,h: 130};
-const plant1Base = { x: 3, y: 230, w: 60,h: 90};
+const bedBase = { x: 3, y: 155, w: 120, h: 130};
+const plant1Base = { x: 3, y: 230, w: 60, h: 90};
 
 const playerStartBase = { x: 260, y: 150 };
 
@@ -243,12 +258,10 @@ function resizeCanvas() {
   canvas.height = screen.clientHeight;
   if (bgImg) {
     scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
-
     bgRect.dw = roomOriginal.w * scaleFactor;
     bgRect.dh = roomOriginal.h * scaleFactor;
     bgRect.dx = (canvas.width - bgRect.dw) / 2;
     bgRect.dy = (canvas.height - bgRect.dh) / 2;
-
     updateScaledBounds();
   }
 }
@@ -321,9 +334,7 @@ function update(dt){
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false; // pixel art crisp
-
-  // Fondo
+  ctx.imageSmoothingEnabled = false; 
   if (bgImg) {
     const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     bgRect.dw = roomOriginal.w * s;
@@ -332,7 +343,6 @@ function draw() {
     bgRect.dy = (canvas.height - bgRect.dh) / 2;
     ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
   }
-
   if (!assets) return;
 
   const sw = SPRITES.size.w, sh = SPRITES.size.h;
@@ -340,7 +350,7 @@ function draw() {
   const dh = Math.round(sh * SPRITES.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
-  // Respiración
+  // respiración
   let stretchPx = 0;
   if (!player.moving) {
     const Hz = 0.6;
@@ -351,75 +361,45 @@ function draw() {
   const drawShadow = () => {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.beginPath();
-    ctx.ellipse(
-      Math.round(player.x),
-      Math.round(player.y + dh / 2 - 4),
-      dw / 2.5,
-      dh / 6,
-      0, 0, Math.PI * 2
-    );
+    ctx.ellipse(Math.round(player.x), Math.round(player.y + dh / 2 - 4), dw / 2.5, dh / 6, 0, 0, Math.PI * 2);
     ctx.fill();
   };
-
   const drawPlayer = () => {
-    ctx.drawImage(img, 0, 0, sw, sh,
+    ctx.drawImage(
+      img, 0, 0, sw, sh,
       Math.round(player.x - dw / 2),
       Math.round(player.y - dh / 2) - stretchPx,
       dw, dh + stretchPx
     );
   };
 
-  // Lista ordenada por profundidad
+  // lista ordenada por profundidad
   let drawList = [];
+  if (tvOnImg) drawList.push({ y: tvPos.y, draw: () => ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h) });
+  if (plant1Img) drawList.push({ y: plant1Pos.y, draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
+  if (sofaImg) drawList.push({ y: sofaPos.y + sofaPos.h / 2, draw: () => ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
+  if (bedImg) drawList.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
+  drawList.push({ y: player.y, draw: () => { drawShadow(); drawPlayer(); } });
 
-  // TV y planta (van siempre detrás)
-  if (tvOnImg) {
-    drawList.push({ y: tvPos.y, draw: () => ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h) });
-  }
-  if (plant1Img) {
-    drawList.push({ y: plant1Pos.y, draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
-  }
-
-  // Sofá
-  if (sofaImg) {
-    drawList.push({ y: sofaPos.y + sofaPos.h / 2, draw: () => ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
-  }
-
-  // Cama
-  if (bedImg) {
-    drawList.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
-  }
-
-  // Personaje
-  drawList.push({
-    y: player.y,
-    draw: () => { drawShadow(); drawPlayer(); }
-  });
-
-  // Ordenar y dibujar
   drawList.sort((a, b) => a.y - b.y).forEach(o => o.draw());
 
-  // Oscurecer todo
   ctx.fillStyle = 'rgba(0,0,0,0.40)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Luz dinámica de la tele por encima de todo
   const flicker = 0.35 + Math.random() * 0.05;
   drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 }
 
-    
 function drawLight(x, y, radius, intensity) {
   const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`); // centro amarillo claro
-  gradient.addColorStop(1, 'rgba(255, 255, 200, 0)'); // borde transparente
-
+  gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`);
+  gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
   ctx.globalCompositeOperation = "lighter"; 
   ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalCompositeOperation = "source-over"; // volver a normal
+  ctx.globalCompositeOperation = "source-over";
 }
 
 function loop(now){
@@ -439,7 +419,7 @@ async function init() {
     loadImage(PLANT1_IMG),
     preloadSprites(SPRITES)
   ]);
-  bgMusic.play();
+  enableMusicOnInteraction(); // <- música lista para primera interacción
   resizeCanvas();
   requestAnimationFrame(loop);
 }
