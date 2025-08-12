@@ -136,41 +136,56 @@ const SPRITES = {
 const BACKGROUND = "assets/locations/room.png";
 let bgImg = null;
 
+
 const SOFA_IMG = "assets/objects/sofa.png";
 let sofaImg = null;
+    
+const TVON_IMG = "assets/objects/tv_on.png";
+let tvOnImg = null;
 
-const roomOriginal = { w: 512, h: 412 }; 
+const roomOriginal = { w: 512, h: 350 }; 
+let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
+
 const boundsBase = { x: 15, y: 135, w: 490, h: 230 };
 const obstaclesBase = [
   { x: 50, y: 60, w: 80, h: 40 },
   { x: 20, y: 40, w: 30, h: 60 },
 ];
-const sofaPosBase = { x: 200, y: 300, w: 100, h: 50 };
-let sofaPos = {};
+const sofaBase = { x: 170, y: 170, w: 240, h: 190 };    
+const tvOnBase = { x: 200, y: 100, w: 130, h: 90 };
+    
+const playerStartBase = { x: 260, y: 245 };
 
-let bounds = {};
-let obstacles = [];
+let bounds={}, obstacles=[], sofaPos={}, tvPos={};
 let scaleFactor = 1;
 
 function updateScaledBounds() {
   bounds = {
-    x: boundsBase.x * scaleFactor,
-    y: boundsBase.y * scaleFactor,
-    w: boundsBase.w * scaleFactor,
-    h: boundsBase.h * scaleFactor
-  };
-  sofaPos = {
-    x: sofaPosBase.x * scaleFactor,
-    y: sofaPosBase.y * scaleFactor,
-    w: sofaPosBase.w * scaleFactor,
-    h: sofaPosBase.h * scaleFactor
+    x: bgRect.dx + Math.round(boundsBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(boundsBase.y * scaleFactor),
+    w: Math.round(boundsBase.w * scaleFactor),
+    h: Math.round(boundsBase.h * scaleFactor),
   };
   obstacles = obstaclesBase.map(o => ({
-    x: o.x * scaleFactor,
-    y: o.y * scaleFactor,
-    w: o.w * scaleFactor,
-    h: o.h * scaleFactor
+    x: bgRect.dx + Math.round(o.x * scaleFactor),
+    y: bgRect.dy + Math.round(o.y * scaleFactor),
+    w: Math.round(o.w * scaleFactor),
+    h: Math.round(o.h * scaleFactor),
   }));
+  sofaPos = {
+    x: bgRect.dx + Math.round(sofaBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(sofaBase.y * scaleFactor),
+    w: Math.round(sofaBase.w * scaleFactor),
+    h: Math.round(sofaBase.h * scaleFactor),
+  };
+  tvPos = {
+    x: bgRect.dx + Math.round(tvOnBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(tvOnBase.y * scaleFactor),
+    w: Math.round(tvOnBase.w * scaleFactor),
+    h: Math.round(tvOnBase.h * scaleFactor),
+  };
+  player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
+  player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
 }
 
 const loadImage = (src) => new Promise(res => {
@@ -205,7 +220,7 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 
-const player = { x:0, y:0, speed:200, dir:'down', moving:false, frame:0, frameTime:0 };
+const player = { x:0, y:0, speed:200, dir:'up', moving:false, frame:0, frameTime:0 };
 const keys = { up:false, down:false, left:false, right:false };
 
 function bindHold(btn, on, off) {
@@ -272,17 +287,19 @@ function update(dt){
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
+  // 1. Fondo
   if(bgImg){
-    const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
-    const dw = roomOriginal.w * s;
-    const dh = roomOriginal.h * s;
-    const dx = (canvas.width - dw) / 2;
-    const dy = (canvas.height - dh) / 2;
-    ctx.drawImage(bgImg, dx, dy, dw, dh);
+      const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
+      bgRect.dw = roomOriginal.w * s;
+      bgRect.dh = roomOriginal.h * s;
+      bgRect.dx = (canvas.width - bgRect.dw) / 2;
+      bgRect.dy = (canvas.height - bgRect.dh) / 2;
+      ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
   }
 
   if(!assets) return;
 
+  // 2. Sofá y personaje con lógica de superposición
   const sw = SPRITES.size.w, sh = SPRITES.size.h;
   const dw = sw * SPRITES.scale, dh = sh * SPRITES.scale;
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
@@ -294,6 +311,30 @@ function draw(){
     ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
     ctx.drawImage(img, 0, 0, sw, sh, player.x - dw/2, player.y - dh/2, dw, dh);
   }
+
+  if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
+
+  // 3. Oscurecer todo (incluye sofá y personaje)
+  ctx.fillStyle = 'rgba(0,0,0,0.40)'; // opacidad de la oscuridad
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // 4. Luz dinámica de la tele
+  const flicker = 0.35 + Math.random() * 0.05;
+  drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 120, flicker);
+}
+
+    
+function drawLight(x, y, radius, intensity) {
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`); // centro amarillo claro
+  gradient.addColorStop(1, 'rgba(255, 255, 200, 0)'); // borde transparente
+
+  ctx.globalCompositeOperation = "lighter"; 
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = "source-over"; // volver a normal
 }
 
 function loop(now){
@@ -305,14 +346,13 @@ function loop(now){
 }
 
 async function init() {
-  [bgImg, sofaImg, assets] = await Promise.all([
+  [bgImg, sofaImg, tvOnImg, assets] = await Promise.all([
     loadImage(BACKGROUND),
     loadImage(SOFA_IMG),
+    loadImage(TVON_IMG),
     preloadSprites(SPRITES)
   ]);
   resizeCanvas();
-  player.x = canvas.width/2;
-  player.y = canvas.height/2;
   requestAnimationFrame(loop);
 }
 
