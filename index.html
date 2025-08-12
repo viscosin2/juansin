@@ -334,11 +334,10 @@ function draw() {
   const dh = Math.round(sh * SPRITES.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
-
-  if (plant1Img) ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h);
   if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
   if (bedImg) ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
-    if (sofaImg) ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
+  if (plant1Img) ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h);
+
   // 4. Luz dinámica de la tele
   const flicker = 0.35 + Math.random() * 0.05;
   drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
@@ -396,6 +395,8 @@ function draw() {
     drawShadow();
     drawPlayer();
   }
+  
+  if (sofaImg) ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
   
     if (player.y < bedPos.y + bedPos.h / 2) {
     // personaje detrás del sofá
