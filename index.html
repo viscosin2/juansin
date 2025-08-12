@@ -142,7 +142,7 @@ let sofaImg = null;
 const TVON_IMG = "assets/objects/tv_on.png";
 let tvOnImg = null;
 
-const BED_IMG = "assets/objects/bed.png";
+const BED_IMG = "assets/objects/bed.PNG";
 let bedImg = null;
 
 const roomOriginal = { w: 512, h: 350 }; 
@@ -155,10 +155,11 @@ const obstaclesBase = [
 ];
 const sofaBase = { x: 170, y: 75, w: 220, h: 180 };    
 const tvOnBase = { x: 200, y: 35, w: 130, h: 90 };
+const bedBase = { x: 200, y: 35, w: 130, h: 90 };
     
 const playerStartBase = { x: 260, y: 150 };
 
-let bounds={}, obstacles=[], sofaPos={}, tvPos={};
+let bounds={}, obstacles=[], bedPos={}, sofaPos={}, tvPos={};
 let scaleFactor = 1;
 
 function updateScaledBounds() {
@@ -185,6 +186,12 @@ function updateScaledBounds() {
     y: bgRect.dy + Math.round(tvOnBase.y * scaleFactor),
     w: Math.round(tvOnBase.w * scaleFactor),
     h: Math.round(tvOnBase.h * scaleFactor),
+  };
+  bedPos = {
+    x: bgRect.dx + Math.round(bedBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(bedBase.y * scaleFactor),
+    w: Math.round(bedBase.w * scaleFactor),
+    h: Math.round(bedBase.h * scaleFactor),
   };
   player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
   player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
@@ -315,6 +322,7 @@ function draw() {
   const dh = Math.round(sh * SPRITES.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
+  if (bedImg) ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
   if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
 
   // 4. Luz dinámica de la tele
@@ -322,6 +330,7 @@ function draw() {
   drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 
   if (sofaImg) ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
+  
 
   // === RESPIRACIÓN: 1 píxel hacia arriba, pies clavados ===
   // Solo cuando está idle: alterna entre 0 y 1 px para mantenerlo nítido
