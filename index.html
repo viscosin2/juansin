@@ -3,46 +3,58 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Minijuego Game Boy</title>
+<title>Minijuego con colisiones escaladas</title>
 <style>
   html, body {
     height: 100%;
     margin: 0;
-    background: #8da36f; /* color carcasa Game Boy */
+    background: #111;
     display: flex;
     justify-content: center;
     align-items: center;
   }
-  .game-wrapper {
+  .gameboy {
     width: 100%;
+    max-width: 500px;
     height: 100%;
-    max-width: 480px; /* ancho máximo como portátil */
-    background: #8da36f;
+    background: #c4b998;
     display: flex;
     flex-direction: column;
-    padding: 20px;
+    padding: 12px;
     box-sizing: border-box;
+    border-radius: 20px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.6);
+  }
+  .screen-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #555;
+    border-radius: 12px;
+    padding: 10px;
   }
   .screen {
-    flex: 1;
-    background: #222;
-    border: 8px solid #555; /* marco de la pantalla */
-    border-radius: 12px;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    aspect-ratio: 1/1; /* Proporción exacta de la imagen */
+    width: 100%;
+    background: #000;
     display: flex;
-    align-items: center;
     justify-content: center;
-    margin-bottom: 20px;
+    align-items: center;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
   }
   canvas {
+    width: 100%;
+    height: 100%;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     background: black;
-    border-radius: 6px;
   }
   .controls {
-    height: 200px;
-    background: transparent;
+    height: 40%;
+    background: #111219;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
@@ -59,7 +71,7 @@
   .btn, .act {
     border: none;
     border-radius: 16px;
-    background: linear-gradient(180deg, #3b3b3b, #1b1b1b);
+    background: linear-gradient(180deg, #1b1c24, #0d0e14);
     color: #e5e7eb;
     font-size: 16px;
     font-weight: 600;
@@ -82,9 +94,11 @@
 </head>
 <body>
 
-<div class="game-wrapper">
-  <div class="screen">
-    <canvas id="game"></canvas>
+<div class="gameboy">
+  <div class="screen-container">
+    <div class="screen">
+      <canvas id="game"></canvas>
+    </div>
   </div>
   <div class="controls">
     <div class="dpad">
@@ -122,14 +136,14 @@ const SPRITES = {
 const BACKGROUND = "assets/locations/room.png";
 let bgImg = null;
 
-// Tamaño original del PNG
+// Tamaño original del PNG de la habitación
 const roomOriginal = { w: 512, h: 512 }; 
 
 // Definir en coordenadas originales
 const boundsBase = { x: 15, y: 135, w: 490, h: 230 };
 const obstaclesBase = [
-  { x: 50, y: 60, w: 80, h: 40 }, // cama
-  { x: 20, y: 40, w: 30, h: 60 }, // estantería
+  { x: 50, y: 60, w: 80, h: 40 },
+  { x: 20, y: 40, w: 30, h: 60 },
 ];
 
 let bounds = {};
@@ -173,8 +187,8 @@ ctx.imageSmoothingEnabled = false;
 
 function resizeCanvas() {
   const screen = document.querySelector('.screen');
-  canvas.width = screen.clientWidth - 16; // margen del marco
-  canvas.height = screen.clientHeight - 16;
+  canvas.width = screen.clientWidth;
+  canvas.height = screen.clientHeight;
   if (bgImg) {
     scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     updateScaledBounds();
@@ -185,7 +199,6 @@ window.addEventListener('resize', resizeCanvas);
 const player = { x:0, y:0, speed:200, dir:'down', moving:false, frame:0, frameTime:0 };
 const keys = { up:false, down:false, left:false, right:false };
 
-// ======= Controles =======
 function bindHold(btn, on, off) {
   const start = e => { e.preventDefault(); on(); };
   const end   = e => { e.preventDefault(); off(); };
@@ -211,7 +224,6 @@ function collides(x, y) {
   const py = y - halfH;
   const pw = halfW * 2;
   const ph = halfH * 2;
-
   if (x < bounds.x || x > bounds.x + bounds.w ||
       y < bounds.y || y > bounds.y + bounds.h) {
     return true;
