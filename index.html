@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -117,11 +118,9 @@
 </div>
 
 <script>
-/* ================== SPRITES ================== */
 const SPRITES = {
   size: { w: 36, h: 40 },
   scale: 0.9,
-  // Sprites por defecto
   idle: {
     down:  ["assets/juan_character/idle_down.png"],
     up:    ["assets/juan_character/idle_up.png"],
@@ -133,28 +132,13 @@ const SPRITES = {
     up:    ["assets/juan_character/walk_up_0.png",    "assets/juan_character/walk_up_1.png"],
     left:  ["assets/juan_character/walk_left_0.png",  "assets/juan_character/walk_left_1.png"],
     right: ["assets/juan_character/walk_right_0.png", "assets/juan_character/walk_right_1.png"],
-  },
-  // Sprites con chanclas/zapatos
-  idle_shoes: {
-    down:  ["assets/juan_character/idle_down_shoes.png"],
-    up:    ["assets/juan_character/idle_up_shoes.png"],
-    left:  ["assets/juan_character/idle_left_shoes.png"],
-    right: ["assets/juan_character/idle_right_shoes.png"],
-  },
-  walk_shoes: {
-    down:  ["assets/juan_character/walk_down_0_shoes.png",  "assets/juan_character/walk_down_1_shoes.png"],
-    up:    ["assets/juan_character/walk_up_0_shoes.png",    "assets/juan_character/walk_up_1_shoes.png"],
-    left:  ["assets/juan_character/walk_left_0_shoes.png",  "assets/juan_character/walk_left_1_shoes.png"],
-    right: ["assets/juan_character/walk_right_0_shoes.png", "assets/juan_character/walk_right_1_shoes.png"],
   }
 };
 
-/* ================== AUDIO ================== */
 let bgMusic = new Audio("assets/sounds/ambient1.mp3");
-bgMusic.loop = true;
-bgMusic.volume = 0.4;
+bgMusic.loop = true;       // Repetir en bucle
+bgMusic.volume = 0.4;      // Volumen (0.0 a 1.0)
 
-/* ================== IMÁGENES DE ESCENA ================== */
 const BACKGROUND = "assets/locations/room.PNG";
 let bgImg = null;
 
@@ -163,22 +147,16 @@ let plant1Img = null;
 
 const SOFA_IMG = "assets/objects/sofa.png";
 let sofaImg = null;
-
+    
 const TVON_IMG = "assets/objects/tv_on.png";
 let tvOnImg = null;
 
 const BED_IMG = "assets/objects/bed.PNG";
 let bedImg = null;
 
-/* ======= NUEVO: OBJETO CHANCLAS ======= */
-const FLIPFLOPS_IMG = "assets/objects/flipflops.png"; // pon aquí tu PNG
-let flipflopsImg = null;
-
-/* ================== ROOM REFS ================== */
 const roomOriginal = { w: 512, h: 350 }; 
 let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
 
-/* ================== COLISIONES ================== */
 const boundsBase = { x: 20, y: 85, w: 465, h: 235 };
 const obstaclesBase = [
   { x: 230, y: 25, w: 70, h: 50 }, // TV
@@ -193,15 +171,11 @@ const tvOnBase = { x: 205, y: 35, w: 125, h: 90 };
 const bedBase = { x: 3, y: 155, w: 120,h: 130};
 const plant1Base = { x: 3, y: 230, w: 60,h: 90};
 
-/* ======= NUEVO: POS DE CHANCLAS (en coords del room) ======= */
-const flipflopsBase = { x: 300, y: 220, w: 36, h: 20 }; // ajusta a donde quieras que aparezcan
-
 const playerStartBase = { x: 260, y: 150 };
 
-let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={}, flipflopsPos={};
+let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={};
 let scaleFactor = 1;
 
-/* ================== SCALING ================== */
 function updateScaledBounds() {
   bounds = {
     x: bgRect.dx + Math.round(boundsBase.x * scaleFactor),
@@ -239,19 +213,10 @@ function updateScaledBounds() {
     w: Math.round(plant1Base.w * scaleFactor),
     h: Math.round(plant1Base.h * scaleFactor),
   };
-  /* ======= NUEVO: escalar chanclas ======= */
-  flipflopsPos = {
-    x: bgRect.dx + Math.round(flipflopsBase.x * scaleFactor),
-    y: bgRect.dy + Math.round(flipflopsBase.y * scaleFactor),
-    w: Math.round(flipflopsBase.w * scaleFactor),
-    h: Math.round(flipflopsBase.h * scaleFactor),
-  };
-
   player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
   player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
 }
 
-/* ================== CARGAS ================== */
 const loadImage = (src) => new Promise(res => {
   const img = new Image();
   img.onload = () => res(img);
@@ -259,11 +224,9 @@ const loadImage = (src) => new Promise(res => {
   img.src = src;
 });
 
-/* Cambiado para cargar cualquier estado presente en SPRITES (incluye *_shoes) */
 async function preloadSprites(map) {
-  const result = {};
-  for (const state of Object.keys(map)) {
-    result[state] = {};
+  const result = { idle: {}, walk: {} };
+  for (const state of ["idle","walk"]) {
     for (const dir of Object.keys(map[state])) {
       result[state][dir] = await Promise.all(map[state][dir].map(loadImage));
     }
@@ -290,10 +253,10 @@ function resizeCanvas() {
     updateScaledBounds();
   }
 }
+
 window.addEventListener('resize', resizeCanvas);
 
-/* ================== INPUT ================== */
-const player = { x:0, y:0, speed:200, dir:'up', moving:false, frame:0, frameTime:0, hasShoes:false };
+const player = { x:0, y:0, speed:200, dir:'up', moving:false, frame:0, frameTime:0 };
 const keys = { up:false, down:false, left:false, right:false };
 
 function bindHold(btn, on, off) {
@@ -310,15 +273,9 @@ bindHold(document.getElementById('btn-down'),  () => keys.down=true,  () => keys
 bindHold(document.getElementById('btn-left'),  () => keys.left=true,  () => keys.left=false);
 bindHold(document.getElementById('btn-right'), () => keys.right=true, () => keys.right=false);
 
-/* Teclas */
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){keys[d]=true; e.preventDefault();}});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
-
-/* ================== COLISIONES ================== */
-function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh){
-  return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
-}
 
 function collides(x, y) {
   const halfW = SPRITES.size.w * SPRITES.scale / 2;
@@ -332,15 +289,13 @@ function collides(x, y) {
     return true;
   }
   for (const o of obstacles) {
-    if (rectsOverlap(px, py, pw, ph, o.x, o.y, o.w, o.h)) {
+    if (px < o.x + o.w && px + pw > o.x &&
+        py < o.y + o.h && py + ph > o.y) {
       return true;
     }
   }
   return false;
 }
-
-/* ======= NUEVO: estado de chanclas ======= */
-let flipflopsPicked = false;
 
 let assets = null;
 function update(dt){
@@ -363,19 +318,6 @@ function update(dt){
     player.frameTime += dt;
     if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else player.frame=0;
-
-  /* ======= NUEVO: pickup de chanclas ======= */
-  if (!flipflopsPicked && flipflopsImg) {
-    const halfW = SPRITES.size.w * SPRITES.scale / 2;
-    const halfH = SPRITES.size.h * SPRITES.scale / 2;
-    const px = player.x - halfW, py = player.y - halfH, pw = halfW*2, ph = halfH*2;
-    if (rectsOverlap(px, py, pw, ph, flipflopsPos.x, flipflopsPos.y, flipflopsPos.w, flipflopsPos.h)) {
-      flipflopsPicked = true;
-      player.hasShoes = true;
-      // (opcional) Bonus de velocidad
-      // player.speed = 230;
-    }
-  }
 }
 
 function draw() {
@@ -397,13 +339,7 @@ function draw() {
   const sw = SPRITES.size.w, sh = SPRITES.size.h;
   const dw = Math.round(sw * SPRITES.scale);
   const dh = Math.round(sh * SPRITES.scale);
-
-  // Selección de sprite según estado + si tiene chanclas
-  const baseState = player.moving ? 'walk' : 'idle';
-  const shoesState = player.hasShoes ? (baseState + '_shoes') : baseState;
-  // fallback por si faltara algún asset shoes en alguna dirección
-  let img = (assets[shoesState] && assets[shoesState][player.dir] && assets[shoesState][player.dir][player.moving?player.frame:0])
-            || (assets[baseState][player.dir][player.moving?player.frame:0]);
+  const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
   // Respiración
   let stretchPx = 0;
@@ -455,11 +391,6 @@ function draw() {
     drawList.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
   }
 
-  // ======= NUEVO: dibujar chanclas si no están recogidas =======
-  if (!flipflopsPicked && flipflopsImg) {
-    drawList.push({ y: flipflopsPos.y + flipflopsPos.h / 2, draw: () => ctx.drawImage(flipflopsImg, flipflopsPos.x, flipflopsPos.y, flipflopsPos.w, flipflopsPos.h) });
-  }
-
   // Personaje
   drawList.push({
     y: player.y,
@@ -478,19 +409,20 @@ function draw() {
   drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 }
 
+    
 function drawLight(x, y, radius, intensity) {
   const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`);
-  gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+  gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`); // centro amarillo claro
+  gradient.addColorStop(1, 'rgba(255, 255, 200, 0)'); // borde transparente
+
   ctx.globalCompositeOperation = "lighter"; 
   ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
-  ctx.globalCompositeOperation = "source-over";
+  ctx.globalCompositeOperation = "source-over"; // volver a normal
 }
 
-/* ================== LOOP ================== */
 function loop(now){
   if(!loop.last) loop.last=now;
   const dt = Math.min(1/30,(now-loop.last)/1000);
@@ -499,21 +431,16 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
-/* ================== INIT ================== */
 async function init() {
-  [bgImg, sofaImg, tvOnImg, bedImg, plant1Img, flipflopsImg, assets] = await Promise.all([
+  [bgImg, sofaImg, tvOnImg, bedImg, plant1Img, assets] = await Promise.all([
     loadImage(BACKGROUND),
     loadImage(SOFA_IMG),
     loadImage(TVON_IMG),
     loadImage(BED_IMG),
     loadImage(PLANT1_IMG),
-    loadImage(FLIPFLOPS_IMG), // NUEVO
     preloadSprites(SPRITES)
   ]);
-
-  // Algunos navegadores bloquean autoplay; se activará al primer input
-  bgMusic.play().catch(()=>{});
-
+  bgMusic.play();
   resizeCanvas();
   requestAnimationFrame(loop);
 }
