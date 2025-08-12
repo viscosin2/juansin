@@ -316,7 +316,7 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = false; // pixel art crisp
 
-  // 1. Fondo
+  // Fondo
   if (bgImg) {
     const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     bgRect.dw = roomOriginal.w * s;
@@ -328,35 +328,19 @@ function draw() {
 
   if (!assets) return;
 
-  // 2. Sofá y personaje con lógica de superposición
   const sw = SPRITES.size.w, sh = SPRITES.size.h;
   const dw = Math.round(sw * SPRITES.scale);
   const dh = Math.round(sh * SPRITES.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
-  if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
-
-  // 4. Luz dinámica de la tele
-  const flicker = 0.35 + Math.random() * 0.05;
-  drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
-  
-
-  
-  // === RESPIRACIÓN: 1 píxel hacia arriba, pies clavados ===
-  // Solo cuando está idle: alterna entre 0 y 1 px para mantenerlo nítido
+  // Respiración
   let stretchPx = 0;
   if (!player.moving) {
     const Hz = 0.6;
     const t = performance.now() / 1000;
-    const s = Math.sin(t * Math.PI * 2 * Hz);      // -1..1
-    stretchPx = Math.round((s * 0.5 + 0.5) * 1);   // 0..1 (entero)
+    stretchPx = Math.round((Math.sin(t * Math.PI * 2 * Hz) * 0.5 + 0.5) * 1);
   }
 
-  // coordenadas base (tu player.x/y es el centro)
-  const baseX = Math.round(player.x - dw / 2);
-  const baseY = Math.round(player.y - dh / 2);
-
-  // dibuja sombra (no se estira ni se mueve)
   const drawShadow = () => {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.beginPath();
@@ -370,49 +354,51 @@ function draw() {
     ctx.fill();
   };
 
-  // dibuja personaje con estiramiento hacia arriba
   const drawPlayer = () => {
-    // para que los pies no se muevan:
-    // aumentamos altura a (dh + stretchPx) y subimos Y exactamente stretchPx
-    const destX = baseX;
-    const destY = baseY - stretchPx;            // pies se quedan donde estaban
-    const destW = dw;
-    const destH = dh + stretchPx;               // estira 1 px hacia arriba
-    ctx.drawImage(img, 0, 0, sw, sh, destX, destY, destW, destH);
+    ctx.drawImage(img, 0, 0, sw, sh,
+      Math.round(player.x - dw / 2),
+      Math.round(player.y - dh / 2) - stretchPx,
+      dw, dh + stretchPx
+    );
   };
-  
-    if (sofaImg) ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
 
-  // z-order con el sofá
-  if (player.y < sofaPos.y + sofaPos.h / 2) {
-    // personaje detrás del sofá
-    drawShadow();
-    drawPlayer();
-    ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
-  } else {
-    // personaje delante del sofá
-    ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
-    drawShadow();
-    drawPlayer();
+  // Lista ordenada por profundidad
+  let drawList = [];
+
+  // TV y planta (van siempre detrás)
+  if (tvOnImg) {
+    drawList.push({ y: tvPos.y, draw: () => ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h) });
   }
-  
-  if (player.y < bedPos.y + bedPos.h / 2) {
-    // personaje detrás de la cama
-    drawShadow();
-    drawPlayer();
-    ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
-  } else {
-    // personaje delante de la cama
-    ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
-    drawShadow();
-    drawPlayer();
+  if (plant1Img) {
+    drawList.push({ y: plant1Pos.y, draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
   }
-  
-  if (plant1Img) ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h);
-  
-  // 3. Oscurecer todo
+
+  // Sofá
+  if (sofaImg) {
+    drawList.push({ y: sofaPos.y + sofaPos.h / 2, draw: () => ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
+  }
+
+  // Cama
+  if (bedImg) {
+    drawList.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
+  }
+
+  // Personaje
+  drawList.push({
+    y: player.y,
+    draw: () => { drawShadow(); drawPlayer(); }
+  });
+
+  // Ordenar y dibujar
+  drawList.sort((a, b) => a.y - b.y).forEach(o => o.draw());
+
+  // Oscurecer todo
   ctx.fillStyle = 'rgba(0,0,0,0.40)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Luz dinámica de la tele por encima de todo
+  const flicker = 0.35 + Math.random() * 0.05;
+  drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 }
 
     
