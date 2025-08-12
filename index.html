@@ -154,14 +154,14 @@ let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
 const boundsBase = { x: 20, y: 85, w: 465, h: 235 };
 const obstaclesBase = [
   { x: 230, y: 25, w: 70, h: 50 }, // TV
-  { x: 0, y: 200,w: 90, h: 100}, // Cama
-  { x: 5, y: 25, w: 100, h: 50 }, // Estanteria
-  { x: 195, y: 170, w: 170, h: 2 }  // Sofa
+  { x: 0, y: 200, w: 90, h: 100}, // Cama
+  { x: 5, y: 25, w: 100, h: 50 }, // Estantería
+  { x: 195, y: 170, w: 170, h: 2 }  // Sofá
 ];
 const sofaBase = { x: 170, y: 75, w: 220, h: 180 };    
 const tvOnBase = { x: 200, y: 35, w: 130, h: 90 };
-const bedBase = { x: 3, y: 155, w: 120,h: 130};
-const plant1Base = { x: 3, y: 230, w: 60,h: 90};
+const bedBase = { x: 3, y: 155, w: 120, h: 130};
+const plant1Base = { x: 3, y: 230, w: 60, h: 90};
 
 const playerStartBase = { x: 260, y: 150 };
 
@@ -290,6 +290,7 @@ function collides(x, y) {
 }
 
 let assets = null;
+
 function update(dt){
   const vx = (keys.left?-1:0)+(keys.right?1:0);
   const vy = (keys.up?-1:0)+(keys.down?1:0);
@@ -312,11 +313,23 @@ function update(dt){
   } else player.frame=0;
 }
 
+function drawLight(x, y, radius, intensity) {
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+  gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`);
+  gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+  ctx.globalCompositeOperation = "lighter"; 
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = "source-over";
+}
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false; // pixel art crisp
+  ctx.imageSmoothingEnabled = false;
 
-  // 1. Fondo
+  // 1) Fondo escalado
   if (bgImg) {
     const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     bgRect.dw = roomOriginal.w * s;
@@ -325,116 +338,88 @@ function draw() {
     bgRect.dy = (canvas.height - bgRect.dh) / 2;
     ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
   }
-
   if (!assets) return;
 
-  // 2. Sofá y personaje con lógica de superposición
   const sw = SPRITES.size.w, sh = SPRITES.size.h;
   const dw = Math.round(sw * SPRITES.scale);
   const dh = Math.round(sh * SPRITES.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
-
-  if (plant1Img) ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h);
-  if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
-  if (bedImg) ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
-  
-  // 4. Luz dinámica de la tele
-  const flicker = 0.35 + Math.random() * 0.05;
-  drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
-  
-  if (sofaImg) ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
-  
-  // === RESPIRACIÓN: 1 píxel hacia arriba, pies clavados ===
-  // Solo cuando está idle: alterna entre 0 y 1 px para mantenerlo nítido
+  // Respiración: estira 1px hacia arriba (pies fijos)
   let stretchPx = 0;
   if (!player.moving) {
     const Hz = 0.6;
     const t = performance.now() / 1000;
-    const s = Math.sin(t * Math.PI * 2 * Hz);      // -1..1
-    stretchPx = Math.round((s * 0.5 + 0.5) * 1);   // 0..1 (entero)
+    const s = Math.sin(t * Math.PI * 2 * Hz);
+    stretchPx = Math.round((s * 0.5 + 0.5) * 1);
   }
 
-  // coordenadas base (tu player.x/y es el centro)
-  const baseX = Math.round(player.x - dw / 2);
-  const baseY = Math.round(player.y - dh / 2);
+  // 2) Capas ordenadas por “suelo” (z = y de la base)
+  const layers = [];
 
-  // dibuja sombra (no se estira ni se mueve)
-  const drawShadow = () => {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.beginPath();
-    ctx.ellipse(
-      Math.round(player.x),
-      Math.round(player.y + dh / 2 - 4),
-      dw / 2.5,
-      dh / 6,
-      0, 0, Math.PI * 2
-    );
-    ctx.fill();
-  };
+  // Plant, bed, sofa, TV como imágenes planas
+  if (plant1Img) layers.push({
+    z: plant1Pos.y + plant1Pos.h/2,
+    draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h)
+  });
+  if (bedImg) layers.push({
+    z: bedPos.y + bedPos.h/2,
+    draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h)
+  });
+  if (sofaImg) layers.push({
+    z: sofaPos.y + sofaPos.h/2,
+    draw: () => ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h)
+  });
+  if (tvOnImg) layers.push({
+    z: tvPos.y + tvPos.h/2,
+    draw: () => ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h)
+  });
 
-  // dibuja personaje con estiramiento hacia arriba
-  const drawPlayer = () => {
-    // para que los pies no se muevan:
-    // aumentamos altura a (dh + stretchPx) y subimos Y exactamente stretchPx
-    const destX = baseX;
-    const destY = baseY - stretchPx;            // pies se quedan donde estaban
-    const destW = dw;
-    const destH = dh + stretchPx;               // estira 1 px hacia arriba
-    ctx.drawImage(img, 0, 0, sw, sh, destX, destY, destW, destH);
-  };
+  // Player con sombra incluida
+  layers.push({
+    z: player.y, // la “base” del personaje
+    draw: () => {
+      // sombra (no se estira ni se mueve)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.beginPath();
+      ctx.ellipse(
+        Math.round(player.x),
+        Math.round(player.y + dh / 2 - 4),
+        dw / 2.5,
+        dh / 6,
+        0, 0, Math.PI * 2
+      );
+      ctx.fill();
 
-  // z-order con el sofá
-  if (player.y < sofaPos.y + sofaPos.h / 2) {
-    // personaje detrás del sofá
-    drawShadow();
-    drawPlayer();
-    ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
-  } else {
-    // personaje delante del sofá
-    ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
-    drawShadow();
-    drawPlayer();
-  }
-  
-    if (player.y < bedPos.y + bedPos.h / 2) {
-    // personaje detrás del sofá
-    drawShadow();
-    drawPlayer();
-    ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
-  } else {
-    // personaje delante del sofá
-    ctx.drawImage(bedIng, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
-    drawShadow();
-    drawPlayer();
-  }
-  
-  // 3. Oscurecer todo
+      // sprite (estirado hacia arriba)
+      const baseX = Math.round(player.x - dw / 2);
+      const baseY = Math.round(player.y - dh / 2);
+      const destX = baseX;
+      const destY = baseY - stretchPx;     // pies quietos
+      const destW = dw;
+      const destH = dh + stretchPx;        // estira 1px
+      ctx.drawImage(img, 0, 0, sw, sh, destX, destY, destW, destH);
+    }
+  });
+
+  // Ordenar por z y dibujar
+  layers.sort((a,b)=>a.z-b.z).forEach(l=>l.draw());
+
+  // 3) Luz dinámica de la tele (encima de capas)
+  const flicker = 0.35 + Math.random() * 0.05;
+  drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+
+  // 4) Oscurecer todo
   ctx.fillStyle = 'rgba(0,0,0,0.40)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-
-
-    
-function drawLight(x, y, radius, intensity) {
-  const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`); // centro amarillo claro
-  gradient.addColorStop(1, 'rgba(255, 255, 200, 0)'); // borde transparente
-
-  ctx.globalCompositeOperation = "lighter"; 
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = "source-over"; // volver a normal
 }
 
 function loop(now){
   if(!loop.last) loop.last=now;
   const dt = Math.min(1/30,(now-loop.last)/1000);
   loop.last=now;
-  update(dt); draw();
+  update(dt); 
+  draw();
   requestAnimationFrame(loop);
 }
 
@@ -450,6 +435,9 @@ async function init() {
   resizeCanvas();
   requestAnimationFrame(loop);
 }
+
+// helpers abajo para que existan
+function loadImage(src){ const img=new Image(); return new Promise(r=>{ img.onload=()=>r(img); img.onerror=()=>r(null); img.src=src;}); }
 
 init();
 </script>
