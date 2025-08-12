@@ -396,17 +396,6 @@ function draw() {
     drawPlayer();
   }
   
-    if (player.y < bedPos.y + bedPos.h / 2) {
-    // personaje detrás de la cama
-    drawShadow();
-    drawPlayer();
-    ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
-  } else {
-    // personaje delante de la cama
-    ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
-    drawShadow();
-    drawPlayer();
-  }
   
   if (plant1Img) ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h);
   
