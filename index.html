@@ -337,10 +337,13 @@ function draw() {
 
   if (plant1Img) ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h);
   if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
-
+  if (bedImg) ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
+  
   // 4. Luz dinámica de la tele
   const flicker = 0.35 + Math.random() * 0.05;
   drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+  
+  if (sofaImg) ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
   
   // === RESPIRACIÓN: 1 píxel hacia arriba, pies clavados ===
   // Solo cuando está idle: alterna entre 0 y 1 px para mantenerlo nítido
