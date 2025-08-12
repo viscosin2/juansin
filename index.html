@@ -157,7 +157,7 @@ let bgMusic = new Audio("assets/sounds/ambient1.mp3");
 bgMusic.loop = true;
 bgMusic.volume = 0.4;
 
-const pickupSnd = new Audio("assets/sounds/pickup.wav");
+const pickupSnd = new Audio("assets/sounds/pickup.mp3");
 pickupSnd.volume = 0.7;
 
 const BACKGROUND = "assets/locations/room.PNG";
@@ -176,7 +176,7 @@ const BED_IMG = "assets/objects/bed.PNG";
 let bedImg = null;
 
 /* === NUEVO: Chanclas en el suelo que se “equipan” al pisarlas === */
-const SANDALS_IMG = "assets/objects/shoes.png";
+const SANDALS_IMG = "assets/objects/shoes.PNG";
 let sandalsImg = null;
 let hasShoes = false; // cuando las recoges, true
 
@@ -201,7 +201,7 @@ const bedBase = { x: 3, y: 155, w: 120,h: 130};
 const plant1Base = { x: 3, y: 230, w: 60,h: 90};
 
 /* === NUEVO: posición de las chanclas (no es obstáculo, se puede pisar) === */
-const sandalsBase = { x: 310, y: 260, w: 36, h: 24 };
+const sandalsBase = { x: 100, y: 100, w: 36, h: 24 };
 
 const playerStartBase = { x: 260, y: 150 };
 
