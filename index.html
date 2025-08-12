@@ -146,15 +146,15 @@ let tvOnImg = null;
 const roomOriginal = { w: 512, h: 350 }; 
 let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
 
-const boundsBase = { x: 15, y: 135, w: 490, h: 230 };
+const boundsBase = { x: 15, y: 160, w: 490, h: 230 };
 const obstaclesBase = [
-  { x: 50, y: 60, w: 80, h: 40 },
-  { x: 20, y: 40, w: 30, h: 60 },
+  { x: 230, y: 50, w: 70, h: 50 }, // TV
+  { x: 195, y: 270, w: 188, h: 2 }  // Sofa
 ];
 const sofaBase = { x: 170, y: 170, w: 240, h: 190 };    
-const tvOnBase = { x: 200, y: 100, w: 130, h: 90 };
+const tvOnBase = { x: 200, y: 115, w: 130, h: 90 };
     
-const playerStartBase = { x: 260, y: 245 };
+const playerStartBase = { x: 260, y: 240 };
 
 let bounds={}, obstacles=[], sofaPos={}, tvPos={};
 let scaleFactor = 1;
@@ -304,23 +304,29 @@ function draw(){
   const dw = sw * SPRITES.scale, dh = sh * SPRITES.scale;
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
+
+  if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
+      // 4. Luz dinámica de la tele
+  const flicker = 0.35 + Math.random() * 0.05;
+  drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+  if (sofaImg) ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
+  
   if (player.y < sofaPos.y + sofaPos.h/2) {
     ctx.drawImage(img, 0, 0, sw, sh, player.x - dw/2, player.y - dh/2, dw, dh);
     ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
   } else {
     ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
     ctx.drawImage(img, 0, 0, sw, sh, player.x - dw/2, player.y - dh/2, dw, dh);
-  }
+  } 
+    
 
-  if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
+
+  
 
   // 3. Oscurecer todo (incluye sofá y personaje)
   ctx.fillStyle = 'rgba(0,0,0,0.40)'; // opacidad de la oscuridad
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 4. Luz dinámica de la tele
-  const flicker = 0.35 + Math.random() * 0.05;
-  drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 120, flicker);
 }
 
     
