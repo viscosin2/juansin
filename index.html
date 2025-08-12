@@ -26,19 +26,22 @@
   }
   .screen {
     flex: 1;
-    background: #222;
+    background: #111; /* color marco */
     display: flex;
     align-items: center;
     justify-content: center;
     border-bottom: 6px solid #111;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
     position: relative;
+    padding: 6px; /* grosor del marco */
+    border-radius: 16px;
   }
   canvas {
     image-rendering: pixelated;
     image-rendering: crisp-edges;
     border-radius: 12px;
     box-shadow: 0 0 20px rgba(0,0,0,0.6);
+    background: black; /* por si hay barras */
   }
   .controls {
     flex: 1;
@@ -254,18 +257,18 @@ function update(dt){
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(bgImg){
-    const s = scaleFactor;
+    const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     const dw = roomOriginal.w * s;
     const dh = roomOriginal.h * s;
-    const dx = (canvas.width-dw)/2;
-    const dy = (canvas.height-dh)/2;
+    const dx = (canvas.width - dw) / 2;
+    const dy = (canvas.height - dh) / 2;
     ctx.drawImage(bgImg, dx, dy, dw, dh);
   }
   if(!assets) return;
   const sw = SPRITES.size.w, sh = SPRITES.size.h;
-  const dw = sw*SPRITES.scale, dh = sh*SPRITES.scale;
+  const dw = sw * SPRITES.scale, dh = sh * SPRITES.scale;
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
-  ctx.drawImage(img, 0,0,sw,sh, player.x-dw/2, player.y-dh/2, dw, dh);
+  ctx.drawImage(img, 0, 0, sw, sh, player.x - dw/2, player.y - dh/2, dw, dh);
 }
 
 function loop(now){
