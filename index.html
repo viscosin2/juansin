@@ -136,6 +136,9 @@ const SPRITES = {
 const BACKGROUND = "assets/locations/room.png";
 let bgImg = null;
 
+const SOFA_IMG = "assets/sofa.png";
+let sofaImg = null;
+
 // Tamaño original del PNG de la habitación
 const roomOriginal = { w: 512, h: 412 }; 
 
@@ -145,6 +148,9 @@ const obstaclesBase = [
   { x: 50, y: 60, w: 80, h: 40 },
   { x: 20, y: 40, w: 30, h: 60 },
 ];
+
+const sofaPosBase = { x: 200, y: 300, w: 100, h: 50 };
+let sofaPos = {};
 
 let bounds = {};
 let obstacles = [];
@@ -156,6 +162,12 @@ function updateScaledBounds() {
     y: boundsBase.y * scaleFactor,
     w: boundsBase.w * scaleFactor,
     h: boundsBase.h * scaleFactor
+  };
+  sofaPos = {
+  x: sofaPosBase.x * scaleFactor,
+  y: sofaPosBase.y * scaleFactor,
+  w: sofaPosBase.w * scaleFactor,
+  h: sofaPosBase.h * scaleFactor
   };
   obstacles = obstaclesBase.map(o => ({
     x: o.x * scaleFactor,
@@ -265,6 +277,8 @@ function update(dt){
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // 1. Fondo
   if(bgImg){
     const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     const dw = roomOriginal.w * s;
@@ -272,13 +286,30 @@ function draw(){
     const dx = (canvas.width - dw) / 2;
     const dy = (canvas.height - dh) / 2;
     ctx.drawImage(bgImg, dx, dy, dw, dh);
+
+    // Guardamos offset del fondo (para saber dónde colocar cosas)
+    bgOffsetX = dx;
+    bgOffsetY = dy;
   }
+
   if(!assets) return;
+
   const sw = SPRITES.size.w, sh = SPRITES.size.h;
   const dw = sw * SPRITES.scale, dh = sh * SPRITES.scale;
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
-  ctx.drawImage(img, 0, 0, sw, sh, player.x - dw/2, player.y - dh/2, dw, dh);
+
+  // 2. Si el personaje está "detrás" del sofá → lo dibujamos primero
+  if (player.y < sofaPos.y + sofaPos.h/2) {
+    ctx.drawImage(img, 0, 0, sw, sh, player.x - dw/2, player.y - dh/2, dw, dh);
+    ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
+  } 
+  // 3. Si está "delante" → dibujamos sofá primero y luego personaje
+  else {
+    ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
+    ctx.drawImage(img, 0, 0, sw, sh, player.x - dw/2, player.y - dh/2, dw, dh);
+  }
 }
+
 
 function loop(now){
   if(!loop.last) loop.last=now;
@@ -288,11 +319,12 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
-(async function init(){
-  [bgImg, assets] = await Promise.all([
-    loadImage(BACKGROUND),
-    preloadSprites(SPRITES)
-  ]);
+[bgImg, sofaImg, assets] = await Promise.all([
+  loadImage(BACKGROUND),
+  loadImage(SOFA_IMG),
+  preloadSprites(SPRITES)
+]);
+
   resizeCanvas();
   player.x = canvas.width/2;
   player.y = canvas.height/2;
