@@ -133,6 +133,11 @@ const SPRITES = {
     right: ["assets/juan_character/walk_right_0.png", "assets/juan_character/walk_right_1.png"],
   }
 };
+
+let bgMusic = new Audio("assets/sounds/ambient1.mp3");
+bgMusic.loop = true;       // Repetir en bucle
+bgMusic.volume = 0.4;      // Volumen (0.0 a 1.0)
+
 const BACKGROUND = "assets/locations/room.PNG";
 let bgImg = null;
 
@@ -434,6 +439,11 @@ async function init() {
     loadImage(PLANT1_IMG),
     preloadSprites(SPRITES)
   ]);
+  document.body.addEventListener('click', () => {
+    if (bgMusic.paused) {
+      bgMusic.play();
+    }
+  }, { once: true });
   resizeCanvas();
   requestAnimationFrame(loop);
 }
