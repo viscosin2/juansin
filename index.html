@@ -154,8 +154,8 @@ let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
 const boundsBase = { x: 20, y: 85, w: 465, h: 235 };
 const obstaclesBase = [
   { x: 230, y: 25, w: 70, h: 50 }, // TV
-  { x: 0, y: 200,w: 90, h: 7}, // Cama
-  { x: 5, y: 25, w: 100, h: 50 }, // Estanteria
+  { x: 0, y: 200,w: 90, h: 10}, // Cama
+  { x: 5, y: 25, w: 105, h: 50 }, // Estanteria
   { x: 195, y: 170, w: 170, h: 2 }  // Sofa
 ];
 const sofaBase = { x: 170, y: 75, w: 220, h: 180 };    
@@ -380,6 +380,8 @@ function draw() {
     const destH = dh + stretchPx;               // estira 1 px hacia arriba
     ctx.drawImage(img, 0, 0, sw, sh, destX, destY, destW, destH);
   };
+  
+    if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
 
   // z-order con el sofá
   if (player.y < sofaPos.y + sofaPos.h / 2) {
