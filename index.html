@@ -439,11 +439,7 @@ async function init() {
     loadImage(PLANT1_IMG),
     preloadSprites(SPRITES)
   ]);
-  document.body.addEventListener('click', () => {
-    if (bgMusic.paused) {
-      bgMusic.play();
-    }
-  }, { once: true });
+  bgMusic.play();
   resizeCanvas();
   requestAnimationFrame(loop);
 }
