@@ -371,11 +371,11 @@ function update(dt){
   player.moving = vx!==0 || vy!==0;
 
   if(player.moving){
-    if(Math.abs(vx)>Math.abs(vy)) player.dir = vx<0?'left':'right';
-    else if(Math.abs(vy)>0)       player.dir = vy<0?'up':'down';
-    const len = Math.hypot(vx,vy)||1;
-    const nx = (vx/len)*player.speed*dt;
-    const ny = (vy/len)*player.speed*dt;
+    if(Math.abs(vx)>Math.abs(vy)) player.dir = vx<0 ? 'left' : 'right';
+    else if(Math.abs(vy)>0)       player.dir = vy<0 ? 'up' : 'down';
+    const len = Math.hypot(vx,vy) || 1;
+    const nx = (vx/len) * player.speed * dt;
+    const ny = (vy/len) * player.speed * dt;
     const newX = player.x + nx;
     const newY = player.y + ny;
     if(!collides(newX, newY)){
@@ -383,13 +383,28 @@ function update(dt){
       player.y = newY;
     }
     player.frameTime += dt;
-    if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
-  } else player.frame=0;
+    if(player.frameTime >= 0.14){ 
+      player.frame = (player.frame + 1) % 2; 
+      player.frameTime = 0; 
+    }
+  } else {
+    player.frame = 0;
+  }
 
-  // NUEVO: check de pickup de chanclas
+  // NUEVO: check de pickup de chanclas con área reducida
   if (!hasShoes && sandalsImg) {
+    const reduce = 0.5; // 0.5 = 50% del tamaño original, sube o baja para ajustar
     const pRect = getPlayerRect();
-    if (aabbIntersect(pRect, sandalsPos)) {
+
+    // Reducir el tamaño del rectángulo del jugador
+    const reducedRect = {
+      x: pRect.x + (pRect.w * (1 - reduce) / 2),
+      y: pRect.y + (pRect.h * (1 - reduce) / 2),
+      w: pRect.w * reduce,
+      h: pRect.h * reduce
+    };
+
+    if (aabbIntersect(reducedRect, sandalsPos)) {
       equipShoes();
     }
   }
