@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -118,7 +117,8 @@
 </div>
 
 <script>
-const SPRITES = {
+/* ====== SPRITES ====== */
+const SPRITES_NORMAL = {
   size: { w: 36, h: 40 },
   scale: 0.9,
   idle: {
@@ -135,9 +135,30 @@ const SPRITES = {
   }
 };
 
+// Mismas direcciones pero con sufijo _shoes en los archivos
+const SPRITES_SHOES = {
+  size: { w: 36, h: 40 },
+  scale: 0.9,
+  idle: {
+    down:  ["assets/juan_character/idle_down_shoes.png"],
+    up:    ["assets/juan_character/idle_up_shoes.png"],
+    left:  ["assets/juan_character/idle_left_shoes.png"],
+    right: ["assets/juan_character/idle_right_shoes.png"],
+  },
+  walk: {
+    down:  ["assets/juan_character/walk_down_shoes_0.png",  "assets/juan_character/walk_down_shoes_1.png"],
+    up:    ["assets/juan_character/walk_up_shoes_0.png",    "assets/juan_character/walk_up_shoes_1.png"],
+    left:  ["assets/juan_character/walk_left_shoes_0.png",  "assets/juan_character/walk_left_shoes_1.png"],
+    right: ["assets/juan_character/walk_right_shoes_0.png", "assets/juan_character/walk_right_shoes_1.png"],
+  }
+};
+
 let bgMusic = new Audio("assets/sounds/ambient1.mp3");
-bgMusic.loop = true;       // Repetir en bucle
-bgMusic.volume = 0.4;      // Volumen (0.0 a 1.0)
+bgMusic.loop = true;
+bgMusic.volume = 0.4;
+
+const pickupSnd = new Audio("assets/sounds/pickup.wav");
+pickupSnd.volume = 0.7;
 
 const BACKGROUND = "assets/locations/room.PNG";
 let bgImg = null;
@@ -154,9 +175,15 @@ let tvOnImg = null;
 const BED_IMG = "assets/objects/bed.PNG";
 let bedImg = null;
 
+/* === NUEVO: Chanclas en el suelo que se “equipan” al pisarlas === */
+const SANDALS_IMG = "assets/objects/shoes.png";
+let sandalsImg = null;
+let hasShoes = false; // cuando las recoges, true
+
 const roomOriginal = { w: 512, h: 350 }; 
 let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
 
+/* ==== BOUNDS Y OBSTÁCULOS ==== */
 const boundsBase = { x: 20, y: 85, w: 465, h: 235 };
 const obstaclesBase = [
   { x: 230, y: 25, w: 70, h: 50 }, // TV
@@ -166,14 +193,19 @@ const obstaclesBase = [
   { x: 5, y: 25, w: 110, h: 50 }, // Estanteria
   { x: 195, y: 170, w: 170, h: 0.5 }  // Sofa
 ];
+
+// Zona visual del sofá, tv, cama, planta
 const sofaBase = { x: 170, y: 75, w: 220, h: 180 };    
 const tvOnBase = { x: 205, y: 35, w: 125, h: 90 };
 const bedBase = { x: 3, y: 155, w: 120,h: 130};
 const plant1Base = { x: 3, y: 230, w: 60,h: 90};
 
+/* === NUEVO: posición de las chanclas (no es obstáculo, se puede pisar) === */
+const sandalsBase = { x: 310, y: 260, w: 36, h: 24 };
+
 const playerStartBase = { x: 260, y: 150 };
 
-let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={};
+let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={}, sandalsPos={};
 let scaleFactor = 1;
 
 function updateScaledBounds() {
@@ -213,6 +245,12 @@ function updateScaledBounds() {
     w: Math.round(plant1Base.w * scaleFactor),
     h: Math.round(plant1Base.h * scaleFactor),
   };
+  sandalsPos = {
+    x: bgRect.dx + Math.round(sandalsBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(sandalsBase.y * scaleFactor),
+    w: Math.round(sandalsBase.w * scaleFactor),
+    h: Math.round(sandalsBase.h * scaleFactor),
+  };
   player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
   player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
 }
@@ -225,7 +263,7 @@ const loadImage = (src) => new Promise(res => {
 });
 
 async function preloadSprites(map) {
-  const result = { idle: {}, walk: {} };
+  const result = { idle: {}, walk: {}, size: map.size, scale: map.scale };
   for (const state of ["idle","walk"]) {
     for (const dir of Object.keys(map[state])) {
       result[state][dir] = await Promise.all(map[state][dir].map(loadImage));
@@ -278,8 +316,8 @@ window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){keys[d]=
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
 
 function collides(x, y) {
-  const halfW = SPRITES.size.w * SPRITES.scale / 2;
-  const halfH = SPRITES.size.h * SPRITES.scale / 2;
+  const halfW = currentMeta().size.w * currentMeta().scale / 2;
+  const halfH = currentMeta().size.h * currentMeta().scale / 2;
   const px = x - halfW;
   const py = y - halfH;
   const pw = halfW * 2;
@@ -297,7 +335,36 @@ function collides(x, y) {
   return false;
 }
 
-let assets = null;
+/* Helpers para AABB y rect del player */
+function getPlayerRect(x = player.x, y = player.y) {
+  const halfW = currentMeta().size.w * currentMeta().scale / 2;
+  const halfH = currentMeta().size.h * currentMeta().scale / 2;
+  return { x: x - halfW, y: y - halfH, w: halfW * 2, h: halfH * 2 };
+}
+function aabbIntersect(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x &&
+         a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/* Activo el set de sprites actual */
+let assets = null;        // set actual
+let assetsNormal = null;  // cache normal
+let assetsShoes  = null;  // cache shoes
+
+function currentMeta(){   // tamaño/escala del set actual
+  return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets };
+}
+
+function equipShoes() {
+  if (hasShoes) return;
+  hasShoes = true;
+  if (pickupSnd) { try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){} }
+  assets = assetsShoes || assets;      // swap a sprites con zapatos si cargaron bien
+  player.speed = 230;                  // pequeño buff de velocidad
+  sandalsImg = null;                   // oculta chanclas
+}
+
+/* === LOOP === */
 function update(dt){
   const vx = (keys.left?-1:0)+(keys.right?1:0);
   const vy = (keys.up?-1:0)+(keys.down?1:0);
@@ -318,6 +385,14 @@ function update(dt){
     player.frameTime += dt;
     if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else player.frame=0;
+
+  // NUEVO: check de pickup de chanclas
+  if (!hasShoes && sandalsImg) {
+    const pRect = getPlayerRect();
+    if (aabbIntersect(pRect, sandalsPos)) {
+      equipShoes();
+    }
+  }
 }
 
 function draw() {
@@ -336,9 +411,9 @@ function draw() {
 
   if (!assets) return;
 
-  const sw = SPRITES.size.w, sh = SPRITES.size.h;
-  const dw = Math.round(sw * SPRITES.scale);
-  const dh = Math.round(sh * SPRITES.scale);
+  const sw = currentMeta().size.w, sh = currentMeta().size.h;
+  const dw = Math.round(sw * SPRITES_NORMAL.scale);
+  const dh = Math.round(sh * SPRITES_NORMAL.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
   // Respiración
@@ -391,6 +466,14 @@ function draw() {
     drawList.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
   }
 
+  // NUEVO: Chanclas en el suelo (solo si no están equipadas)
+  if (!hasShoes && sandalsImg) {
+    drawList.push({
+      y: sandalsPos.y + sandalsPos.h / 2,
+      draw: () => ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h)
+    });
+  }
+
   // Personaje
   drawList.push({
     y: player.y,
@@ -409,7 +492,6 @@ function draw() {
   drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 }
 
-    
 function drawLight(x, y, radius, intensity) {
   const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
   gradient.addColorStop(0, `rgba(255, 255, 200, ${intensity})`); // centro amarillo claro
@@ -432,15 +514,27 @@ function loop(now){
 }
 
 async function init() {
-  [bgImg, sofaImg, tvOnImg, bedImg, plant1Img, assets] = await Promise.all([
+  // Precarga de imágenes y sets de sprites (normal + shoes)
+  const [
+    bg, sofa, tv, bed, plant, sandals,
+    normalSet, shoesSet
+  ] = await Promise.all([
     loadImage(BACKGROUND),
     loadImage(SOFA_IMG),
     loadImage(TVON_IMG),
     loadImage(BED_IMG),
     loadImage(PLANT1_IMG),
-    preloadSprites(SPRITES)
+    loadImage(SANDALS_IMG),
+    preloadSprites(SPRITES_NORMAL),
+    preloadSprites(SPRITES_SHOES)
   ]);
-  bgMusic.play();
+
+  bgImg = bg; sofaImg = sofa; tvOnImg = tv; bedImg = bed; plant1Img = plant; sandalsImg = sandals;
+  assetsNormal = normalSet; assetsShoes = shoesSet;
+  assets = assetsNormal; // empezar sin zapatos
+
+  try { bgMusic.play(); } catch(e){ /* móviles bloquean autoplay; se iniciará al primer input */ }
+
   resizeCanvas();
   requestAnimationFrame(loop);
 }
