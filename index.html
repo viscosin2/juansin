@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Minijuego con colisiones escaladas</title>
+<title>Juansin 30th birthday</title>
 <style>
   html, body {
     height: 100%;
@@ -136,6 +136,9 @@ const SPRITES = {
 const BACKGROUND = "assets/locations/room.PNG";
 let bgImg = null;
 
+const PLANT1_IMG = "assets/objects/plant1.PNG";
+let plant1Img = null;
+
 const SOFA_IMG = "assets/objects/sofa.png";
 let sofaImg = null;
     
@@ -157,10 +160,11 @@ const obstaclesBase = [
 const sofaBase = { x: 170, y: 75, w: 220, h: 180 };    
 const tvOnBase = { x: 200, y: 35, w: 130, h: 90 };
 const bedBase = { x: 3, y: 155, w: 120,h: 150};
-    
+const plant1Base = { x: 3, y: 170, w: 40,h: 70};
+
 const playerStartBase = { x: 260, y: 150 };
 
-let bounds={}, obstacles=[], bedPos={}, sofaPos={}, tvPos={};
+let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={};
 let scaleFactor = 1;
 
 function updateScaledBounds() {
@@ -193,6 +197,12 @@ function updateScaledBounds() {
     y: bgRect.dy + Math.round(bedBase.y * scaleFactor),
     w: Math.round(bedBase.w * scaleFactor),
     h: Math.round(bedBase.h * scaleFactor),
+  };
+  plant1Pos = {
+    x: bgRect.dx + Math.round(plant1Base.x * scaleFactor),
+    y: bgRect.dy + Math.round(plant1Base.y * scaleFactor),
+    w: Math.round(plant1Base.w * scaleFactor),
+    h: Math.round(plant1Base.h * scaleFactor),
   };
   player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
   player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
@@ -324,6 +334,7 @@ function draw() {
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
   if (bedImg) ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
+  if (plant1Img) ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h);
   if (tvOnImg) ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
 
   // 4. Luz dinámica de la tele
@@ -415,11 +426,12 @@ function loop(now){
 }
 
 async function init() {
-  [bgImg, sofaImg, tvOnImg, bedImg, assets] = await Promise.all([
+  [bgImg, sofaImg, tvOnImg, bedImg, plant1Img, assets] = await Promise.all([
     loadImage(BACKGROUND),
     loadImage(SOFA_IMG),
     loadImage(TVON_IMG),
     loadImage(BED_IMG),
+    loadImage(PLANT1_IMG),
     preloadSprites(SPRITES)
   ]);
   resizeCanvas();
