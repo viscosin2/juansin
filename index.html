@@ -414,10 +414,11 @@ function loop(now){
 }
 
 async function init() {
-  [bgImg, sofaImg, tvOnImg, assets] = await Promise.all([
+  [bgImg, sofaImg, tvOnImg, bedImg, assets] = await Promise.all([
     loadImage(BACKGROUND),
     loadImage(SOFA_IMG),
     loadImage(TVON_IMG),
+    loadImage(BED_IMG),
     preloadSprites(SPRITES)
   ]);
   resizeCanvas();
