@@ -341,10 +341,7 @@ function draw() {
   // 4. Luz dinámica de la tele
   const flicker = 0.35 + Math.random() * 0.05;
   drawLight(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
-
-  if (sofaImg) ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h);
   
-
   // === RESPIRACIÓN: 1 píxel hacia arriba, pies clavados ===
   // Solo cuando está idle: alterna entre 0 y 1 px para mantenerlo nítido
   let stretchPx = 0;
@@ -397,7 +394,18 @@ function draw() {
     drawPlayer();
   }
   
-  if (bedImg) ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
+    if (player.y < bedPos.y + bedPos.h / 2) {
+    // personaje detrás del sofá
+    drawShadow();
+    drawPlayer();
+    ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
+  } else {
+    // personaje delante del sofá
+    ctx.drawImage(bedIng, bedPos.x, bedPos.y, bedPos.w, bedPos.h);
+    drawShadow();
+    drawPlayer();
+  }
+  
   // 3. Oscurecer todo
   ctx.fillStyle = 'rgba(0,0,0,0.40)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
