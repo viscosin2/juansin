@@ -375,9 +375,9 @@ function handleAction() {
 // CAMA
 const reducedBed = {
   x: bedPos.x + 40,  // margen izquierda
-  y: bedPos.y + bedPos.h - 22, // solo la parte baja
-  w: bedPos.w - 120,  // margen derecha
-  h: 22              // altura pequeña
+  y: bedPos.y + bedPos.h, // solo la parte baja
+  w: bedPos.w - 80,  // margen derecha
+  h: 30              // altura pequeña
 };
 
 const insideBed = aabb(getPlayerRect(), reducedBed);
