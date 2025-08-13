@@ -69,7 +69,7 @@
     display: grid;
     grid-template-columns: repeat(3, 64px);
     grid-template-rows: repeat(3, 64px);
-    gap: 4px;                  /* más juntas sin cambiar tamaño de celda */
+    gap: 0px;                  /* más juntas sin cambiar tamaño de celda */
     justify-content: center;
     align-content: center;
     overflow: visible;         /* por si la imagen escalada sobresale 1-2px */
@@ -92,7 +92,7 @@
     image-rendering: pixelated;
     display: block;
     /* rotamos y AGRANDAMOS SOLO LA IMAGEN (no la celda) */
-    transform: rotate(var(--rot, 0deg)) scale(var(--scale, 1.22));
+    transform: rotate(var(--rot, 0deg)) scale(var(--scale, 1.28));
     transform-origin: center center;
   }
   .btn-up    { --rot: 180deg; }
