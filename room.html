@@ -376,8 +376,8 @@ function handleAction() {
 const reducedBed = {
   x: bedPos.x + 40,  // margen izquierda
   y: bedPos.y + bedPos.h, // solo la parte baja
-  w: bedPos.w - 80,  // margen derecha
-  h: 30              // altura pequeña
+  w: bedPos.w - 20,  // margen derecha
+  h: 50              // altura pequeña
 };
 
 const insideBed = aabb(getPlayerRect(), reducedBed);
