@@ -1,50 +1,97 @@
+Ahora tengo este HTML así
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Juansin 30th – Room</title>
+<title>Juansin 30th birthday</title>
 <style>
   html, body {
-    height: 100%; margin: 0; background: #111;
-    display: flex; justify-content: center; align-items: center;
+    height: 100%;
+    margin: 0;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
   .gameboy {
-    width: 100%; max-width: 500px; height: 100%;
-    background: #000; display: flex; flex-direction: column;
-    padding: 12px; box-sizing: border-box; border-radius: 20px;
+    width: 100%;
+    max-width: 500px;
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    box-sizing: border-box;
+    border-radius: 20px;
     box-shadow: 0 0 40px rgba(0,0,0,0.6);
   }
   .screen-container {
-    flex: 1; display: flex; justify-content: center; align-items: center;
-    background: #0B0A21; border-radius: 12px; padding: 10px;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #0B0A21;
+    border-radius: 12px;
+    padding: 10px;
   }
   .screen {
-    aspect-ratio: 1/1; width: 100%; background: #0B0A21;
-    border-radius: 8px; overflow: hidden; position: relative;
+    aspect-ratio: 1/1;
+    width: 100%;
+    background: #0B0A21;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    overflow: hidden;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
   }
-  /* Canvas: solo el juego es negro; (por si reusas confeti algún día) */
-  canvas { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; background: transparent; }
-  #game { background: black; }
-
+  canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: black;
+  }
   .controls {
-    height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr;
-    gap: 14px; padding: 14px;
+    height: 40%;
+    background: #0B0A21;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 14px;
   }
   .dpad {
-    display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px);
-    gap: 8px; justify-content: center; align-content: center;
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(3, 64px);
+    gap: 8px;
+    justify-content: center;
+    align-content: center;
   }
   .btn, .act {
-    border: none; border-radius: 16px; background: linear-gradient(180deg, #1b1c24, #0d0e14);
-    color:#e5e7eb; font-size:16px; font-weight:600; display:grid; place-items:center;
-    box-shadow: 0 6px 20px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06); transition: transform .05s ease;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #1b1c24, #0d0e14);
+    color: #e5e7eb;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0,0,0,.45),
+                inset 0 0 0 1px rgba(255,255,255,.06);
+    display: grid;
+    place-items: center;
+    outline: none;
+    transition: transform .05s ease;
   }
   .btn:active, .act:active { transform: translateY(2px); }
-  .btn { width:64px; height:64px; }
-  .btn span { font-size:26px; }
-  .act { width:120px; height:120px; margin:auto; letter-spacing:.5px; }
+  .btn { width: 64px; height: 64px; }
+  .btn span { font-size: 26px; }
+  .act {
+    width: 120px; height: 120px;
+    margin: auto;
+    letter-spacing: .5px;
+  }
 </style>
 </head>
 <body>
@@ -55,7 +102,6 @@
       <canvas id="game"></canvas>
     </div>
   </div>
-
   <div class="controls">
     <div class="dpad">
       <div></div>
@@ -84,12 +130,14 @@ const SPRITES_NORMAL = {
     right: ["assets/juan_character/idle_right.png"],
   },
   walk: {
-    down:  ["assets/juan_character/walk_down_0.png","assets/juan_character/walk_down_1.png"],
-    up:    ["assets/juan_character/walk_up_0.png","assets/juan_character/walk_up_1.png"],
-    left:  ["assets/juan_character/walk_left_0.png","assets/juan_character/walk_left_1.png"],
-    right: ["assets/juan_character/walk_right_0.png","assets/juan_character/walk_right_1.png"],
+    down:  ["assets/juan_character/walk_down_0.png",  "assets/juan_character/walk_down_1.png"],
+    up:    ["assets/juan_character/walk_up_0.png",    "assets/juan_character/walk_up_1.png"],
+    left:  ["assets/juan_character/walk_left_0.png",  "assets/juan_character/walk_left_1.png"],
+    right: ["assets/juan_character/walk_right_0.png", "assets/juan_character/walk_right_1.png"],
   }
 };
+
+// Mismas direcciones pero con sufijo _shoes en los archivos
 const SPRITES_SHOES = {
   size: { w: 36, h: 40 },
   scale: 0.9,
@@ -100,17 +148,19 @@ const SPRITES_SHOES = {
     right: ["assets/juan_character/idle_right_shoes.png"],
   },
   walk: {
-    down:  ["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"],
-    up:    ["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"],
-    left:  ["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"],
-    right: ["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"],
+    down:  ["assets/juan_character/walk_down_0_shoes.png",  "assets/juan_character/walk_down_1_shoes.png"],
+    up:    ["assets/juan_character/walk_up_0_shoes.png",    "assets/juan_character/walk_up_1_shoes.png"],
+    left:  ["assets/juan_character/walk_left_0_shoes.png",  "assets/juan_character/walk_left_1_shoes.png"],
+    right: ["assets/juan_character/walk_right_0_shoes.png", "assets/juan_character/walk_right_1_shoes.png"],
   }
 };
 
 let bgMusic = new Audio("assets/sounds/ambient1.mp3");
-bgMusic.loop = true; bgMusic.volume = 0.4;
+bgMusic.loop = true;
+bgMusic.volume = 0.4;
 
-const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
+const pickupSnd = new Audio("assets/sounds/pickup.mp3");
+pickupSnd.volume = 0.7;
 
 const BACKGROUND = "assets/locations/room.PNG";
 let bgImg = null;
@@ -120,230 +170,400 @@ let plant1Img = null;
 
 const SOFA_IMG = "assets/objects/sofa.png";
 let sofaImg = null;
-
+    
 const TVON_IMG = "assets/objects/tv_on.png";
 let tvOnImg = null;
 
 const BED_IMG = "assets/objects/bed.PNG";
 let bedImg = null;
 
-/* Chanclas pickup */
+/* === NUEVO: Chanclas en el suelo que se “equipan” al pisarlas === */
 const SANDALS_IMG = "assets/objects/shoes.PNG";
-let sandalsImg = null; let hasShoes = false;
+let sandalsImg = null;
+let hasShoes = false; // cuando las recoges, true
 
-/* En esta página el juego arranca directo */
-let gameStarted = true;
-
-const roomOriginal = { w: 512, h: 350 };
+const roomOriginal = { w: 512, h: 350 }; 
 let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
 
+/* ==== BOUNDS Y OBSTÁCULOS ==== */
 const boundsBase = { x: 20, y: 85, w: 465, h: 235 };
 const obstaclesBase = [
   { x: 230, y: 25, w: 70, h: 50 }, // TV
-  { x: 0,   y: 190, w: 95, h: 38}, // Cama
-  { x: 0,   y: 260, w: 40, h: 21}, // Planta
-  { x: 450, y: 250, w: 15, h: 0.5}, // Pelota
-  { x: 5,   y: 25,  w: 110,h: 50 }, // Estanteria
-  { x: 195, y: 170, w: 170,h: 0.5 } // Sofa
+  { x: 0, y: 190,w: 95, h: 38}, // Cama
+  { x: 0, y: 260,w: 40, h: 21}, // Planta
+  { x: 450, y: 250,w: 15, h: 0.5}, // Pelota
+  { x: 5, y: 25, w: 110, h: 50 }, // Estanteria
+  { x: 195, y: 170, w: 170, h: 0.5 }  // Sofa
 ];
-const sofaBase   = { x: 170, y: 75,  w: 220, h: 180 };
-const tvOnBase   = { x: 205, y: 35,  w: 125, h: 90  };
-const bedBase    = { x: 3,   y: 155, w: 120, h: 130 };
-const plant1Base = { x: 3,   y: 230, w: 60,  h: 90  };
-const sandalsBase= { x: 55,  y: 270, w: 50,  h: 50  };
+
+// Zona visual del sofá, tv, cama, planta
+const sofaBase = { x: 170, y: 75, w: 220, h: 180 };    
+const tvOnBase = { x: 205, y: 35, w: 125, h: 90 };
+const bedBase = { x: 3, y: 155, w: 120,h: 130};
+const plant1Base = { x: 3, y: 230, w: 60,h: 90};
+const sandalsBase = { x: 55, y: 270, w: 50, h: 50 };
+
 const playerStartBase = { x: 260, y: 150 };
 
 let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={}, sandalsPos={};
 let scaleFactor = 1;
 
-const loadImage = (src) => new Promise(res => { const img=new Image(); img.onload=()=>res(img); img.onerror=()=>res(null); img.src=src; });
+function updateScaledBounds() {
+  bounds = {
+    x: bgRect.dx + Math.round(boundsBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(boundsBase.y * scaleFactor),
+    w: Math.round(boundsBase.w * scaleFactor),
+    h: Math.round(boundsBase.h * scaleFactor),
+  };
+  obstacles = obstaclesBase.map(o => ({
+    x: bgRect.dx + Math.round(o.x * scaleFactor),
+    y: bgRect.dy + Math.round(o.y * scaleFactor),
+    w: Math.round(o.w * scaleFactor),
+    h: Math.round(o.h * scaleFactor),
+  }));
+  sofaPos = {
+    x: bgRect.dx + Math.round(sofaBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(sofaBase.y * scaleFactor),
+    w: Math.round(sofaBase.w * scaleFactor),
+    h: Math.round(sofaBase.h * scaleFactor),
+  };
+  tvPos = {
+    x: bgRect.dx + Math.round(tvOnBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(tvOnBase.y * scaleFactor),
+    w: Math.round(tvOnBase.w * scaleFactor),
+    h: Math.round(tvOnBase.h * scaleFactor),
+  };
+  bedPos = {
+    x: bgRect.dx + Math.round(bedBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(bedBase.y * scaleFactor),
+    w: Math.round(bedBase.w * scaleFactor),
+    h: Math.round(bedBase.h * scaleFactor),
+  };
+  plant1Pos = {
+    x: bgRect.dx + Math.round(plant1Base.x * scaleFactor),
+    y: bgRect.dy + Math.round(plant1Base.y * scaleFactor),
+    w: Math.round(plant1Base.w * scaleFactor),
+    h: Math.round(plant1Base.h * scaleFactor),
+  };
+  sandalsPos = {
+    x: bgRect.dx + Math.round(sandalsBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(sandalsBase.y * scaleFactor),
+    w: Math.round(sandalsBase.w * scaleFactor),
+    h: Math.round(sandalsBase.h * scaleFactor),
+  };
+  player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
+  player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
+}
 
-async function preloadSprites(map){
-  const out={ idle:{}, walk:{}, size:map.size, scale:map.scale };
-  for(const st of ["idle","walk"]) for(const dir of Object.keys(map[st])) out[st][dir] = await Promise.all(map[st][dir].map(loadImage));
-  return out;
+const loadImage = (src) => new Promise(res => {
+  const img = new Image();
+  img.onload = () => res(img);
+  img.onerror = () => res(null);
+  img.src = src;
+});
+
+async function preloadSprites(map) {
+  const result = { idle: {}, walk: {}, size: map.size, scale: map.scale };
+  for (const state of ["idle","walk"]) {
+    for (const dir of Object.keys(map[state])) {
+      result[state][dir] = await Promise.all(map[state][dir].map(loadImage));
+    }
+  }
+  return result;
 }
 
 const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
 
-function resizeCanvas(){
-  const screen=document.querySelector('.screen');
-  canvas.width=screen.clientWidth; canvas.height=screen.clientHeight;
-  if(bgImg){
-    scaleFactor = Math.min(canvas.width/roomOriginal.w, canvas.height/roomOriginal.h);
-    bgRect.dw = roomOriginal.w*scaleFactor; bgRect.dh = roomOriginal.h*scaleFactor;
-    bgRect.dx = (canvas.width - bgRect.dw)/2; bgRect.dy = (canvas.height - bgRect.dh)/2;
+function resizeCanvas() {
+  const screen = document.querySelector('.screen');
+  canvas.width = screen.clientWidth;
+  canvas.height = screen.clientHeight;
+  if (bgImg) {
+    scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
+
+    bgRect.dw = roomOriginal.w * scaleFactor;
+    bgRect.dh = roomOriginal.h * scaleFactor;
+    bgRect.dx = (canvas.width - bgRect.dw) / 2;
+    bgRect.dy = (canvas.height - bgRect.dh) / 2;
+
     updateScaledBounds();
   }
 }
-window.addEventListener('resize', resizeCanvas);
 
-function updateScaledBounds(){
-  bounds = {
-    x: bgRect.dx + Math.round(boundsBase.x*scaleFactor),
-    y: bgRect.dy + Math.round(boundsBase.y*scaleFactor),
-    w: Math.round(boundsBase.w*scaleFactor),
-    h: Math.round(boundsBase.h*scaleFactor),
-  };
-  obstacles = obstaclesBase.map(o=>({
-    x: bgRect.dx + Math.round(o.x*scaleFactor),
-    y: bgRect.dy + Math.round(o.y*scaleFactor),
-    w: Math.round(o.w*scaleFactor),
-    h: Math.round(o.h*scaleFactor),
-  }));
-  sofaPos = { x:bgRect.dx+Math.round(sofaBase.x*scaleFactor), y:bgRect.dy+Math.round(sofaBase.y*scaleFactor), w:Math.round(sofaBase.w*scaleFactor), h:Math.round(sofaBase.h*scaleFactor) };
-  tvPos   = { x:bgRect.dx+Math.round(tvOnBase.x*scaleFactor), y:bgRect.dy+Math.round(tvOnBase.y*scaleFactor), w:Math.round(tvOnBase.w*scaleFactor), h:Math.round(tvOnBase.h*scaleFactor) };
-  bedPos  = { x:bgRect.dx+Math.round(bedBase.x*scaleFactor),  y:bgRect.dy+Math.round(bedBase.y*scaleFactor),  w:Math.round(bedBase.w*scaleFactor),  h:Math.round(bedBase.h*scaleFactor) };
-  plant1Pos = { x:bgRect.dx+Math.round(plant1Base.x*scaleFactor), y:bgRect.dy+Math.round(plant1Base.y*scaleFactor), w:Math.round(plant1Base.w*scaleFactor), h:Math.round(plant1Base.h*scaleFactor) };
-  sandalsPos= { x:bgRect.dx+Math.round(sandalsBase.x*scaleFactor),y:bgRect.dy+Math.round(sandalsBase.y*scaleFactor),w:Math.round(sandalsBase.w*scaleFactor), h:Math.round(sandalsBase.h*scaleFactor) };
-}
+window.addEventListener('resize', resizeCanvas);
 
 const player = { x:0, y:0, speed:200, dir:'up', moving:false, frame:0, frameTime:0 };
 const keys = { up:false, down:false, left:false, right:false };
 
-function bindHold(btn, on, off){
-  const start=e=>{ e.preventDefault(); on(); };
-  const end=e=>{ e.preventDefault(); off(); };
+function bindHold(btn, on, off) {
+  const start = e => { e.preventDefault(); on(); };
+  const end   = e => { e.preventDefault(); off(); };
   btn.addEventListener('touchstart', start, {passive:false});
   btn.addEventListener('touchend', end, {passive:false});
   btn.addEventListener('touchcancel', end, {passive:false});
   btn.addEventListener('mousedown', start);
   window.addEventListener('mouseup', end);
 }
-bindHold(document.getElementById('btn-up'),    ()=>keys.up=true,    ()=>keys.up=false);
-bindHold(document.getElementById('btn-down'),  ()=>keys.down=true,  ()=>keys.down=false);
-bindHold(document.getElementById('btn-left'),  ()=>keys.left=true,  ()=>keys.left=false);
-bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.right=false);
-
-/* ACCIÓN aquí la puedes usar para interactuar; ya no inicia juego */
-document.getElementById('btn-act').addEventListener('click', ()=>{ /* hookear interacción si quieres */ });
+bindHold(document.getElementById('btn-up'),    () => keys.up=true,    () => keys.up=false);
+bindHold(document.getElementById('btn-down'),  () => keys.down=true,  () => keys.down=false);
+bindHold(document.getElementById('btn-left'),  () => keys.left=true,  () => keys.left=false);
+bindHold(document.getElementById('btn-right'), () => keys.right=true, () => keys.right=false);
 
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){keys[d]=true; e.preventDefault();}});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
 
-function currentMeta(){ return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets }; }
-
-function collides(x,y){
-  const halfW=currentMeta().size.w*currentMeta().scale/2;
-  const halfH=currentMeta().size.h*currentMeta().scale/2;
-  const px=x-halfW, py=y-halfH, pw=halfW*2, ph=halfH*2;
-  if(x<bounds.x || x>bounds.x+bounds.w || y<bounds.y || y>bounds.y+bounds.h) return true;
-  for(const o of obstacles){
-    if(px<o.x+o.w && px+pw>o.x && py<o.y+o.h && py+ph>o.y) return true;
+function collides(x, y) {
+  const halfW = currentMeta().size.w * currentMeta().scale / 2;
+  const halfH = currentMeta().size.h * currentMeta().scale / 2;
+  const px = x - halfW;
+  const py = y - halfH;
+  const pw = halfW * 2;
+  const ph = halfH * 2;
+  if (x < bounds.x || x > bounds.x + bounds.w ||
+      y < bounds.y || y > bounds.y + bounds.h) {
+    return true;
+  }
+  for (const o of obstacles) {
+    if (px < o.x + o.w && px + pw > o.x &&
+        py < o.y + o.h && py + ph > o.y) {
+      return true;
+    }
   }
   return false;
 }
 
-function getPlayerRect(x=player.x,y=player.y){
-  const halfW=currentMeta().size.w*currentMeta().scale/2;
-  const halfH=currentMeta().size.h*currentMeta().scale/2;
-  return { x:x-halfW, y:y-halfH, w:halfW*2, h:halfH*2 };
+/* Helpers para AABB y rect del player */
+function getPlayerRect(x = player.x, y = player.y) {
+  const halfW = currentMeta().size.w * currentMeta().scale / 2;
+  const halfH = currentMeta().size.h * currentMeta().scale / 2;
+  return { x: x - halfW, y: y - halfH, w: halfW * 2, h: halfH * 2 };
 }
-function aabbIntersect(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
-
-let assets=null, assetsNormal=null, assetsShoes=null;
-
-function equipShoes(){
-  if(hasShoes) return; hasShoes=true;
-  try{ pickupSnd.currentTime=0; pickupSnd.play(); }catch(e){}
-  assets = assetsShoes || assets; player.speed = 230; sandalsImg = null;
+function aabbIntersect(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x &&
+         a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
+/* Activo el set de sprites actual */
+let assets = null;        // set actual
+let assetsNormal = null;  // cache normal
+let assetsShoes  = null;  // cache shoes
+
+function currentMeta(){   // tamaño/escala del set actual
+  return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets };
+}
+
+function equipShoes() {
+  if (hasShoes) return;
+  hasShoes = true;
+  if (pickupSnd) { try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){} }
+  assets = assetsShoes || assets;      // swap a sprites con zapatos si cargaron bien
+  player.speed = 230;                  // pequeño buff de velocidad
+  sandalsImg = null;                   // oculta chanclas
+}
+
+/* === LOOP === */
 function update(dt){
-  if(!gameStarted) return;
-  const vx=(keys.left?-1:0)+(keys.right?1:0);
-  const vy=(keys.up?-1:0)+(keys.down?1:0);
+  const vx = (keys.left?-1:0)+(keys.right?1:0);
+  const vy = (keys.up?-1:0)+(keys.down?1:0);
   player.moving = vx!==0 || vy!==0;
-  if(player.moving){
-    if(Math.abs(vx)>Math.abs(vy)) player.dir = vx<0?'left':'right';
-    else if(Math.abs(vy)>0)       player.dir = vy<0?'up':'down';
-    const len=Math.hypot(vx,vy)||1;
-    const nx=(vx/len)*player.speed*dt, ny=(vy/len)*player.speed*dt;
-    const nxp=player.x+nx, nyp=player.y+ny;
-    if(!collides(nxp,nyp)){ player.x=nxp; player.y=nyp; }
-    player.frameTime+=dt; if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
-  } else { player.frame=0; }
 
-  if(!hasShoes && sandalsImg){
-    const reduce=0.5, pRect=getPlayerRect();
-    const reduced={ x:pRect.x+(pRect.w*(1-reduce)/2), y:pRect.y+(pRect.h*(1-reduce)/2), w:pRect.w*reduce, h:pRect.h*reduce };
-    if(aabbIntersect(reduced, sandalsPos)) equipShoes();
+  if(player.moving){
+    if(Math.abs(vx)>Math.abs(vy)) player.dir = vx<0 ? 'left' : 'right';
+    else if(Math.abs(vy)>0)       player.dir = vy<0 ? 'up' : 'down';
+    const len = Math.hypot(vx,vy) || 1;
+    const nx = (vx/len) * player.speed * dt;
+    const ny = (vy/len) * player.speed * dt;
+    const newX = player.x + nx;
+    const newY = player.y + ny;
+    if(!collides(newX, newY)){
+      player.x = newX;
+      player.y = newY;
+    }
+    player.frameTime += dt;
+    if(player.frameTime >= 0.14){ 
+      player.frame = (player.frame + 1) % 2; 
+      player.frameTime = 0; 
+    }
+  } else {
+    player.frame = 0;
+  }
+
+  // NUEVO: check de pickup de chanclas con área reducida
+  if (!hasShoes && sandalsImg) {
+    const reduce = 0.5; // 0.5 = 50% del tamaño original, sube o baja para ajustar
+    const pRect = getPlayerRect();
+
+    // Reducir el tamaño del rectángulo del jugador
+    const reducedRect = {
+      x: pRect.x + (pRect.w * (1 - reduce) / 2),
+      y: pRect.y + (pRect.h * (1 - reduce) / 2),
+      w: pRect.w * reduce,
+      h: pRect.h * reduce
+    };
+
+    if (aabbIntersect(reducedRect, sandalsPos)) {
+      equipShoes();
+    }
   }
 }
 
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.imageSmoothingEnabled=false;
-  if(bgImg){
-    const s=Math.min(canvas.width/roomOriginal.w, canvas.height/roomOriginal.h);
-    bgRect.dw=roomOriginal.w*s; bgRect.dh=roomOriginal.h*s;
-    bgRect.dx=(canvas.width-bgRect.dw)/2; bgRect.dy=(canvas.height-bgRect.dh)/2;
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false; // pixel art crisp
+
+  // Fondo
+  if (bgImg) {
+    const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
+    bgRect.dw = roomOriginal.w * s;
+    bgRect.dh = roomOriginal.h * s;
+    bgRect.dx = (canvas.width - bgRect.dw) / 2;
+    bgRect.dy = (canvas.height - bgRect.dh) / 2;
     ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
   }
-  if(!assets) return;
 
-  const sw=currentMeta().size.w, sh=currentMeta().size.h;
-  const dw=Math.round(sw*SPRITES_NORMAL.scale), dh=Math.round(sh*SPRITES_NORMAL.scale);
+  if (!assets) return;
+
+  const sw = currentMeta().size.w, sh = currentMeta().size.h;
+  const dw = Math.round(sw * SPRITES_NORMAL.scale);
+  const dh = Math.round(sh * SPRITES_NORMAL.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
-  let stretchPx=0;
-  if(!player.moving){ const Hz=0.6, t=performance.now()/1000; stretchPx=Math.round((Math.sin(t*Math.PI*2*Hz)*0.5+0.5)*1); }
+  // Respiración
+  let stretchPx = 0;
+  if (!player.moving) {
+    const Hz = 0.6;
+    const t = performance.now() / 1000;
+    stretchPx = Math.round((Math.sin(t * Math.PI * 2 * Hz) * 0.5 + 0.5) * 1);
+  }
 
-  const drawShadow=()=>{ ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0,0,Math.PI*2); ctx.fill(); };
-  const drawPlayer=()=>{ ctx.drawImage(img,0,0,sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2)-stretchPx, dw, dh+stretchPx ); };
+  const drawShadow = () => {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(
+      Math.round(player.x),
+      Math.round(player.y + dh / 2 - 4),
+      dw / 2.5,
+      dh / 6,
+      0, 0, Math.PI * 2
+    );
+    ctx.fill();
+  };
 
-  let list=[];
-  if(tvOnImg)   list.push({y:tvPos.y,               draw:()=>ctx.drawImage(tvOnImg,   tvPos.x,   tvPos.y,   tvPos.w,   tvPos.h)});
-  if(plant1Img) list.push({y:plant1Pos.y,           draw:()=>ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h)});
-  if(sofaImg)   list.push({y:sofaPos.y+sofaPos.h/2, draw:()=>ctx.drawImage(sofaImg,   sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h)});
-  if(bedImg)    list.push({y:bedPos.y+bedPos.h/2,   draw:()=>ctx.drawImage(bedImg,    bedPos.x,  bedPos.y,  bedPos.w,  bedPos.h)});
-  if(!hasShoes && sandalsImg) list.push({ y:sandalsPos.y+sandalsPos.h/2, draw:()=>ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h) });
-  list.push({ y:player.y, draw:()=>{ drawShadow(); drawPlayer(); } });
-  list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
+  const drawPlayer = () => {
+    ctx.drawImage(img, 0, 0, sw, sh,
+      Math.round(player.x - dw / 2),
+      Math.round(player.y - dh / 2) - stretchPx,
+      dw, dh + stretchPx
+    );
+  };
 
-  // Oscurecer + luz TV
-  ctx.fillStyle='rgba(0,0,0,0.40)'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  drawLightClipped(tvPos.x+tvPos.w/2, tvPos.y+tvPos.h/2, 100, 0.35+Math.random()*0.05);
+  // Lista ordenada por profundidad
+  let drawList = [];
+
+  // TV y planta (van siempre detrás)
+  if (tvOnImg) {
+    drawList.push({ y: tvPos.y, draw: () => ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h) });
+  }
+  if (plant1Img) {
+    drawList.push({ y: plant1Pos.y, draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
+  }
+
+  // Sofá
+  if (sofaImg) {
+    drawList.push({ y: sofaPos.y + sofaPos.h / 2, draw: () => ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
+  }
+
+  // Cama
+  if (bedImg) {
+    drawList.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
+  }
+
+  // NUEVO: Chanclas en el suelo (solo si no están equipadas)
+  if (!hasShoes && sandalsImg) {
+    drawList.push({
+      y: sandalsPos.y + sandalsPos.h / 2,
+      draw: () => ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h)
+    });
+  }
+
+  // Personaje
+  drawList.push({
+    y: player.y,
+    draw: () => { drawShadow(); drawPlayer(); }
+  });
+
+  // Ordenar y dibujar
+  drawList.sort((a, b) => a.y - b.y).forEach(o => o.draw());
+
+  // Oscurecer todo
+  ctx.fillStyle = 'rgba(0,0,0,0.40)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Luz dinámica de la tele por encima de todo
+  const flicker = 0.35 + Math.random() * 0.05;
+drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 }
 
-function drawLightClipped(x,y,radius,intensity){
-  if(!bgRect || !bgRect.dw || !bgRect.dh) return;
-  const rs = radius*(bgRect.dw/roomOriginal.w);
-  ctx.save(); ctx.beginPath(); ctx.rect(bgRect.dx,bgRect.dy,bgRect.dw,bgRect.dh); ctx.clip();
-  const g=ctx.createRadialGradient(x,y,0,x,y,rs);
-  g.addColorStop(0,`rgba(255,255,200,${intensity})`); g.addColorStop(1,'rgba(255,255,200,0)');
-  ctx.globalCompositeOperation="lighter"; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,rs,0,Math.PI*2); ctx.fill();
-  ctx.restore(); ctx.globalCompositeOperation="source-over";
+function drawLightClipped(x, y, radius, intensity) {
+  if (!bgRect || !bgRect.dw || !bgRect.dh) return;
+
+  // Escala el radio con el zoom de la sala para que no se dispare
+  const radiusScaled = radius * (bgRect.dw / roomOriginal.w);
+
+  ctx.save();
+  // Recorta a la “pantalla” (la foto del room)
+  ctx.beginPath();
+  ctx.rect(bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
+  ctx.clip();
+
+  const g = ctx.createRadialGradient(x, y, 0, x, y, radiusScaled);
+  g.addColorStop(0, `rgba(255, 255, 200, ${intensity})`);
+  g.addColorStop(1, 'rgba(255, 255, 200, 0)');
+
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, radiusScaled, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+  ctx.globalCompositeOperation = "source-over";
 }
 
 function loop(now){
   if(!loop.last) loop.last=now;
-  const dt=Math.min(1/30,(now-loop.last)/1000);
-  loop.last=now; update(dt); draw(); requestAnimationFrame(loop);
+  const dt = Math.min(1/30,(now-loop.last)/1000);
+  loop.last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
 }
 
-let assetsNormal=null, assetsShoes=null, assets=null;
-
-function updateScaledPositionsAfterLoad(){
-  resizeCanvas();
-  // posición inicial del jugador (centrada a escala)
-  player.x = bgRect.dx + Math.round((roomOriginal.w/2) * scaleFactor);
-  player.y = bgRect.dy + Math.round((roomOriginal.h/2) * scaleFactor);
-}
-
-async function init(){
-  const [bg, sofa, tv, bed, plant, sandals, normalSet, shoesSet] = await Promise.all([
-    loadImage(BACKGROUND), loadImage(SOFA_IMG), loadImage(TVON_IMG),
-    loadImage(BED_IMG), loadImage(PLANT1_IMG), loadImage(SANDALS_IMG),
-    preloadSprites(SPRITES_NORMAL), preloadSprites(SPRITES_SHOES)
+async function init() {
+  // Precarga de imágenes y sets de sprites (normal + shoes)
+  const [
+    bg, sofa, tv, bed, plant, sandals,
+    normalSet, shoesSet
+  ] = await Promise.all([
+    loadImage(BACKGROUND),
+    loadImage(SOFA_IMG),
+    loadImage(TVON_IMG),
+    loadImage(BED_IMG),
+    loadImage(PLANT1_IMG),
+    loadImage(SANDALS_IMG),
+    preloadSprites(SPRITES_NORMAL),
+    preloadSprites(SPRITES_SHOES)
   ]);
-  bgImg=bg; sofaImg=sofa; tvOnImg=tv; bedImg=bed; plant1Img=plant; sandalsImg=sandals;
-  assetsNormal=normalSet; assetsShoes=shoesSet; assets=assetsNormal;
 
-  updateScaledPositionsAfterLoad();
-  try{ bgMusic.play(); }catch(e){} // en móvil pedirá interacción previa (ya la hubo en index)
+  bgImg = bg; sofaImg = sofa; tvOnImg = tv; bedImg = bed; plant1Img = plant; sandalsImg = sandals;
+  assetsNormal = normalSet; assetsShoes = shoesSet;
+  assets = assetsNormal; // empezar sin zapatos
+
+  try { bgMusic.play(); } catch(e){ /* móviles bloquean autoplay; se iniciará al primer input */ }
+
+  resizeCanvas();
   requestAnimationFrame(loop);
 }
 
