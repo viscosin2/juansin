@@ -53,7 +53,7 @@
     background: black;
   }
 
-  /* ===== CONTROLES: dejamos el alto fijo como antes ===== */
+  /* ===== CONTROLES ===== */
   .controls {
     height: 40%;
     background: #0B0A21;
@@ -64,19 +64,18 @@
     box-sizing: border-box;
   }
 
-  /* ===== D-PAD: celdas siguen siendo 64px; solo acercamos con gap ===== */
   .dpad {
     display: grid;
     grid-template-columns: repeat(3, 64px);
     grid-template-rows: repeat(3, 64px);
     gap: 0px;                  /* más juntas sin cambiar tamaño de celda */
     justify-content: center;
-    margin-left: 12px;
+    margin-left: 12px;         /* mueve todo el bloque un poco a la dcha */
     align-content: center;
-    overflow: visible;         /* por si la imagen escalada sobresale 1-2px */
+    overflow: visible;
   }
 
-  /* ===== Flechas PNG sin fondo, solo sombra ===== */
+  /* Flechas PNG sin fondo, solo sombra */
   .img-btn {
     width: 64px;
     height: 64px;
@@ -85,7 +84,7 @@
     cursor: pointer;
     filter: drop-shadow(0 3px 4px rgba(0,0,0,0.85));
     transition: transform 0.06s ease, filter 0.06s ease;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-tap-highlight-color: transparent; /* iOS: quitar flash */
   }
   .img-btn.arrow::before {
     content: "";
@@ -93,7 +92,6 @@
     background: url("assets/ui/arrow.PNG") center/contain no-repeat;
     image-rendering: pixelated;
     display: block;
-    /* rotamos y AGRANDAMOS SOLO LA IMAGEN (no la celda) */
     transform: rotate(var(--rot, 0deg)) scale(var(--scale, 1.28));
     transform-origin: center center;
   }
@@ -102,7 +100,7 @@
   .btn-right { --rot: -90deg; }
   .btn-down  { --rot:   0deg;  }
 
-  /* ===== Botón de acción PNG sin fondo ===== */
+  /* Botón de acción PNG sin fondo */
   .img-act {
     width: 120px; height: 120px;
     border: none; outline: none; padding: 0;
@@ -110,9 +108,9 @@
     cursor: pointer;
     filter: drop-shadow(0 5px 6px rgba(0,0,0,0.85));
     transition: transform 0.06s ease, filter 0.06s ease;
-    margin-top: 45px;          /* bájalo/ajusta si quieres */
+    margin-top: 45px;
     justify-self: center;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-tap-highlight-color: transparent; /* iOS */
   }
   .img-act::before {
     content: "";
@@ -120,10 +118,10 @@
     background: url("assets/ui/action_btn.PNG") center/contain no-repeat;
     image-rendering: pixelated;
     display: block;
-    transform: scale(1.02);    /* un pelín más grande sin cambiar layout */
+    transform: scale(1.02);
   }
 
-  /* ===== Efecto presionado ===== */
+  /* Efecto presionado */
   .img-btn:active, .img-btn.pressed,
   .img-act:active, .img-act.pressed {
     transform: scale(0.95);
@@ -209,6 +207,10 @@ let sofaImg = null;
 
 const TVON_IMG = "assets/objects/tv_on.png";
 let tvOnImg = null;
+
+const TVOFF_IMG = "assets/objects/tv_off.png";
+let tvOffImg = null;
+let tvOn = true; // estado inicial de la tele (encendida)
 
 const BED_IMG = "assets/objects/bed.PNG";
 let bedImg = null;
@@ -367,7 +369,7 @@ const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLe
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){keys[d]=true; e.preventDefault();}});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
 
-function currentMeta(){   // tamaño/escala del set actual
+function currentMeta(){
   return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets };
 }
 
@@ -391,7 +393,7 @@ function collides(x, y) {
   return false;
 }
 
-/* Helpers para AABB y rect del player */
+/* Helpers AABB */
 function getPlayerRect(x = player.x, y = player.y) {
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
   const halfH = currentMeta().size.h * currentMeta().scale / 2;
@@ -402,7 +404,30 @@ function aabbIntersect(a, b) {
          a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
-/* Activo el set de sprites actual */
+/* ===== Interacción TV ===== */
+function rectInflate(r, pad) {
+  return { x: r.x - pad, y: r.y - pad, w: r.w + pad*2, h: r.h + pad*2 };
+}
+function isNearTV() {
+  const pRect = getPlayerRect();
+  const interactZone = rectInflate(tvPos, 12); // ajustable
+  return aabbIntersect(pRect, interactZone);
+}
+function handleAction(){
+  if (isNearTV()){
+    tvOn = !tvOn; // toggle on/off
+  }
+  // aquí puedes añadir más interacciones según zonas
+}
+document.getElementById('btn-act').addEventListener('click', handleAction);
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'Enter') {
+    e.preventDefault();
+    handleAction();
+  }
+}, { passive:false });
+
+/* ===== SPRITES ACTUALES ===== */
 let assets = null;        // set actual
 let assetsNormal = null;  // cache normal
 let assetsShoes  = null;  // cache shoes
@@ -461,7 +486,7 @@ function update(dt){
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false; // pixel art crisp
+  ctx.imageSmoothingEnabled = false;
 
   // Fondo
   if (bgImg) {
@@ -512,9 +537,17 @@ function draw() {
   // Lista ordenada por profundidad
   let drawList = [];
 
-  if (tvOnImg && tvOnImg.width) {
-    drawList.push({ y: tvPos.y, draw: () => ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h) });
+  // TV (elige on/off según estado)
+  if ((tvOn && tvOnImg && tvOnImg.width) || (!tvOn && tvOffImg && tvOffImg.width)) {
+    drawList.push({
+      y: tvPos.y,
+      draw: () => {
+        const tvImg = tvOn ? tvOnImg : tvOffImg;
+        if (tvImg) ctx.drawImage(tvImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
+      }
+    });
   }
+
   if (plant1Img && plant1Img.width) {
     drawList.push({ y: plant1Pos.y, draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
   }
@@ -532,18 +565,18 @@ function draw() {
     });
   }
 
-  drawList.push({
-    y: player.y,
-    draw: () => { drawShadow(); drawPlayer(); }
-  });
-
+  drawList.push({ y: player.y, draw: () => { drawShadow(); drawPlayer(); } });
   drawList.sort((a, b) => a.y - b.y).forEach(o => o.draw());
 
+  // Oscurecido general
   ctx.fillStyle = 'rgba(0,0,0,0.40)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const flicker = 0.35 + Math.random() * 0.05;
-  drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+  // Luz de la tele SOLO si está encendida
+  if (tvOn) {
+    const flicker = 0.35 + Math.random() * 0.05;
+    drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+  }
 }
 
 function drawLightClipped(x, y, radius, intensity) {
@@ -580,12 +613,13 @@ function loop(now){
 
 async function init() {
   const [
-    bg, sofa, tv, bed, plant, sandals,
+    bg, sofa, tvOnI, tvOffI, bed, plant, sandals,
     normalSet, shoesSet
   ] = await Promise.all([
     loadImage(BACKGROUND),
     loadImage(SOFA_IMG),
     loadImage(TVON_IMG),
+    loadImage(TVOFF_IMG),
     loadImage(BED_IMG),
     loadImage(PLANT1_IMG),
     loadImage(SANDALS_IMG),
@@ -593,8 +627,16 @@ async function init() {
     preloadSprites(SPRITES_SHOES)
   ]);
 
-  bgImg = bg; sofaImg = sofa; tvOnImg = tv; bedImg = bed; plant1Img = plant; sandalsImg = sandals;
-  assetsNormal = normalSet; assetsShoes = shoesSet;
+  bgImg = bg;
+  sofaImg = sofa;
+  tvOnImg = tvOnI;
+  tvOffImg = tvOffI;   // <-- IMPORTANTE: asignar la TV OFF
+  bedImg = bed;
+  plant1Img = plant;
+  sandalsImg = sandals;
+
+  assetsNormal = normalSet;
+  assetsShoes = shoesSet;
   assets = assetsNormal;
 
   try { bgMusic.play(); } catch(e){}
