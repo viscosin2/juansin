@@ -95,7 +95,7 @@ const DEBUG = false;
 /* Velocidad y oscuridad */
 const BASE_SPEED = 200;
 const SHOES_BONUS = 30;
-const DARK_MULTIPLIER = 0.5; // 50% más lento a oscuras (TV off + lámpara off)
+const DARK_MULTIPLIER = 0.8; // 50% más lento a oscuras (TV off + lámpara off)
 const DARK_OFF = 0.40;  // nivel de oscuridad por defecto
 const DARK_NONE = 0.00; // sin oscuridad (cuando la lámpara está encendida)
 
@@ -138,8 +138,8 @@ let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedIm
 let tvOn = true;          // la tele empieza encendida
 let tvAlreadyOff = false; // solo la puedes apagar una vez con acción
 let lampOn = false;       // lámpara empieza apagada
-let darkness = 0.40;      // opacidad actual de la oscuridad
-let targetDarkness = 0.40;// objetivo hacia el que interpolamos (fade)
+let darkness = 0.60;      // opacidad actual de la oscuridad
+let targetDarkness = 0.60;// objetivo hacia el que interpolamos (fade)
 let darkWarnShown = false;// para no spamear el toast de “no veo bien”
 
 /* ===========================
@@ -407,7 +407,7 @@ function update(dt){
   player.speed = lightOk ? base : base * DARK_MULTIPLIER;
 
   if (!lightOk) {
-    if (!darkWarnShown) { showToast('No veo bien, debo ir con cuidado'); darkWarnShown = true; }
+    if (!darkWarnShown) { showToast('Está oscuro, debo ir con cuidado.'); darkWarnShown = true; }
   } else {
     darkWarnShown = false;
   }
