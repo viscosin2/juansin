@@ -372,9 +372,19 @@ function handleAction() {
   const insidePlant = aabb(getPlayerRect(), plant1Pos);
   if (insidePlant) { showToast('10 años regándola y ni un solo aguacate...'); return; }
 
-  // Cama
-  const insideBed = aabb(getPlayerRect(), bedPos);
-  if (insideBed) { showToast('Todavía no es hora de dormir.'); return; }
+// CAMA
+const reducedBed = {
+  x: bedPos.x + 40,  // margen izquierda
+  y: bedPos.y + bedPos.h - 22, // solo la parte baja
+  w: bedPos.w - 80,  // margen derecha
+  h: 22              // altura pequeña
+};
+
+const insideBed = aabb(getPlayerRect(), reducedBed);
+if (insideBed) {
+  showToast('Todavía no es hora de dormir.');
+  return;
+}
 }
 
 /* ===========================
