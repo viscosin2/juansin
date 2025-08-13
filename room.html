@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Juansin 30th birthday - room</title>
 <style>
+  /* ===== Escala responsive ===== */
+  :root{
+    /* tamaño flechas (3x3 celdas); vmin para respetar el lado más pequeño del móvil */
+    --btn: clamp(44px, 12vmin, 70px);
+    --gap: clamp(2px, 1vmin, 8px);
+    /* tamaño botón acción */
+    --act: clamp(84px, 20vmin, 120px);
+    /* padding del mueble */
+    --pad: clamp(8px, 2.4vmin, 14px);
+  }
+
   html, body {
     height: 100%;
     margin: 0;
@@ -13,10 +24,11 @@
     justify-content: center;
     align-items: center;
   }
+  /* Usa small viewport height para evitar “saltos” de la barra del móvil */
   .gameboy {
     width: 100%;
-    max-width: 500px;
-    height: 100%;
+    max-width: min(92vw, 500px);
+    height: 100svh;
     background: #000;
     display: flex;
     flex-direction: column;
@@ -24,9 +36,11 @@
     box-sizing: border-box;
     border-radius: 20px;
     box-shadow: 0 0 40px rgba(0,0,0,0.6);
+    overflow: hidden; /* por si algo se pasa 1px, que no haga scroll */
   }
   .screen-container {
-    flex: 1;
+    flex: 1 1 auto;              /* que la pantalla ocupe el espacio disponible */
+    min-height: 0;               /* importante para que pueda encoger */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -50,76 +64,78 @@
     height: 100%;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
-    background: black;
+    background: black;  /* solo el juego, todo lo demás transparente */
   }
+
+  /* ===== Controles (sin alto fijo, responsive) ===== */
   .controls {
-    height: 40%;
     background: #0B0A21;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    padding: 14px;
+    gap: var(--pad);
+    padding: var(--pad);
+    box-sizing: border-box;
   }
-/* Botones en grid: igual que antes */
-.dpad {
-  display: grid;
-  grid-template-columns: repeat(3, 80px);
-  grid-template-rows: repeat(3, 80px);
-  gap: 2px;
-  justify-content: center;
-  align-content: center;
-}
 
-/* Flechas */
-.img-btn {
-  width: 64px; height: 80px;
-  border: none; outline: none; padding: 0;
-  background: transparent;
-  cursor: pointer;
-  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.6));
-  transition: transform 0.06s ease, filter 0.06s ease;
-}
+  /* Cruceta ↑ ← → ↓ en 3x3 */
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, var(--btn));
+    grid-template-rows: repeat(3, var(--btn));
+    gap: var(--gap);
+    justify-content: center;
+    align-content: center;
+  }
 
-/* Usamos la misma imagen y rotamos */
-.img-btn.arrow::before {
-  content: "";
-  width: 100%; height: 100%;
-  background: url("assets/ui/arrow.PNG") center/contain no-repeat;
-  image-rendering: pixelated;
-  display: block;
-  transform: rotate(var(--rot, 0deg));
-}
+  /* Flechas: solo PNG con sombra */
+  .img-btn {
+    width: var(--btn);
+    height: var(--btn);
+    border: none; outline: none; padding: 0;
+    background: transparent;
+    cursor: pointer;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.6));
+    transition: transform 0.06s ease, filter 0.06s ease;
+  }
+  .img-btn.arrow::before {
+    content: "";
+    width: 100%; height: 100%;
+    background: url("assets/ui/arrow.PNG") center/contain no-repeat;
+    image-rendering: pixelated;
+    display: block;
+    transform: rotate(var(--rot, 0deg));
+  }
+  .btn-up    { --rot: 180deg; }
+  .btn-left  { --rot:  90deg; }
+  .btn-right { --rot: -90deg; }
+  .btn-down  { --rot:   0deg; }
 
-.btn-up    { --rot: 180deg; }
-.btn-left  { --rot:  90deg; }
-.btn-right { --rot: -90deg; }
-.btn-down  { --rot:   0deg; }
+  /* Botón de acción: solo PNG con sombra */
+  .img-act {
+    width: var(--act);
+    height: var(--act);
+    border: none; outline: none; padding: 0;
+    background: transparent;
+    cursor: pointer;
+    filter: drop-shadow(0 5px 6px rgba(0,0,0,0.6));
+    transition: transform 0.06s ease, filter 0.06s ease;
+    margin-top: clamp(6px, 1.6vmin, 20px); /* bajadita fina */
+    justify-self: center; /* centrado en su columna */
+  }
+  .img-act::before {
+    content: "";
+    width: 100%; height: 100%;
+    background: url("assets/ui/action_btn.PNG") center/contain no-repeat;
+    image-rendering: pixelated;
+    display: block;
+  }
 
-/* Botón acción */
-.img-act {
-  width: 120px; height: 120px;
-  border: none; outline: none; padding: 0;
-  background: transparent;
-  cursor: pointer;
-  filter: drop-shadow(0 5px 6px rgba(0,0,0,0.6));
-  transition: transform 0.06s ease, filter 0.06s ease;
-  margin-top: 20px;
-}
-.img-act::before {
-  content: "";
-  width: 100%; height: 100%;
-  background: url("assets/ui/action_btn.PNG") center/contain no-repeat;
-  image-rendering: pixelated;
-  display: block;
-}
-
-/* Efecto presionado */
-.img-btn:active, .img-btn.pressed,
-.img-act:active, .img-act.pressed {
-  transform: scale(0.94);
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9);
-}
-
+  /* Efecto presionado */
+  .img-btn:active, .img-btn.pressed,
+  .img-act:active, .img-act.pressed {
+    transform: scale(0.94);
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9);
+  }
 </style>
 </head>
 <body>
@@ -130,21 +146,22 @@
       <canvas id="game"></canvas>
     </div>
   </div>
-<div class="controls">
-  <div class="dpad">
-    <div></div>
-    <button id="btn-up"    class="img-btn arrow btn-up"    aria-label="Arriba"></button>
-    <div></div>
-    <button id="btn-left"  class="img-btn arrow btn-left"  aria-label="Izquierda"></button>
-    <div></div>
-    <button id="btn-right" class="img-btn arrow btn-right" aria-label="Derecha"></button>
-    <div></div>
-    <button id="btn-down"  class="img-btn arrow btn-down"  aria-label="Abajo"></button>
-    <div></div>
-  </div>
 
-  <button id="btn-act" class="img-act" aria-label="Acción"></button>
-</div>
+  <div class="controls">
+    <div class="dpad">
+      <div></div>
+      <button id="btn-up"    class="img-btn arrow btn-up"    aria-label="Arriba"></button>
+      <div></div>
+      <button id="btn-left"  class="img-btn arrow btn-left"  aria-label="Izquierda"></button>
+      <div></div>
+      <button id="btn-right" class="img-btn arrow btn-right" aria-label="Derecha"></button>
+      <div></div>
+      <button id="btn-down"  class="img-btn arrow btn-down"  aria-label="Abajo"></button>
+      <div></div>
+    </div>
+
+    <button id="btn-act" class="img-act" aria-label="Acción"></button>
+  </div>
 </div>
 
 <script>
@@ -166,7 +183,6 @@ const SPRITES_NORMAL = {
   }
 };
 
-// Mismas direcciones pero con sufijo _shoes en los archivos
 const SPRITES_SHOES = {
   size: { w: 36, h: 40 },
   scale: 0.9,
@@ -185,11 +201,9 @@ const SPRITES_SHOES = {
 };
 
 let bgMusic = new Audio("assets/sounds/ambient1.mp3");
-bgMusic.loop = true;
-bgMusic.volume = 0.4;
+bgMusic.loop = true; bgMusic.volume = 0.4;
 
-const pickupSnd = new Audio("assets/sounds/pickup.mp3");
-pickupSnd.volume = 0.7;
+const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
 
 const BACKGROUND = "assets/locations/room.PNG";
 let bgImg = null;
@@ -199,17 +213,16 @@ let plant1Img = null;
 
 const SOFA_IMG = "assets/objects/sofa.png";
 let sofaImg = null;
-    
+
 const TVON_IMG = "assets/objects/tv_on.png";
 let tvOnImg = null;
 
 const BED_IMG = "assets/objects/bed.PNG";
 let bedImg = null;
 
-/* === NUEVO: Chanclas en el suelo que se “equipan” al pisarlas === */
+/* Chanclas pickup */
 const SANDALS_IMG = "assets/objects/shoes.PNG";
-let sandalsImg = null;
-let hasShoes = false; // cuando las recoges, true
+let sandalsImg = null; let hasShoes = false;
 
 const roomOriginal = { w: 512, h: 350 }; 
 let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
@@ -225,7 +238,6 @@ const obstaclesBase = [
   { x: 195, y: 170, w: 170, h: 0.5 }  // Sofa
 ];
 
-// Zona visual del sofá, tv, cama, planta
 const sofaBase = { x: 170, y: 75, w: 220, h: 180 };    
 const tvOnBase = { x: 205, y: 35, w: 125, h: 90 };
 const bedBase = { x: 3, y: 155, w: 120,h: 130};
@@ -287,7 +299,11 @@ function updateScaledBounds() {
 const loadImage = (src) => new Promise(res => {
   const img = new Image();
   img.onload = () => res(img);
-  img.onerror = () => res(null);
+  img.onerror = () => {
+    console.warn('No se pudo cargar:', src);
+    const ph = document.createElement('canvas'); ph.width=ph.height=1; // placeholder
+    res(ph);
+  };
   img.src = src;
 });
 
@@ -311,12 +327,10 @@ function resizeCanvas() {
   canvas.height = screen.clientHeight;
   if (bgImg) {
     scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
-
     bgRect.dw = roomOriginal.w * scaleFactor;
     bgRect.dh = roomOriginal.h * scaleFactor;
     bgRect.dx = (canvas.width - bgRect.dw) / 2;
     bgRect.dy = (canvas.height - bgRect.dh) / 2;
-
     updateScaledBounds();
   }
 }
@@ -340,6 +354,7 @@ bindHold(document.getElementById('btn-down'),  () => keys.down=true,  () => keys
 bindHold(document.getElementById('btn-left'),  () => keys.left=true,  () => keys.left=false);
 bindHold(document.getElementById('btn-right'), () => keys.right=true, () => keys.right=false);
 
+/* Feedback visual de “presionado” fiable en móvil */
 function bindPressVisual(el){
   const on = () => el.classList.add('pressed');
   const off = () => el.classList.remove('pressed');
@@ -358,6 +373,10 @@ function bindPressVisual(el){
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){keys[d]=true; e.preventDefault();}});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
+
+function currentMeta(){   // tamaño/escala del set actual
+  return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets };
+}
 
 function collides(x, y) {
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
@@ -395,10 +414,6 @@ let assets = null;        // set actual
 let assetsNormal = null;  // cache normal
 let assetsShoes  = null;  // cache shoes
 
-function currentMeta(){   // tamaño/escala del set actual
-  return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets };
-}
-
 function equipShoes() {
   if (hasShoes) return;
   hasShoes = true;
@@ -435,19 +450,16 @@ function update(dt){
     player.frame = 0;
   }
 
-  // NUEVO: check de pickup de chanclas con área reducida
+  // Pickup de chanclas con área reducida
   if (!hasShoes && sandalsImg) {
-    const reduce = 0.5; // 0.5 = 50% del tamaño original, sube o baja para ajustar
+    const reduce = 0.5;
     const pRect = getPlayerRect();
-
-    // Reducir el tamaño del rectángulo del jugador
     const reducedRect = {
       x: pRect.x + (pRect.w * (1 - reduce) / 2),
       y: pRect.y + (pRect.h * (1 - reduce) / 2),
       w: pRect.w * reduce,
       h: pRect.h * reduce
     };
-
     if (aabbIntersect(reducedRect, sandalsPos)) {
       equipShoes();
     }
@@ -508,25 +520,25 @@ function draw() {
   let drawList = [];
 
   // TV y planta (van siempre detrás)
-  if (tvOnImg) {
+  if (tvOnImg && tvOnImg.width) {
     drawList.push({ y: tvPos.y, draw: () => ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h) });
   }
-  if (plant1Img) {
+  if (plant1Img && plant1Img.width) {
     drawList.push({ y: plant1Pos.y, draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
   }
 
   // Sofá
-  if (sofaImg) {
+  if (sofaImg && sofaImg.width) {
     drawList.push({ y: sofaPos.y + sofaPos.h / 2, draw: () => ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
   }
 
   // Cama
-  if (bedImg) {
+  if (bedImg && bedImg.width) {
     drawList.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
   }
 
-  // NUEVO: Chanclas en el suelo (solo si no están equipadas)
-  if (!hasShoes && sandalsImg) {
+  // Chanclas
+  if (!hasShoes && sandalsImg && sandalsImg.width) {
     drawList.push({
       y: sandalsPos.y + sandalsPos.h / 2,
       draw: () => ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h)
@@ -548,17 +560,15 @@ function draw() {
 
   // Luz dinámica de la tele por encima de todo
   const flicker = 0.35 + Math.random() * 0.05;
-drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+  drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 }
 
 function drawLightClipped(x, y, radius, intensity) {
   if (!bgRect || !bgRect.dw || !bgRect.dh) return;
 
-  // Escala el radio con el zoom de la sala para que no se dispare
   const radiusScaled = radius * (bgRect.dw / roomOriginal.w);
 
   ctx.save();
-  // Recorta a la “pantalla” (la foto del room)
   ctx.beginPath();
   ctx.rect(bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
   ctx.clip();
@@ -586,7 +596,6 @@ function loop(now){
 }
 
 async function init() {
-  // Precarga de imágenes y sets de sprites (normal + shoes)
   const [
     bg, sofa, tv, bed, plant, sandals,
     normalSet, shoesSet
@@ -603,10 +612,9 @@ async function init() {
 
   bgImg = bg; sofaImg = sofa; tvOnImg = tv; bedImg = bed; plant1Img = plant; sandalsImg = sandals;
   assetsNormal = normalSet; assetsShoes = shoesSet;
-  assets = assetsNormal; // empezar sin zapatos
+  assets = assetsNormal;
 
-  try { bgMusic.play(); } catch(e){ /* móviles bloquean autoplay; se iniciará al primer input */ }
-
+  try { bgMusic.play(); } catch(e){}
   resizeCanvas();
   requestAnimationFrame(loop);
 }
