@@ -276,18 +276,30 @@ function showToast(msg, ms=2000){
 
 /* ===== ACCIÓN TV (una sola vez apagar) ===== */
 let tvAlreadyOff = false;
-function handleAction(){
-  // ¿está el player dentro de la zona invisible?
-  const inside = aabb(getPlayerRect(), tvInteractPos);
-  if (inside){
-    if (tvOn && !tvAlreadyOff){
+function handleAction() {
+  const insideTV = aabb(getPlayerRect(), tvInteractPos);
+  if (insideTV) {
+    if (tvOn && !tvAlreadyOff) {
       tvOn = false; tvAlreadyOff = true;
-      showToast('Tele apagada'); // <- quítalo si NO quieres toast al apagar bien
-    } else if (!tvOn){
+      showToast('Tele apagada');
+    } else if (!tvOn) {
       showToast('Ya la he apagado');
     }
+    return; // <- para que no siga comprobando planta en el mismo click
   }
-  // si no está "inside", no mostramos nada
+
+  // --- NUEVO: zona de interacción con planta ---
+  const plantInteractPos = {
+    x: plant1Pos.x,
+    y: plant1Pos.y,
+    w: plant1Pos.w,
+    h: plant1Pos.h
+  };
+  const insidePlant = aabb(getPlayerRect(), plantInteractPos);
+  if (insidePlant) {
+    showToast('Qué planta más bonita');
+    return;
+  }
 }
 const actBtn = document.getElementById('btn-act');
 actBtn.addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
