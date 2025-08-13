@@ -44,7 +44,7 @@
     border-radius: 8px;
     overflow: hidden;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
-    position: relative; /* para overlays */
+    position: relative; /* overlays */
   }
   canvas {
     width: 100%;
@@ -97,17 +97,16 @@
     position: absolute;
     inset: 0;
   }
-  /* Capa con tu imagen de inicio; queda por delante del canvas */
   .start-overlay {
+    /* Usa la extensión real que tengas (PNG o jpg) */
     background: #000 url("assets/ui/start_bg.jpg") center center / contain no-repeat;
     display: flex;
     justify-content: center;
-    align-items: flex-end; /* por si quieres poner un "PRESS START" abajo */
+    align-items: flex-end;
     opacity: 1;
     transition: opacity .6s ease;
-    z-index: 3;
+    z-index: 10;   /* por delante del juego */
   }
-  /* Texto opcional en el overlay */
   .start-overlay .hint {
     width: 100%;
     text-align: center;
@@ -120,63 +119,63 @@
     text-shadow: 0 2px 10px rgba(0,0,0,.8);
     opacity: .8;
   }
-  
-  /* === Sprite decorativo del menú de inicio === */
-.start-icon{
-  position: absolute;
-  left: 50%;
-  bottom: 0%;          /* ajústalo donde lo quieras */
-  transform: translateX(-50%) scale(1);
-  width: 45%;           /* tamaño base; ajusta a tu gusto */
-  image-rendering: pixelated;
-  filter: drop-shadow(0 0 8px rgba(255,255,200,.55))
-          drop-shadow(0 0 16px rgba(255,255,200,.35));
-  animation: startPulse 1.4s ease-in-out infinite, bluePulse 1.4s ease-in-out infinite;
-  transition: transform .12s ease, opacity .18s ease, filter .18s ease;
-  z-index: 3;
-}
 
-@keyframes bluePulse{
-  0%,100%{
-    filter: drop-shadow(0 0 6px rgba(0,150,255,.6))
-            drop-shadow(0 0 14px rgba(0,150,255,.4));
+  /* === ÍCONO/BOTÓN START con neón azul === */
+  .start-icon{
+    position: absolute;
+    left: 50%;
+    bottom: 0%;                         /* colócalo a tu gusto */
+    transform: translateX(-50%) scale(1);
+    width: 45%;
+    image-rendering: pixelated;
+    animation: startPulse 1.4s ease-in-out infinite,
+               bluePulse 1.4s ease-in-out infinite;
+    transition: transform .12s ease, opacity .18s ease, filter .18s ease;
+    z-index: 11; /* por delante del confeti */
   }
-  50%{
-    filter: drop-shadow(0 0 10px rgba(0,180,255,.85))
-            drop-shadow(0 0 20px rgba(0,180,255,.6));
+
+  @keyframes startPulse{
+    0%   { transform: translateX(-50%) scale(1.00); }
+    50%  { transform: translateX(-50%) scale(1.07); }
+    100% { transform: translateX(-50%) scale(1.00); }
   }
-}
+  /* Neón azul pulsante */
+  @keyframes bluePulse{
+    0%,100%{
+      filter: drop-shadow(0 0 6px rgba(0,200,255,.75))
+              drop-shadow(0 0 14px rgba(0,200,255,.6))
+              drop-shadow(0 0 22px rgba(0,200,255,.4));
+    }
+    50%{
+      filter: drop-shadow(0 0 10px rgba(0,240,255,1))
+              drop-shadow(0 0 20px rgba(0,240,255,.85))
+              drop-shadow(0 0 28px rgba(0,240,255,.65));
+    }
+  }
+  .start-icon.pressed{
+    transform: translateX(-50%) scale(0.92);
+    opacity: 0;
+    filter: drop-shadow(0 0 0 rgba(0,0,0,0));
+  }
 
-@keyframes startPulse{
-  0%   { transform: translateX(-50%) scale(1.00); }
-  50%  { transform: translateX(-50%) scale(1.07); }
-  100% { transform: translateX(-50%) scale(1.00); }
-}
+  /* Canvas de confeti (debajo del icono, encima del fondo del overlay) */
+  #confettiCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9;           /* detrás del icono */
+    pointer-events: none;
+    image-rendering: pixelated;
+  }
 
-/* Estado al “pulsar”: se encoge un pelín y se apaga el brillo */
-.start-icon.pressed{
-  transform: translateX(-50%) scale(0.92);
-  opacity: 0;
-  filter: drop-shadow(0 0 0 rgba(0,0,0,0));
-}
-
-#confettiCanvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;           /* detrás del icono y del hint */
-  pointer-events: none; /* no bloquea clics */
-  image-rendering: pixelated;
-}
-  
   /* Cortinilla negra para el fade a negro y fade desde negro */
   .black-curtain {
     background: #000;
-    opacity: 0;            /* invisible por defecto */
+    opacity: 0;
     transition: opacity .6s ease;
-    z-index: 4;            /* por encima del overlay cuando toque */
-    pointer-events: none;  /* no bloquea clicks salvo que la opacidad > 0 (visualmente da igual) */
+    z-index: 20;          /* por encima de todo cuando toca */
+    pointer-events: none;
   }
   .hidden { display: none; }
   .opaque { opacity: 1; }
@@ -189,16 +188,17 @@
     <div class="screen">
       <canvas id="game"></canvas>
 
-      <!-- ===== NUEVO: OVERLAYS ===== -->
-<div id="startOverlay" class="start-overlay">
-  <canvas id="confettiCanvas"></canvas>
-  <img id="startIcon" class="start-icon" src="assets/ui/start_icon.png" alt="Start">
-  <div class="hint"></div>
-</div>
+      <!-- ===== OVERLAY DE INICIO ===== -->
+      <div id="startOverlay" class="start-overlay">
+        <canvas id="confettiCanvas"></canvas>
+        <img id="startIcon" class="start-icon" src="assets/ui/start_btn.PNG" alt="Start">
+        <div class="hint"></div>
+      </div>
       <div id="blackCurtain" class="black-curtain"></div>
       <!-- ===== FIN OVERLAYS ===== -->
     </div>
   </div>
+
   <div class="controls">
     <div class="dpad">
       <div></div>
@@ -234,7 +234,6 @@ const SPRITES_NORMAL = {
   }
 };
 
-// Mismas direcciones pero con sufijo _shoes en los archivos
 const SPRITES_SHOES = {
   size: { w: 36, h: 40 },
   scale: 0.9,
@@ -267,24 +266,24 @@ let plant1Img = null;
 
 const SOFA_IMG = "assets/objects/sofa.png";
 let sofaImg = null;
-    
+
 const TVON_IMG = "assets/objects/tv_on.png";
 let tvOnImg = null;
 
 const BED_IMG = "assets/objects/bed.PNG";
 let bedImg = null;
 
-/* === NUEVO: Chanclas en el suelo que se “equipan” al pisarlas === */
+/* === Chanclas “pickup” === */
 const SANDALS_IMG = "assets/objects/shoes.PNG";
 let sandalsImg = null;
-let hasShoes = false; // cuando las recoges, true
+let hasShoes = false;
 
-/* === NUEVO: Estado de inicio === */
-let gameStarted = false;       // hasta que no empiece, bloqueo input/movimiento
+/* === Estado de inicio === */
+let gameStarted = false;       // bloquea movimiento hasta empezar
 const startOverlay  = () => document.getElementById('startOverlay');
 const blackCurtain  = () => document.getElementById('blackCurtain');
 
-const roomOriginal = { w: 512, h: 350 }; 
+const roomOriginal = { w: 512, h: 350 };
 let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
 
 /* ==== BOUNDS Y OBSTÁCULOS ==== */
@@ -298,13 +297,11 @@ const obstaclesBase = [
   { x: 195, y: 170, w: 170, h: 0.5 }  // Sofa
 ];
 
-// Zona visual del sofá, tv, cama, planta
-const sofaBase = { x: 170, y: 75, w: 220, h: 180 };    
-const tvOnBase = { x: 205, y: 35, w: 125, h: 90 };
-const bedBase = { x: 3, y: 155, w: 120,h: 130};
-const plant1Base = { x: 3, y: 230, w: 60,h: 90};
+const sofaBase =   { x: 170, y: 75, w: 220, h: 180 };
+const tvOnBase =   { x: 205, y: 35, w: 125, h: 90 };
+const bedBase =    { x: 3,   y: 155,w: 120, h: 130 };
+const plant1Base = { x: 3,   y: 230,w: 60,  h: 90 };
 const sandalsBase = { x: 55, y: 270, w: 50, h: 50 };
-
 const playerStartBase = { x: 260, y: 150 };
 
 let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={}, sandalsPos={};
@@ -411,10 +408,10 @@ bindHold(document.getElementById('btn-down'),  () => keys.down=true,  () => keys
 bindHold(document.getElementById('btn-left'),  () => keys.left=true,  () => keys.left=false);
 bindHold(document.getElementById('btn-right'), () => keys.right=true, () => keys.right=false);
 
-/* Acción = empezar juego si aún no ha empezado */
+/* Solo empieza con el botón de acción */
 document.getElementById('btn-act').addEventListener('click', tryStartGame);
 
-/* Teclado: flechas/WASD ya van; añadimos Enter/Espacio para empezar */
+/* Teclado para moverse (no iniciar) */
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { 
   const d=mapKey[e.code]; 
@@ -422,8 +419,10 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
 
-
-/* Movimiento bloqueado si no ha empezado */
+/* ===== COLISIONES ===== */
+function currentMeta(){
+  return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets };
+}
 function collides(x, y) {
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
   const halfH = currentMeta().size.h * currentMeta().scale / 2;
@@ -431,52 +430,38 @@ function collides(x, y) {
   const py = y - halfH;
   const pw = halfW * 2;
   const ph = halfH * 2;
-  if (x < bounds.x || x > bounds.x + bounds.w ||
-      y < bounds.y || y > bounds.y + bounds.h) {
-    return true;
-  }
+  if (x < bounds.x || x > bounds.x + bounds.w || y < bounds.y || y > bounds.y + bounds.h) return true;
   for (const o of obstacles) {
-    if (px < o.x + o.w && px + pw > o.x &&
-        py < o.y + o.h && py + ph > o.y) {
-      return true;
-    }
+    if (px < o.x + o.w && px + pw > o.x && py < o.y + o.h && py + ph > o.y) return true;
   }
   return false;
 }
-
-/* Helpers para AABB y rect del player */
 function getPlayerRect(x = player.x, y = player.y) {
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
   const halfH = currentMeta().size.h * currentMeta().scale / 2;
   return { x: x - halfW, y: y - halfH, w: halfW * 2, h: halfH * 2 };
 }
 function aabbIntersect(a, b) {
-  return a.x < b.x + b.w && a.x + a.w > b.x &&
-         a.y < b.y + b.h && a.y + a.h > b.y;
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
-/* Activo el set de sprites actual */
-let assets = null;        // set actual
-let assetsNormal = null;  // cache normal
-let assetsShoes  = null;  // cache shoes
-
-function currentMeta(){   // tamaño/escala del set actual
-  return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets };
-}
+/* ===== SPRITES ACTUALES ===== */
+let assets = null;
+let assetsNormal = null;
+let assetsShoes  = null;
 
 function equipShoes() {
   if (hasShoes) return;
   hasShoes = true;
-  if (pickupSnd) { try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){} }
-  assets = assetsShoes || assets;      // swap a sprites con zapatos si cargaron bien
-  player.speed = 230;                  // pequeño buff de velocidad
-  sandalsImg = null;                   // oculta chanclas
+  try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){}
+  assets = assetsShoes || assets;
+  player.speed = 230;
+  sandalsImg = null;
 }
 
-/* === LOOP === */
+/* ===== LOOP ===== */
 function update(dt){
-  // Bloqueo total del movimiento si no ha empezado
-  if (!gameStarted) return;
+  if (!gameStarted) return; // bloquea hasta empezar
 
   const vx = (keys.left?-1:0)+(keys.right?1:0);
   const vy = (keys.up?-1:0)+(keys.down?1:0);
@@ -485,9 +470,9 @@ function update(dt){
   if(player.moving){
     if(Math.abs(vx)>Math.abs(vy)) player.dir = vx<0 ? 'left' : 'right';
     else if(Math.abs(vy)>0)       player.dir = vy<0 ? 'up' : 'down';
-    const len = Math.hypot(vx,vy) || 1;
-    const nx = (vx/len) * player.speed * dt;
-    const ny = (vy/len) * player.speed * dt;
+    const len = Math.hypot(vx,vy)||1;
+    const nx = (vx/len)*player.speed*dt;
+    const ny = (vy/len)*player.speed*dt;
     const newX = player.x + nx;
     const newY = player.y + ny;
     if(!collides(newX, newY)){
@@ -495,40 +480,30 @@ function update(dt){
       player.y = newY;
     }
     player.frameTime += dt;
-    if(player.frameTime >= 0.14){ 
-      player.frame = (player.frame + 1) % 2; 
-      player.frameTime = 0; 
-    }
+    if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else {
     player.frame = 0;
   }
 
-  // NUEVO: check de pickup de chanclas con área reducida
+  // Pickup chanclas con área reducida
   if (!hasShoes && sandalsImg) {
-    const reduce = 0.5; // 0.5 = 50% del tamaño original, sube o baja para ajustar
+    const reduce = 0.5;
     const pRect = getPlayerRect();
-
-    // Reducir el tamaño del rectángulo del jugador
     const reducedRect = {
       x: pRect.x + (pRect.w * (1 - reduce) / 2),
       y: pRect.y + (pRect.h * (1 - reduce) / 2),
       w: pRect.w * reduce,
       h: pRect.h * reduce
     };
-
-    if (aabbIntersect(reducedRect, sandalsPos)) {
-      equipShoes();
-    }
+    if (aabbIntersect(reducedRect, sandalsPos)) equipShoes();
   }
 }
 
 function draw() {
-  const hasBG = !!bgImg;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false; // pixel art crisp
+  ctx.imageSmoothingEnabled = false;
 
-  // Fondo
-  if (hasBG) {
+  if (bgImg) {
     const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     bgRect.dw = roomOriginal.w * s;
     bgRect.dh = roomOriginal.h * s;
@@ -544,104 +519,62 @@ function draw() {
   const dh = Math.round(sh * SPRITES_NORMAL.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
-  // Respiración
+  // respiración
   let stretchPx = 0;
   if (!player.moving) {
-    const Hz = 0.6;
-    const t = performance.now() / 1000;
+    const Hz = 0.6, t = performance.now()/1000;
     stretchPx = Math.round((Math.sin(t * Math.PI * 2 * Hz) * 0.5 + 0.5) * 1);
   }
 
   const drawShadow = () => {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
-    ctx.ellipse(
-      Math.round(player.x),
-      Math.round(player.y + dh / 2 - 4),
-      dw / 2.5,
-      dh / 6,
-      0, 0, Math.PI * 2
-    );
+    ctx.ellipse(Math.round(player.x), Math.round(player.y + dh/2 - 4), dw/2.5, dh/6, 0, 0, Math.PI*2);
     ctx.fill();
   };
-
   const drawPlayer = () => {
-    ctx.drawImage(img, 0, 0, sw, sh,
-      Math.round(player.x - dw / 2),
-      Math.round(player.y - dh / 2) - stretchPx,
+    ctx.drawImage(img, 0,0, sw,sh,
+      Math.round(player.x - dw/2),
+      Math.round(player.y - dh/2) - stretchPx,
       dw, dh + stretchPx
     );
   };
 
-  // Lista ordenada por profundidad
   let drawList = [];
+  if (tvOnImg)   drawList.push({ y: tvPos.y,              draw: () => ctx.drawImage(tvOnImg,   tvPos.x,   tvPos.y,   tvPos.w,   tvPos.h) });
+  if (plant1Img) drawList.push({ y: plant1Pos.y,          draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
+  if (sofaImg)   drawList.push({ y: sofaPos.y+sofaPos.h/2,draw: () => ctx.drawImage(sofaImg,   sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
+  if (bedImg)    drawList.push({ y: bedPos.y+bedPos.h/2,  draw: () => ctx.drawImage(bedImg,    bedPos.x,  bedPos.y,  bedPos.w,  bedPos.h) });
 
-  // TV y planta (van siempre detrás)
-  if (tvOnImg) {
-    drawList.push({ y: tvPos.y, draw: () => ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h) });
-  }
-  if (plant1Img) {
-    drawList.push({ y: plant1Pos.y, draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
-  }
-
-  // Sofá
-  if (sofaImg) {
-    drawList.push({ y: sofaPos.y + sofaPos.h / 2, draw: () => ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
-  }
-
-  // Cama
-  if (bedImg) {
-    drawList.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
-  }
-
-  // NUEVO: Chanclas en el suelo (solo si no están equipadas)
   if (!hasShoes && sandalsImg) {
-    drawList.push({
-      y: sandalsPos.y + sandalsPos.h / 2,
-      draw: () => ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h)
-    });
+    drawList.push({ y: sandalsPos.y + sandalsPos.h/2, draw: () => ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h) });
   }
 
-  // Personaje (solo se dibuja; moverse depende de gameStarted)
-  drawList.push({
-    y: player.y,
-    draw: () => { drawShadow(); drawPlayer(); }
-  });
+  drawList.push({ y: player.y, draw: () => { drawShadow(); drawPlayer(); } });
+  drawList.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
-  // Ordenar y dibujar
-  drawList.sort((a, b) => a.y - b.y).forEach(o => o.draw());
-
-  // Oscurecer todo
-  ctx.fillStyle = 'rgba(0,0,0,0.40)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Luz dinámica de la tele por encima de todo
-  const flicker = 0.35 + Math.random() * 0.05;
-  drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+  // Oscurecido ambiente + luz TV
+  ctx.fillStyle='rgba(0,0,0,0.40)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  const flicker = 0.35 + Math.random()*0.05;
+  drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker);
 }
 
 function drawLightClipped(x, y, radius, intensity) {
   if (!bgRect || !bgRect.dw || !bgRect.dh) return;
-
-  // Escala el radio con el zoom de la sala para que no se dispare
   const radiusScaled = radius * (bgRect.dw / roomOriginal.w);
-
   ctx.save();
-  // Recorta a la “pantalla” (la foto del room)
   ctx.beginPath();
   ctx.rect(bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
   ctx.clip();
-
-  const g = ctx.createRadialGradient(x, y, 0, x, y, radiusScaled);
+  const g = ctx.createRadialGradient(x,y,0, x,y, radiusScaled);
   g.addColorStop(0, `rgba(255, 255, 200, ${intensity})`);
-  g.addColorStop(1, 'rgba(255, 255, 200, 0)');
-
+  g.addColorStop(1, 'rgba(255,255,200,0)');
   ctx.globalCompositeOperation = "lighter";
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.arc(x, y, radiusScaled, 0, Math.PI * 2);
+  ctx.arc(x, y, radiusScaled, 0, Math.PI*2);
   ctx.fill();
-
   ctx.restore();
   ctx.globalCompositeOperation = "source-over";
 }
@@ -650,10 +583,11 @@ function loop(now){
   if(!loop.last) loop.last=now;
   const dt = Math.min(1/30,(now-loop.last)/1000);
   loop.last=now;
-  update(dt); 
+  update(dt);
   draw();
   requestAnimationFrame(loop);
 }
+
 /* ===== CONFETI PIXELADO ===== */
 const confettiCanvas = document.getElementById('confettiCanvas');
 const cfx = confettiCanvas.getContext('2d');
@@ -668,9 +602,23 @@ const CONFETTI_COLORS = [
 ];
 
 function resizeConfettiCanvas(){
-  confettiCanvas.width = confettiCanvas.clientWidth;
-  confettiCanvas.height = confettiCanvas.clientHeight;
-  seedConfetti();
+  // intentar con su tamaño propio
+  let w = confettiCanvas.clientWidth;
+  let h = confettiCanvas.clientHeight;
+
+  // si aún es 0 (layout aún no calculado), usa el overlay
+  if (!w || !h){
+    const ov = document.getElementById('startOverlay');
+    if (ov){ w = ov.clientWidth; h = ov.clientHeight; }
+  }
+  // fallback: usa el canvas del juego
+  if (!w || !h){
+    const game = document.getElementById('game');
+    if (game){ w = game.clientWidth; h = game.clientHeight; }
+  }
+
+  confettiCanvas.width = w || 300;
+  confettiCanvas.height = h || 300;
 }
 
 function seedConfetti(count = 90){
@@ -744,6 +692,7 @@ function startConfetti(){
 
 function stopConfetti(){
   cancelAnimationFrame(confettiRAF);
+  confettiRAF = null;
   cfx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
 }
 
@@ -767,51 +716,42 @@ function burstFromIcon(){
   }
 }
 
-window.addEventListener('resize', resizeConfettiCanvas);
-resizeConfettiCanvas();
-seedConfetti(90);
-startConfetti();
-
 /* ===== LÓGICA DE INICIO / FADE ===== */
 let starting = false;
 function tryStartGame(){
   if (gameStarted || starting) return;
   starting = true;
-  
-  burstFromIcon();
-  // 0) animación de “click” sobre el icono de inicio (si existe)
+
+  // efecto botón
   const icon = document.getElementById('startIcon');
   if (icon) icon.classList.add('pressed');
 
-  // 1) pequeño delay para que se vea la pulsación
+  // confeti burst desde el icono
+  burstFromIcon();
+
+  // leve pausa para ver el "click" y las chispas
   setTimeout(() => {
-    // 2) fade a negro
+    // subimos a negro
     blackCurtain().classList.add('opaque');
 
-    // 3) cuando ya está negro, quitamos overlay y arrancamos música
+    // ya en negro: ocultar overlay, parar confeti, música
     setTimeout(() => {
-      stopConfetti();
       startOverlay().classList.add('hidden');
+      stopConfetti();
       try { bgMusic.currentTime = 0; bgMusic.play(); } catch(e){}
 
-      // 4) bajamos de negro
+      // bajar desde negro
       setTimeout(() => {
         blackCurtain().classList.remove('opaque');
-
-        // 5) habilitamos control un pelín después
         setTimeout(() => { gameStarted = true; }, 200);
-
       }, 80);
-    }, 600); // igual que transition del curtain (.6s)
-  }, 150);   // duración del “click” del icono antes del fade
+
+    }, 600);
+  }, 150);
 }
 
 async function init() {
-  // Precarga de imágenes y sets de sprites (normal + shoes)
-  const [
-    bg, sofa, tv, bed, plant, sandals,
-    normalSet, shoesSet
-  ] = await Promise.all([
+  const [bg, sofa, tv, bed, plant, sandals, normalSet, shoesSet] = await Promise.all([
     loadImage(BACKGROUND),
     loadImage(SOFA_IMG),
     loadImage(TVON_IMG),
@@ -824,13 +764,22 @@ async function init() {
 
   bgImg = bg; sofaImg = sofa; tvOnImg = tv; bedImg = bed; plant1Img = plant; sandalsImg = sandals;
   assetsNormal = normalSet; assetsShoes = shoesSet;
-  assets = assetsNormal; // empezar sin zapatos
-
-  // Nota: en móviles el autoplay está bloqueado; reproducimos en tryStartGame()
+  assets = assetsNormal;
 
   resizeCanvas();
   requestAnimationFrame(loop);
 }
+
+/* ===== ARRANQUE ===== */
+window.addEventListener('load', () => {
+  // confeti una vez todo está maquetado
+  resizeConfettiCanvas();
+  seedConfetti(90);
+  startConfetti();
+});
+window.addEventListener('resize', () => {
+  resizeConfettiCanvas(); // sin reset para no “borrar” chispas
+});
 
 init();
 </script>
