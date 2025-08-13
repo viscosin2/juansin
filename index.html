@@ -120,6 +120,35 @@
     text-shadow: 0 2px 10px rgba(0,0,0,.8);
     opacity: .8;
   }
+  
+  /* === Sprite decorativo del menú de inicio === */
+.start-icon{
+  position: absolute;
+  left: 50%;
+  bottom: 18%;          /* ajústalo donde lo quieras */
+  transform: translateX(-50%) scale(1);
+  width: 28%;           /* tamaño base; ajusta a tu gusto */
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 8px rgba(255,255,200,.55))
+          drop-shadow(0 0 16px rgba(255,255,200,.35));
+  animation: startPulse 1.4s ease-in-out infinite;
+  transition: transform .12s ease, opacity .18s ease, filter .18s ease;
+  z-index: 3;
+}
+
+@keyframes startPulse{
+  0%   { transform: translateX(-50%) scale(1.00); }
+  50%  { transform: translateX(-50%) scale(1.07); }
+  100% { transform: translateX(-50%) scale(1.00); }
+}
+
+/* Estado al “pulsar”: se encoge un pelín y se apaga el brillo */
+.start-icon.pressed{
+  transform: translateX(-50%) scale(0.92);
+  opacity: 0;
+  filter: drop-shadow(0 0 0 rgba(0,0,0,0));
+}
+  
   /* Cortinilla negra para el fade a negro y fade desde negro */
   .black-curtain {
     background: #000;
@@ -140,9 +169,10 @@
       <canvas id="game"></canvas>
 
       <!-- ===== NUEVO: OVERLAYS ===== -->
-      <div id="startOverlay" class="start-overlay">
-        <div class="hint">PULSA ACCIÓN / ENTER / ESPACIO</div>
-      </div>
+<div id="startOverlay" class="start-overlay">
+  <img id="startIcon" class="start-icon" src="assets/ui/start_btn.jpg" alt="Start">
+  <div class="hint"></div>
+</div>
       <div id="blackCurtain" class="black-curtain"></div>
       <!-- ===== FIN OVERLAYS ===== -->
     </div>
@@ -609,26 +639,30 @@ function tryStartGame(){
   if (gameStarted || starting) return;
   starting = true;
 
-  // 1) Subimos la cortinilla a negro
-  blackCurtain().classList.add('opaque');
+  // 0) animación de “click” sobre el icono de inicio (si existe)
+  const icon = document.getElementById('startIcon');
+  if (icon) icon.classList.add('pressed');
 
-  // 2) tras el negro, quitamos el overlay de inicio y arrancamos música
+  // 1) pequeño delay para que se vea la pulsación
   setTimeout(() => {
-    startOverlay().classList.add('hidden'); // ya no se ve ni ocupa
-    // intentamos reproducir música (ya hay interacción del usuario)
-    try { bgMusic.currentTime = 0; bgMusic.play(); } catch(e){}
+    // 2) fade a negro
+    blackCurtain().classList.add('opaque');
 
-    // 3) bajamos de negro (revelamos el juego)
+    // 3) cuando ya está negro, quitamos overlay y arrancamos música
     setTimeout(() => {
-      blackCurtain().classList.remove('opaque');
+      startOverlay().classList.add('hidden');
+      try { bgMusic.currentTime = 0; bgMusic.play(); } catch(e){}
 
-      // 4) damos un pequeño margen visual y arrancamos el control
+      // 4) bajamos de negro
       setTimeout(() => {
-        gameStarted = true;
-      }, 200);
+        blackCurtain().classList.remove('opaque');
 
-    }, 80); // pequeño margen antes de “bajar” para que se note el corte
-  }, 600); // duración del fade a negro (igual que el transition .6s)
+        // 5) habilitamos control un pelín después
+        setTimeout(() => { gameStarted = true; }, 200);
+
+      }, 80);
+    }, 600); // igual que transition del curtain (.6s)
+  }, 150);   // duración del “click” del icono antes del fade
 }
 
 async function init() {
