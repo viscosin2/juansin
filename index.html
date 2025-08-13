@@ -44,6 +44,7 @@
     border-radius: 8px;
     overflow: hidden;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    position: relative; /* para overlays */
   }
   canvas {
     width: 100%;
@@ -90,6 +91,45 @@
     margin: auto;
     letter-spacing: .5px;
   }
+
+  /* ====== OVERLAYS DEL MENÚ DE INICIO ====== */
+  .start-overlay, .black-curtain {
+    position: absolute;
+    inset: 0;
+  }
+  /* Capa con tu imagen de inicio; queda por delante del canvas */
+  .start-overlay {
+    background: #000 url("assets/ui/start_bg.PNG") center center / contain no-repeat;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end; /* por si quieres poner un "PRESS START" abajo */
+    opacity: 1;
+    transition: opacity .6s ease;
+    z-index: 3;
+  }
+  /* Texto opcional en el overlay */
+  .start-overlay .hint {
+    width: 100%;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: #e5e7eb;
+    margin-bottom: 18px;
+    text-shadow: 0 2px 10px rgba(0,0,0,.8);
+    opacity: .8;
+  }
+  /* Cortinilla negra para el fade a negro y fade desde negro */
+  .black-curtain {
+    background: #000;
+    opacity: 0;            /* invisible por defecto */
+    transition: opacity .6s ease;
+    z-index: 4;            /* por encima del overlay cuando toque */
+    pointer-events: none;  /* no bloquea clicks salvo que la opacidad > 0 (visualmente da igual) */
+  }
+  .hidden { display: none; }
+  .opaque { opacity: 1; }
 </style>
 </head>
 <body>
@@ -98,6 +138,13 @@
   <div class="screen-container">
     <div class="screen">
       <canvas id="game"></canvas>
+
+      <!-- ===== NUEVO: OVERLAYS ===== -->
+      <div id="startOverlay" class="start-overlay">
+        <div class="hint">PULSA ACCIÓN / ENTER / ESPACIO</div>
+      </div>
+      <div id="blackCurtain" class="black-curtain"></div>
+      <!-- ===== FIN OVERLAYS ===== -->
     </div>
   </div>
   <div class="controls">
@@ -179,6 +226,11 @@ let bedImg = null;
 const SANDALS_IMG = "assets/objects/shoes.PNG";
 let sandalsImg = null;
 let hasShoes = false; // cuando las recoges, true
+
+/* === NUEVO: Estado de inicio === */
+let gameStarted = false;       // hasta que no empiece, bloqueo input/movimiento
+const startOverlay  = () => document.getElementById('startOverlay');
+const blackCurtain  = () => document.getElementById('blackCurtain');
 
 const roomOriginal = { w: 512, h: 350 }; 
 let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
@@ -280,12 +332,10 @@ function resizeCanvas() {
   canvas.height = screen.clientHeight;
   if (bgImg) {
     scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
-
     bgRect.dw = roomOriginal.w * scaleFactor;
     bgRect.dh = roomOriginal.h * scaleFactor;
     bgRect.dx = (canvas.width - bgRect.dw) / 2;
     bgRect.dy = (canvas.height - bgRect.dh) / 2;
-
     updateScaledBounds();
   }
 }
@@ -309,10 +359,28 @@ bindHold(document.getElementById('btn-down'),  () => keys.down=true,  () => keys
 bindHold(document.getElementById('btn-left'),  () => keys.left=true,  () => keys.left=false);
 bindHold(document.getElementById('btn-right'), () => keys.right=true, () => keys.right=false);
 
+/* Acción = empezar juego si aún no ha empezado */
+document.getElementById('btn-act').addEventListener('click', tryStartGame);
+
+/* Teclado: flechas/WASD ya van; añadimos Enter/Espacio para empezar */
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
-window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){keys[d]=true; e.preventDefault();}});
+window.addEventListener('keydown', e => { 
+  if (!gameStarted && (e.code === 'Enter' || e.code === 'Space')) { e.preventDefault(); tryStartGame(); return; }
+  const d=mapKey[e.code]; 
+  if(d){keys[d]=true; e.preventDefault();}
+});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
 
+/* También tap/click sobre el overlay de inicio */
+document.addEventListener('DOMContentLoaded', () => {
+  const ov = startOverlay();
+  if (ov) {
+    ov.addEventListener('click', tryStartGame);
+    ov.addEventListener('touchstart', (e)=>{ e.preventDefault(); tryStartGame(); }, {passive:false});
+  }
+});
+
+/* Movimiento bloqueado si no ha empezado */
 function collides(x, y) {
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
   const halfH = currentMeta().size.h * currentMeta().scale / 2;
@@ -364,6 +432,9 @@ function equipShoes() {
 
 /* === LOOP === */
 function update(dt){
+  // Bloqueo total del movimiento si no ha empezado
+  if (!gameStarted) return;
+
   const vx = (keys.left?-1:0)+(keys.right?1:0);
   const vy = (keys.up?-1:0)+(keys.down?1:0);
   player.moving = vx!==0 || vy!==0;
@@ -409,11 +480,12 @@ function update(dt){
 }
 
 function draw() {
+  const hasBG = !!bgImg;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = false; // pixel art crisp
 
   // Fondo
-  if (bgImg) {
+  if (hasBG) {
     const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     bgRect.dw = roomOriginal.w * s;
     bgRect.dh = roomOriginal.h * s;
@@ -487,7 +559,7 @@ function draw() {
     });
   }
 
-  // Personaje
+  // Personaje (solo se dibuja; moverse depende de gameStarted)
   drawList.push({
     y: player.y,
     draw: () => { drawShadow(); drawPlayer(); }
@@ -502,7 +574,7 @@ function draw() {
 
   // Luz dinámica de la tele por encima de todo
   const flicker = 0.35 + Math.random() * 0.05;
-drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+  drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 }
 
 function drawLightClipped(x, y, radius, intensity) {
@@ -535,8 +607,37 @@ function loop(now){
   if(!loop.last) loop.last=now;
   const dt = Math.min(1/30,(now-loop.last)/1000);
   loop.last=now;
-  update(dt); draw();
+  update(dt); 
+  draw();
   requestAnimationFrame(loop);
+}
+
+/* ===== LÓGICA DE INICIO / FADE ===== */
+let starting = false;
+function tryStartGame(){
+  if (gameStarted || starting) return;
+  starting = true;
+
+  // 1) Subimos la cortinilla a negro
+  blackCurtain().classList.add('opaque');
+
+  // 2) tras el negro, quitamos el overlay de inicio y arrancamos música
+  setTimeout(() => {
+    startOverlay().classList.add('hidden'); // ya no se ve ni ocupa
+    // intentamos reproducir música (ya hay interacción del usuario)
+    try { bgMusic.currentTime = 0; bgMusic.play(); } catch(e){}
+
+    // 3) bajamos de negro (revelamos el juego)
+    setTimeout(() => {
+      blackCurtain().classList.remove('opaque');
+
+      // 4) damos un pequeño margen visual y arrancamos el control
+      setTimeout(() => {
+        gameStarted = true;
+      }, 200);
+
+    }, 80); // pequeño margen antes de “bajar” para que se note el corte
+  }, 600); // duración del fade a negro (igual que el transition .6s)
 }
 
 async function init() {
@@ -559,7 +660,7 @@ async function init() {
   assetsNormal = normalSet; assetsShoes = shoesSet;
   assets = assetsNormal; // empezar sin zapatos
 
-  try { bgMusic.play(); } catch(e){ /* móviles bloquean autoplay; se iniciará al primer input */ }
+  // Nota: en móviles el autoplay está bloqueado; reproducimos en tryStartGame()
 
   resizeCanvas();
   requestAnimationFrame(loop);
