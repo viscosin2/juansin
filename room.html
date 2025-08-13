@@ -60,36 +60,81 @@
     gap: 14px;
     padding: 14px;
   }
-  .dpad {
-    display: grid;
-    grid-template-columns: repeat(3, 64px);
-    grid-template-rows: repeat(3, 64px);
-    gap: 8px;
-    justify-content: center;
-    align-content: center;
-  }
-  .btn, .act {
-    border: none;
-    border-radius: 16px;
-    background: linear-gradient(180deg, #1b1c24, #0d0e14);
-    color: #e5e7eb;
-    font-size: 16px;
-    font-weight: 600;
-    box-shadow: 0 6px 20px rgba(0,0,0,.45),
-                inset 0 0 0 1px rgba(255,255,255,.06);
-    display: grid;
-    place-items: center;
-    outline: none;
-    transition: transform .05s ease;
-  }
-  .btn:active, .act:active { transform: translateY(2px); }
-  .btn { width: 64px; height: 64px; }
-  .btn span { font-size: 26px; }
-  .act {
-    width: 120px; height: 120px;
-    margin: auto;
-    letter-spacing: .5px;
-  }
+/* Botones en grid: igual que antes */
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  grid-template-rows: repeat(3, 64px);
+  gap: 8px;
+  justify-content: center;
+  align-content: center;
+}
+
+/* Botón base con imagen */
+.img-btn {
+  width: 64px; height: 64px;
+  border: none; outline: none; padding: 0;
+  background: transparent;
+  border-radius: 16px; /* esquinitas redondas tipo mando */
+  display: grid; place-items: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,.35),
+              inset 0 0 0 1px rgba(255,255,255,.06);
+  transition: transform .06s ease, filter .06s ease, box-shadow .06s ease;
+  cursor: pointer;
+}
+
+/* Flecha: misma imagen para los 4, rotamos */
+.img-btn.arrow::before {
+  content: "";
+  width: 70%; height: 70%;
+  background: url("assets/ui/arrow.PNG") center/contain no-repeat;
+  transform: rotate(var(--rot, 0deg));
+  image-rendering: pixelated;
+  display: block;
+}
+
+/* Direcciones (tu arrow.PNG mira hacia abajo) */
+.btn-up    { --rot: 180deg; }
+.btn-left  { --rot:  90deg; }
+.btn-right { --rot: -90deg; }
+.btn-down  { --rot:   0deg;  }
+
+/* Efecto presionado */
+.img-btn:active,
+.img-btn.pressed {
+  transform: scale(0.94);
+  filter: brightness(0.9);
+  box-shadow: 0 2px 10px rgba(0,0,0,.45),
+              inset 0 0 0 1px rgba(255,255,255,.03);
+}
+
+/* Botón ACCIÓN con PNG */
+.img-act {
+  width: 120px; height: 120px;
+  margin: auto;
+  border: none; outline: none; padding: 0;
+  background: transparent;
+  border-radius: 16px;
+  display: grid; place-items: center;
+  box-shadow: 0 10px 24px rgba(0,0,0,.45),
+              inset 0 0 0 1px rgba(255,255,255,.06);
+  transition: transform .06s ease, filter .06s ease, box-shadow .06s ease;
+  cursor: pointer;
+}
+.img-act::before {
+  content: "";
+  width: 88%; height: 88%;
+  background: url("assets/ui/action_btn.PNG") center/contain no-repeat;
+  image-rendering: pixelated;
+  display: block;
+}
+.img-act:active,
+.img-act.pressed {
+  transform: scale(0.96);
+  filter: brightness(0.95);
+  box-shadow: 0 6px 16px rgba(0,0,0,.55),
+              inset 0 0 0 1px rgba(255,255,255,.03);
+}
 </style>
 </head>
 <body>
@@ -100,20 +145,21 @@
       <canvas id="game"></canvas>
     </div>
   </div>
-  <div class="controls">
-    <div class="dpad">
-      <div></div>
-      <button class="btn" id="btn-up"><span>▲</span></button>
-      <div></div>
-      <button class="btn" id="btn-left"><span>◀</span></button>
-      <div></div>
-      <button class="btn" id="btn-right"><span>▶</span></button>
-      <div></div>
-      <button class="btn" id="btn-down"><span>▼</span></button>
-      <div></div>
-    </div>
-    <button class="act" id="btn-act">ACCIÓN</button>
+<div class="controls">
+  <div class="dpad">
+    <div></div>
+    <button id="btn-up"    class="img-btn arrow btn-up"    aria-label="Arriba"></button>
+    <div></div>
+    <button id="btn-left"  class="img-btn arrow btn-left"  aria-label="Izquierda"></button>
+    <div></div>
+    <button id="btn-right" class="img-btn arrow btn-right" aria-label="Derecha"></button>
+    <div></div>
+    <button id="btn-down"  class="img-btn arrow btn-down"  aria-label="Abajo"></button>
+    <div></div>
   </div>
+
+  <button id="btn-act" class="img-act" aria-label="Acción"></button>
+</div>
 </div>
 
 <script>
@@ -308,6 +354,21 @@ bindHold(document.getElementById('btn-up'),    () => keys.up=true,    () => keys
 bindHold(document.getElementById('btn-down'),  () => keys.down=true,  () => keys.down=false);
 bindHold(document.getElementById('btn-left'),  () => keys.left=true,  () => keys.left=false);
 bindHold(document.getElementById('btn-right'), () => keys.right=true, () => keys.right=false);
+
+function bindPressVisual(el){
+  const on = () => el.classList.add('pressed');
+  const off = () => el.classList.remove('pressed');
+  el.addEventListener('mousedown', on);
+  el.addEventListener('mouseup', off);
+  el.addEventListener('mouseleave', off);
+  el.addEventListener('touchstart', (e)=>{ e.preventDefault(); on(); }, {passive:false});
+  el.addEventListener('touchend', off, {passive:false});
+  el.addEventListener('touchcancel', off, {passive:false});
+}
+['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>{
+  const el = document.getElementById(id);
+  if (el) bindPressVisual(el);
+});
 
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){keys[d]=true; e.preventDefault();}});
