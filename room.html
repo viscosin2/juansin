@@ -299,6 +299,18 @@ function handleAction() {
     showToast('10 años regándola y ni un solo aguacate...');
     return;
   }
+
+  const bedInteractPos = {
+    x: bedPos.x,
+    y: bedPos.y,
+    w: bedPos.w,
+    h: bedPos.h
+  };
+  const insideBed = aabb(getPlayerRect(), bedInteractPos);
+  if (insideBed) {
+    showToast('Todavía no es hora de dormir.');
+    return;
+  }
 }
 const actBtn = document.getElementById('btn-act');
 actBtn.addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
