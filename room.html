@@ -5,17 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Juansin 30th birthday - room</title>
 <style>
-  /* ===== Escala responsive ===== */
-  :root{
-    /* tamaño flechas (3x3 celdas); vmin para respetar el lado más pequeño del móvil */
-    --btn: clamp(44px, 12vmin, 70px);
-    --gap: clamp(2px, 1vmin, 8px);
-    /* tamaño botón acción */
-    --act: clamp(84px, 20vmin, 120px);
-    /* padding del mueble */
-    --pad: clamp(8px, 2.4vmin, 14px);
-  }
-
   html, body {
     height: 100%;
     margin: 0;
@@ -24,11 +13,10 @@
     justify-content: center;
     align-items: center;
   }
-  /* Usa small viewport height para evitar “saltos” de la barra del móvil */
   .gameboy {
     width: 100%;
-    max-width: min(92vw, 500px);
-    height: 100svh;
+    max-width: 500px;
+    height: 100%;
     background: #000;
     display: flex;
     flex-direction: column;
@@ -36,11 +24,9 @@
     box-sizing: border-box;
     border-radius: 20px;
     box-shadow: 0 0 40px rgba(0,0,0,0.6);
-    overflow: hidden; /* por si algo se pasa 1px, que no haga scroll */
   }
   .screen-container {
-    flex: 1 1 auto;              /* que la pantalla ocupe el espacio disponible */
-    min-height: 0;               /* importante para que pueda encoger */
+    flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -64,33 +50,35 @@
     height: 100%;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
-    background: black;  /* solo el juego, todo lo demás transparente */
+    background: black;
   }
 
-  /* ===== Controles (sin alto fijo, responsive) ===== */
+  /* ===== CONTROLES: dejamos el alto fijo como antes ===== */
   .controls {
+    height: 40%;
     background: #0B0A21;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--pad);
-    padding: var(--pad);
+    gap: 14px;
+    padding: 14px;
     box-sizing: border-box;
   }
 
-  /* Cruceta ↑ ← → ↓ en 3x3 */
+  /* ===== D-PAD: celdas siguen siendo 64px; solo acercamos con gap ===== */
   .dpad {
     display: grid;
-    grid-template-columns: repeat(3, var(--btn));
-    grid-template-rows: repeat(3, var(--btn));
-    gap: var(--gap);
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(3, 64px);
+    gap: 4px;                  /* más juntas sin cambiar tamaño de celda */
     justify-content: center;
     align-content: center;
+    overflow: visible;         /* por si la imagen escalada sobresale 1-2px */
   }
 
-  /* Flechas: solo PNG con sombra */
+  /* ===== Flechas PNG sin fondo, solo sombra ===== */
   .img-btn {
-    width: var(--btn);
-    height: var(--btn);
+    width: 64px;
+    height: 64px;
     border: none; outline: none; padding: 0;
     background: transparent;
     cursor: pointer;
@@ -103,24 +91,25 @@
     background: url("assets/ui/arrow.PNG") center/contain no-repeat;
     image-rendering: pixelated;
     display: block;
-    transform: rotate(var(--rot, 0deg));
+    /* rotamos y AGRANDAMOS SOLO LA IMAGEN (no la celda) */
+    transform: rotate(var(--rot, 0deg)) scale(var(--scale, 1.22));
+    transform-origin: center center;
   }
   .btn-up    { --rot: 180deg; }
   .btn-left  { --rot:  90deg; }
   .btn-right { --rot: -90deg; }
-  .btn-down  { --rot:   0deg; }
+  .btn-down  { --rot:   0deg;  }
 
-  /* Botón de acción: solo PNG con sombra */
+  /* ===== Botón de acción PNG sin fondo ===== */
   .img-act {
-    width: var(--act);
-    height: var(--act);
+    width: 120px; height: 120px;
     border: none; outline: none; padding: 0;
     background: transparent;
     cursor: pointer;
     filter: drop-shadow(0 5px 6px rgba(0,0,0,0.6));
     transition: transform 0.06s ease, filter 0.06s ease;
-    margin-top: clamp(6px, 1.6vmin, 20px); /* bajadita fina */
-    justify-self: center; /* centrado en su columna */
+    margin-top: 12px;          /* bájalo/ajusta si quieres */
+    justify-self: center;
   }
   .img-act::before {
     content: "";
@@ -128,12 +117,13 @@
     background: url("assets/ui/action_btn.PNG") center/contain no-repeat;
     image-rendering: pixelated;
     display: block;
+    transform: scale(1.02);    /* un pelín más grande sin cambiar layout */
   }
 
-  /* Efecto presionado */
+  /* ===== Efecto presionado ===== */
   .img-btn:active, .img-btn.pressed,
   .img-act:active, .img-act.pressed {
-    transform: scale(0.94);
+    transform: scale(0.95);
     filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9);
   }
 </style>
@@ -301,7 +291,7 @@ const loadImage = (src) => new Promise(res => {
   img.onload = () => res(img);
   img.onerror = () => {
     console.warn('No se pudo cargar:', src);
-    const ph = document.createElement('canvas'); ph.width=ph.height=1; // placeholder
+    const ph = document.createElement('canvas'); ph.width=ph.height=1;
     res(ph);
   };
   img.src = src;
@@ -354,7 +344,7 @@ bindHold(document.getElementById('btn-down'),  () => keys.down=true,  () => keys
 bindHold(document.getElementById('btn-left'),  () => keys.left=true,  () => keys.left=false);
 bindHold(document.getElementById('btn-right'), () => keys.right=true, () => keys.right=false);
 
-/* Feedback visual de “presionado” fiable en móvil */
+/* feedback visual fiable en móvil */
 function bindPressVisual(el){
   const on = () => el.classList.add('pressed');
   const off = () => el.classList.remove('pressed');
@@ -418,9 +408,9 @@ function equipShoes() {
   if (hasShoes) return;
   hasShoes = true;
   if (pickupSnd) { try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){} }
-  assets = assetsShoes || assets;      // swap a sprites con zapatos si cargaron bien
-  player.speed = 230;                  // pequeño buff de velocidad
-  sandalsImg = null;                   // oculta chanclas
+  assets = assetsShoes || assets;
+  player.speed = 230;
+  sandalsImg = null;
 }
 
 /* === LOOP === */
@@ -450,7 +440,7 @@ function update(dt){
     player.frame = 0;
   }
 
-  // Pickup de chanclas con área reducida
+  // pickup chanclas con área reducida
   if (!hasShoes && sandalsImg) {
     const reduce = 0.5;
     const pRect = getPlayerRect();
@@ -519,25 +509,19 @@ function draw() {
   // Lista ordenada por profundidad
   let drawList = [];
 
-  // TV y planta (van siempre detrás)
   if (tvOnImg && tvOnImg.width) {
     drawList.push({ y: tvPos.y, draw: () => ctx.drawImage(tvOnImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h) });
   }
   if (plant1Img && plant1Img.width) {
     drawList.push({ y: plant1Pos.y, draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
   }
-
-  // Sofá
   if (sofaImg && sofaImg.width) {
     drawList.push({ y: sofaPos.y + sofaPos.h / 2, draw: () => ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
   }
-
-  // Cama
   if (bedImg && bedImg.width) {
     drawList.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
   }
 
-  // Chanclas
   if (!hasShoes && sandalsImg && sandalsImg.width) {
     drawList.push({
       y: sandalsPos.y + sandalsPos.h / 2,
@@ -545,20 +529,16 @@ function draw() {
     });
   }
 
-  // Personaje
   drawList.push({
     y: player.y,
     draw: () => { drawShadow(); drawPlayer(); }
   });
 
-  // Ordenar y dibujar
   drawList.sort((a, b) => a.y - b.y).forEach(o => o.draw());
 
-  // Oscurecer todo
   ctx.fillStyle = 'rgba(0,0,0,0.40)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Luz dinámica de la tele por encima de todo
   const flicker = 0.35 + Math.random() * 0.05;
   drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
 }
