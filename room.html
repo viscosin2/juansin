@@ -6,127 +6,54 @@
 <title>Juansin 30th birthday - room</title>
 <style>
   html, body {
-    height: 100%;
-    margin: 0;
-    background: #111;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    height: 100%; margin: 0; background: #111;
+    display: flex; justify-content: center; align-items: center;
   }
   .gameboy {
-    width: 100%;
-    max-width: 500px;
-    height: 100%;
-    background: #000;
-    display: flex;
-    flex-direction: column;
-    padding: 12px;
-    box-sizing: border-box;
-    border-radius: 20px;
+    width: 100%; max-width: 500px; height: 100%;
+    background: #000; display: flex; flex-direction: column;
+    padding: 12px; box-sizing: border-box; border-radius: 20px;
     box-shadow: 0 0 40px rgba(0,0,0,0.6);
   }
   .screen-container {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: #0B0A21;
-    border-radius: 12px;
-    padding: 10px;
+    flex: 1; display: flex; justify-content: center; align-items: center;
+    background: #0B0A21; border-radius: 12px; padding: 10px;
   }
   .screen {
-    aspect-ratio: 1/1;
-    width: 100%;
-    background: #0B0A21;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 8px;
-    overflow: hidden;
+    aspect-ratio: 1/1; width: 100%; background: #0B0A21;
+    display: flex; justify-content: center; align-items: center;
+    border-radius: 8px; overflow: hidden; position: relative;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
-    position: relative;
   }
-  canvas {
-    width: 100%;
-    height: 100%;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    background: black;
-  }
+  canvas { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; background: black; }
 
-  /* ===== CONTROLES ===== */
+  /* Controles */
   .controls {
-    height: 40%;
-    background: #0B0A21;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    padding: 14px;
-    box-sizing: border-box;
+    height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; padding: 14px; box-sizing: border-box;
   }
-  .dpad {
-    display: grid;
-    grid-template-columns: repeat(3, 64px);
-    grid-template-rows: repeat(3, 64px);
-    gap: 0px;
-    justify-content: center;
-    margin-left: 12px;
-    align-content: center;
-    overflow: visible;
+  .dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px);
+    gap: 0; justify-content: center; margin-left: 12px; align-content: center; overflow: visible; }
+  .img-btn, .img-act {
+    border: none; outline: none; padding: 0; background: transparent; cursor: pointer;
+    transition: transform 0.06s ease, filter 0.06s ease; -webkit-tap-highlight-color: transparent;
   }
-  .img-btn {
-    width: 64px;
-    height: 64px;
-    border: none; outline: none; padding: 0;
-    background: transparent;
-    cursor: pointer;
-    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.85));
-    transition: transform 0.06s ease, filter 0.06s ease;
-    -webkit-tap-highlight-color: transparent;
-  }
+  .img-btn { width: 64px; height: 64px; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.85)); }
   .img-btn.arrow::before {
-    content: "";
-    width: 100%; height: 100%;
-    background: url("assets/ui/arrow.PNG") center/contain no-repeat;
-    image-rendering: pixelated;
-    display: block;
-    transform: rotate(var(--rot, 0deg)) scale(1.28);
-    transform-origin: center center;
+    content: ""; display: block; width: 100%; height: 100%;
+    background: url("assets/ui/arrow.PNG") center/contain no-repeat; image-rendering: pixelated;
+    transform: rotate(var(--rot, 0deg)) scale(1.28); transform-origin: center center;
   }
-  .btn-up    { --rot: 180deg; }
-  .btn-left  { --rot:  90deg; }
-  .btn-right { --rot: -90deg; }
-  .btn-down  { --rot:   0deg; }
+  .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
+  .img-act{ width: 120px; height: 120px; filter: drop-shadow(0 5px 6px rgba(0,0,0,0.85)); margin-top: 45px; justify-self: center; }
+  .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering: pixelated; transform: scale(1.02); }
+  .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform: scale(0.95); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9); }
 
-  .img-act {
-    width: 120px; height: 120px;
-    border: none; outline: none; padding: 0;
-    background: transparent; cursor: pointer;
-    filter: drop-shadow(0 5px 6px rgba(0,0,0,0.85));
-    transition: transform 0.06s ease, filter 0.06s ease;
-    margin-top: 45px;
-    justify-self: center;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .img-act::before {
-    content: "";
-    width: 100%; height: 100%;
-    background: url("assets/ui/action_btn.PNG") center/contain no-repeat;
-    image-rendering: pixelated;
-    display: block;
-    transform: scale(1.02);
-  }
-  .img-btn:active, .img-btn.pressed,
-  .img-act:active, .img-act.pressed {
-    transform: scale(0.95);
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9);
-  }
-
-  /* Toast para feedback */
+  /* Toast */
   .toast{
     position:absolute; top:8px; left:50%; transform:translateX(-50%);
-    background:rgba(0,0,0,.75); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .25s ease; pointer-events:none;
+    background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; pointer-events:none; z-index:5;
   }
   .toast.show{ opacity:1; }
 </style>
@@ -153,195 +80,136 @@
       <button id="btn-down"  class="img-btn arrow btn-down"  aria-label="Abajo"></button>
       <div></div>
     </div>
-
     <button id="btn-act" class="img-act" aria-label="Acción"></button>
   </div>
 </div>
 
 <script>
-/* ====== SPRITES ====== */
+/* ===== CONFIG DEBUG ===== */
+const DEBUG = true; // cambia a false cuando lo tengas
+
+/* ===== SPRITES ===== */
 const SPRITES_NORMAL = {
-  size: { w: 36, h: 40 },
-  scale: 0.9,
-  idle: {
-    down:  ["assets/juan_character/idle_down.png"],
-    up:    ["assets/juan_character/idle_up.png"],
-    left:  ["assets/juan_character/idle_left.png"],
-    right: ["assets/juan_character/idle_right.png"],
-  },
-  walk: {
-    down:  ["assets/juan_character/walk_down_0.png",  "assets/juan_character/walk_down_1.png"],
-    up:    ["assets/juan_character/walk_up_0.png",    "assets/juan_character/walk_up_1.png"],
-    left:  ["assets/juan_character/walk_left_0.png",  "assets/juan_character/walk_left_1.png"],
-    right: ["assets/juan_character/walk_right_0.png", "assets/juan_character/walk_right_1.png"],
-  }
+  size: { w: 36, h: 40 }, scale: 0.9,
+  idle: { down:["assets/juan_character/idle_down.png"], up:["assets/juan_character/idle_up.png"], left:["assets/juan_character/idle_left.png"], right:["assets/juan_character/idle_right.png"] },
+  walk: { down:["assets/juan_character/walk_down_0.png","assets/juan_character/walk_down_1.png"], up:["assets/juan_character/walk_up_0.png","assets/juan_character/walk_up_1.png"], left:["assets/juan_character/walk_left_0.png","assets/juan_character/walk_left_1.png"], right:["assets/juan_character/walk_right_0.png","assets/juan_character/walk_right_1.png"] }
 };
-const SPRITES_SHOES = { ...SPRITES_NORMAL,
-  idle: {
-    down:  ["assets/juan_character/idle_down_shoes.png"],
-    up:    ["assets/juan_character/idle_up_shoes.png"],
-    left:  ["assets/juan_character/idle_left_shoes.png"],
-    right: ["assets/juan_character/idle_right_shoes.png"],
-  },
-  walk: {
-    down:  ["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"],
-    up:    ["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"],
-    left:  ["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"],
-    right: ["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"],
-  }
+const SPRITES_SHOES = {
+  size: { w: 36, h: 40 }, scale: 0.9,
+  idle: { down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
+  walk: { down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
 
-let bgMusic = new Audio("assets/sounds/ambient1.mp3");
-bgMusic.loop = true; bgMusic.volume = 0.4;
+/* ===== AUDIO ===== */
+let bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.4;
 const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
 
+/* ===== IMÁGENES ===== */
 const BACKGROUND = "assets/locations/room.PNG";
-let bgImg = null;
-
 const PLANT1_IMG = "assets/objects/plant1.PNG";
-let plant1Img = null;
+const SOFA_IMG   = "assets/objects/sofa.png";
+const TVON_IMG   = "assets/objects/tv_on.png";
+const TVOFF_IMG  = "assets/objects/tv_off.png";
+const BED_IMG    = "assets/objects/bed.PNG";
+const SANDALS_IMG= "assets/objects/shoes.PNG";
 
-const SOFA_IMG = "assets/objects/sofa.png";
-let sofaImg = null;
+let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null;
+let tvOn = true;
 
-/* TV on/off */
-const TVON_IMG  = "assets/objects/tv_on.png";
-const TVOFF_IMG = "assets/objects/tv_off.png";
-let tvOnImg = null, tvOffImg = null;
-let tvOn = true; // encendida al inicio
+/* ===== CANVAS/ESCALADO ===== */
+const roomOriginal = { w: 512, h: 350 };
+let bgRect = { dx:0, dy:0, dw:0, dh:0 }, scaleFactor = 1;
 
-const BED_IMG = "assets/objects/bed.PNG";
-let bedImg = null;
-
-/* Chanclas pickup */
-const SANDALS_IMG = "assets/objects/shoes.PNG";
-let sandalsImg = null; let hasShoes = false;
-
-/* Canvas / escalado */
-const roomOriginal = { w: 512, h: 350 }; 
-let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
-let scaleFactor = 1;
-
-/* ==== BOUNDS Y OBSTÁCULOS ==== */
-const boundsBase = { x: 20, y: 85, w: 465, h: 235 };
-const obstaclesBase = [
-  { x: 230, y: 25, w: 70, h: 50 }, // TV
-  { x: 0, y: 190,w: 95, h: 38}, // Cama
-  { x: 0, y: 260,w: 40, h: 21}, // Planta
-  { x: 450, y: 250,w: 15, h: 0.5}, // Pelota
-  { x: 5, y: 25, w: 110, h: 50 }, // Estanteria
-  { x: 195, y: 170, w: 170, h: 0.5 }  // Sofa
+/* ===== BOUNDS/OBJETOS (BASE) ===== */
+const boundsBase   = { x: 20, y: 85, w: 465, h: 235 };
+const obstaclesBase= [
+  { x: 230, y: 25,  w: 70,  h: 50 }, // TV
+  { x: 0,   y: 190, w: 95,  h: 38 }, // Cama
+  { x: 0,   y: 260, w: 40,  h: 21 }, // Planta
+  { x: 450, y: 250, w: 15,  h: 0.5}, // Pelota
+  { x: 5,   y: 25,  w: 110, h: 50 }, // Estanteria
+  { x: 195, y: 170, w: 170, h: 0.5}  // Sofa
 ];
+const sofaBase    = { x:170, y:75,  w:220, h:180 };
+const tvOnBase    = { x:205, y:35,  w:125, h:90  };
+const bedBase     = { x:3,   y:155, w:120, h:130 };
+const plant1Base  = { x:3,   y:230, w:60,  h:90  };
+const sandalsBase = { x:55,  y:270, w:50,  h:50  };
 
-const sofaBase    = { x: 170, y: 75,  w: 220, h: 180 };    
-const tvOnBase    = { x: 205, y: 35,  w: 125, h: 90  };
-const bedBase     = { x: 3,   y: 155, w: 120, h: 130 };
-const plant1Base  = { x: 3,   y: 230, w: 60,  h: 90  };
-const sandalsBase = { x: 55,  y: 270, w: 50,  h: 50  };
-
-/* Zona invisible de interacción delante de la TV (en coords base) */
-const TV_INTERACT_MARGIN = 24;  // más ancho que la TV a cada lado
-const TV_INTERACT_DEPTH  = 110; // profundidad hacia abajo
+/* ===== ZONA INVISIBLE DELANTE DE LA TV ===== */
+const TV_INTERACT_MARGIN = 28;  // ancho extra a cada lado
+const TV_INTERACT_DEPTH  = 120; // profundidad hacia abajo (suelo frente TV)
 const tvInteractBase = {
   x: tvOnBase.x - TV_INTERACT_MARGIN,
-  y: tvOnBase.y + tvOnBase.h - 2,          // empieza justo bajo la TV
+  y: tvOnBase.y + tvOnBase.h - 2,
   w: tvOnBase.w + TV_INTERACT_MARGIN*2,
   h: TV_INTERACT_DEPTH
 };
 
 const playerStartBase = { x: 260, y: 150 };
 
+/* ===== POS ESCALADAS ===== */
 let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={}, sandalsPos={}, tvInteractPos={};
 
-function updateScaledBounds() {
+function updateScaledBounds(){
   bounds = {
     x: bgRect.dx + Math.round(boundsBase.x * scaleFactor),
     y: bgRect.dy + Math.round(boundsBase.y * scaleFactor),
     w: Math.round(boundsBase.w * scaleFactor),
     h: Math.round(boundsBase.h * scaleFactor),
   };
-  obstacles = obstaclesBase.map(o => ({
+  obstacles = obstaclesBase.map(o=>({
     x: bgRect.dx + Math.round(o.x * scaleFactor),
     y: bgRect.dy + Math.round(o.y * scaleFactor),
     w: Math.round(o.w * scaleFactor),
     h: Math.round(o.h * scaleFactor),
   }));
-  sofaPos = {
-    x: bgRect.dx + Math.round(sofaBase.x * scaleFactor),
-    y: bgRect.dy + Math.round(sofaBase.y * scaleFactor),
-    w: Math.round(sofaBase.w * scaleFactor),
-    h: Math.round(sofaBase.h * scaleFactor),
-  };
-  tvPos = {
-    x: bgRect.dx + Math.round(tvOnBase.x * scaleFactor),
-    y: bgRect.dy + Math.round(tvOnBase.y * scaleFactor),
-    w: Math.round(tvOnBase.w * scaleFactor),
-    h: Math.round(tvOnBase.h * scaleFactor),
-  };
-  tvInteractPos = {
-    x: bgRect.dx + Math.round(tvInteractBase.x * scaleFactor),
-    y: bgRect.dy + Math.round(tvInteractBase.y * scaleFactor),
-    w: Math.round(tvInteractBase.w * scaleFactor),
-    h: Math.round(tvInteractBase.h * scaleFactor),
-  };
-  bedPos = {
-    x: bgRect.dx + Math.round(bedBase.x * scaleFactor),
-    y: bgRect.dy + Math.round(bedBase.y * scaleFactor),
-    w: Math.round(bedBase.w * scaleFactor),
-    h: Math.round(bedBase.h * scaleFactor),
-  };
-  plant1Pos = {
-    x: bgRect.dx + Math.round(plant1Base.x * scaleFactor),
-    y: bgRect.dy + Math.round(plant1Base.y * scaleFactor),
-    w: Math.round(plant1Base.w * scaleFactor),
-    h: Math.round(plant1Base.h * scaleFactor),
-  };
-  sandalsPos = {
-    x: bgRect.dx + Math.round(sandalsBase.x * scaleFactor),
-    y: bgRect.dy + Math.round(sandalsBase.y * scaleFactor),
-    w: Math.round(sandalsBase.w * scaleFactor),
-    h: Math.round(sandalsBase.h * scaleFactor),
-  };
-  player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
-  player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
+  sofaPos = { x:bgRect.dx+Math.round(sofaBase.x*scaleFactor), y:bgRect.dy+Math.round(sofaBase.y*scaleFactor), w:Math.round(sofaBase.w*scaleFactor), h:Math.round(sofaBase.h*scaleFactor) };
+  tvPos   = { x:bgRect.dx+Math.round(tvOnBase.x*scaleFactor), y:bgRect.dy+Math.round(tvOnBase.y*scaleFactor), w:Math.round(tvOnBase.w*scaleFactor), h:Math.round(tvOnBase.h*scaleFactor) };
+  tvInteractPos = { x:bgRect.dx+Math.round(tvInteractBase.x*scaleFactor), y:bgRect.dy+Math.round(tvInteractBase.y*scaleFactor), w:Math.round(tvInteractBase.w*scaleFactor), h:Math.round(tvInteractBase.h*scaleFactor) };
+  bedPos  = { x:bgRect.dx+Math.round(bedBase.x*scaleFactor), y:bgRect.dy+Math.round(bedBase.y*scaleFactor), w:Math.round(bedBase.w*scaleFactor), h:Math.round(bedBase.h*scaleFactor) };
+  plant1Pos = { x:bgRect.dx+Math.round(plant1Base.x*scaleFactor), y:bgRect.dy+Math.round(plant1Base.y*scaleFactor), w:Math.round(plant1Base.w*scaleFactor), h:Math.round(plant1Base.h*scaleFactor) };
+  sandalsPos = { x:bgRect.dx+Math.round(sandalsBase.x*scaleFactor), y:bgRect.dy+Math.round(sandalsBase.y*scaleFactor), w:Math.round(sandalsBase.w*scaleFactor), h:Math.round(sandalsBase.h*scaleFactor) };
 }
 
-const loadImage = (src) => new Promise(res => {
+const loadImage = (src) => new Promise(res=>{
   const img = new Image();
-  img.onload = () => res(img);
-  img.onerror = () => {
+  img.onload = ()=>res(img);
+  img.onerror = ()=>{
     console.warn('No se pudo cargar:', src);
-    const ph = document.createElement('canvas'); ph.width=ph.height=1;
-    res(ph);
+    const ph = document.createElement('canvas'); ph.width=ph.height=1; res(ph);
   };
   img.src = src;
 });
 
-async function preloadSprites(map) {
-  const result = { idle: {}, walk: {}, size: map.size, scale: map.scale };
-  for (const state of ["idle","walk"]) {
-    for (const dir of Object.keys(map[state])) {
+async function preloadSprites(map){
+  const result = { idle:{}, walk:{}, size: map.size, scale: map.scale };
+  for (const state of ["idle","walk"]){
+    for (const dir of Object.keys(map[state])){
       result[state][dir] = await Promise.all(map[state][dir].map(loadImage));
     }
   }
   return result;
 }
 
+/* ===== CANVAS ===== */
 const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-ctx.imageSmoothingEnabled = false;
+const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
 
-function resizeCanvas() {
+function resizeCanvas(){
   const screen = document.querySelector('.screen');
   canvas.width = screen.clientWidth;
   canvas.height = screen.clientHeight;
-  if (bgImg) {
+  if (bgImg){
     scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     bgRect.dw = roomOriginal.w * scaleFactor;
     bgRect.dh = roomOriginal.h * scaleFactor;
     bgRect.dx = (canvas.width - bgRect.dw) / 2;
     bgRect.dy = (canvas.height - bgRect.dh) / 2;
     updateScaledBounds();
+    // Coloca al jugador tras recalcular posiciones
+    player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
+    player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
   }
 }
 window.addEventListener('resize', resizeCanvas);
@@ -350,7 +218,7 @@ window.addEventListener('resize', resizeCanvas);
 const player = { x:0, y:0, speed:200, dir:'up', moving:false, frame:0, frameTime:0 };
 const keys = { up:false, down:false, left:false, right:false };
 
-function bindHold(btn, on, off) {
+function bindHold(btn, on, off){
   const start = e => { e.preventDefault(); on(); };
   const end   = e => { e.preventDefault(); off(); };
   btn.addEventListener('touchstart', start, {passive:false});
@@ -359,78 +227,70 @@ function bindHold(btn, on, off) {
   btn.addEventListener('mousedown', start);
   window.addEventListener('mouseup', end);
 }
-bindHold(document.getElementById('btn-up'),    () => keys.up=true,    () => keys.up=false);
-bindHold(document.getElementById('btn-down'),  () => keys.down=true,  () => keys.down=false);
-bindHold(document.getElementById('btn-left'),  () => keys.left=true,  () => keys.left=false);
-bindHold(document.getElementById('btn-right'), () => keys.right=true, () => keys.right=false);
+bindHold(document.getElementById('btn-up'),    ()=>keys.up=true,    ()=>keys.up=false);
+bindHold(document.getElementById('btn-down'),  ()=>keys.down=true,  ()=>keys.down=false);
+bindHold(document.getElementById('btn-left'),  ()=>keys.left=true,  ()=>keys.left=false);
+bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.right=false);
 
-/* feedback visual */
 function bindPressVisual(el){
-  const on = () => el.classList.add('pressed');
-  const off = () => el.classList.remove('pressed');
-  el.addEventListener('mousedown', on);
-  el.addEventListener('mouseup', off);
-  el.addEventListener('mouseleave', off);
+  const on = ()=>el.classList.add('pressed');
+  const off= ()=>el.classList.remove('pressed');
+  el.addEventListener('mousedown', on); el.addEventListener('mouseup', off); el.addEventListener('mouseleave', off);
   el.addEventListener('touchstart', (e)=>{ e.preventDefault(); on(); }, {passive:false});
-  el.addEventListener('touchend', off, {passive:false});
-  el.addEventListener('touchcancel', off, {passive:false});
+  el.addEventListener('touchend', off, {passive:false}); el.addEventListener('touchcancel', off, {passive:false});
 }
-['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>{
-  const el = document.getElementById(id);
-  if (el) bindPressVisual(el);
-});
+['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>{ const el=document.getElementById(id); if(el) bindPressVisual(el); });
 
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
-window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){keys[d]=true; e.preventDefault();}});
-window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
+window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
+window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
 
-let assets = null, assetsNormal = null, assetsShoes = null;
-function currentMeta(){
-  return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets };
-}
+/* ===== META/ASSETS ===== */
+let assets=null, assetsNormal=null, assetsShoes=null;
+function currentMeta(){ return { size: assets.size, scale: assets.scale ?? SPRITES_NORMAL.scale, ...assets }; }
 
 /* ===== COLISIONES ===== */
-function collides(x, y) {
+function collides(x, y){
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
   const halfH = currentMeta().size.h * currentMeta().scale / 2;
   const px = x - halfW, py = y - halfH, pw = halfW*2, ph = halfH*2;
   if (x < bounds.x || x > bounds.x + bounds.w || y < bounds.y || y > bounds.y + bounds.h) return true;
-  for (const o of obstacles) {
-    if (px < o.x + o.w && px + pw > o.x && py < o.y + o.h && py + ph > o.y) return true;
-  }
+  for (const o of obstacles){ if (px < o.x + o.w && px + pw > o.x && py < o.y + o.h && py + ph > o.y) return true; }
   return false;
 }
-function getPlayerRect(x = player.x, y = player.y) {
+function getPlayerRect(x=player.x,y=player.y){
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
   const halfH = currentMeta().size.h * currentMeta().scale / 2;
-  return { x: x - halfW, y: y - halfH, w: halfW * 2, h: halfH * 2 };
+  return { x:x-halfW, y:y-halfH, w:halfW*2, h:halfH*2 };
 }
+function aabb(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
 
-/* ===== Interacción TV por zona INVISIBLE y acción de una sola vez ===== */
-function pointInRect(px, py, r){ return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h; }
-
-let tvAlreadyOff = false; // para asegurar que no se vuelva a encender por error
-function handleAction(){
-  if (!tvAlreadyOff && tvOn && pointInRect(player.x, player.y, tvInteractPos)) {
-    tvOn = false; tvAlreadyOff = true;
-    showToast('Tele OFF');
-  } else {
-    showToast('Nada cerca…');
-  }
-}
-
+/* ===== ACCIÓN: APAGAR TV UNA SOLA VEZ ===== */
+let tvAlreadyOff = false;
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
-  clearTimeout(showToast._to); showToast._to = setTimeout(()=>t.classList.remove('show'), 800);
+  clearTimeout(showToast._to); showToast._to = setTimeout(()=>t.classList.remove('show'), 900);
 }
-document.getElementById('btn-act').addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
+function handleAction(){
+  showToast('ACCION'); // para comprobar que el evento llega SIEMPRE
+  // ¿está el player dentro de la zona invisible?
+  const inside = aabb(getPlayerRect(), tvInteractPos);
+  if (tvOn && !tvAlreadyOff && inside){
+    tvOn = false; tvAlreadyOff = true;
+    showToast('Tele apagada');
+  }
+}
+const actBtn = document.getElementById('btn-act');
+actBtn.addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
+actBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); handleAction(); }, {passive:false});
 window.addEventListener('keydown', e => {
-  if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); handleAction(); }
+  if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); handleAction(); }
 }, { passive:false });
 
 /* ===== EQUIP ===== */
-function equipShoes() {
+let hasShoes = false;
+function equipShoes(){
   if (hasShoes) return;
   hasShoes = true;
   try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){}
@@ -439,169 +299,119 @@ function equipShoes() {
   sandalsImg = null;
 }
 
-/* === LOOP === */
+/* ===== LOOP ===== */
 function update(dt){
-  const vx = (keys.left?-1:0)+(keys.right?1:0);
-  const vy = (keys.up?-1:0)+(keys.down?1:0);
-  player.moving = vx!==0 || vy!==0;
-
-  if(player.moving){
-    if(Math.abs(vx)>Math.abs(vy)) player.dir = vx<0 ? 'left' : 'right';
-    else if(Math.abs(vy)>0)       player.dir = vy<0 ? 'up' : 'down';
+  const vx = (keys.left?-1:0) + (keys.right?1:0);
+  const vy = (keys.up?-1:0) + (keys.down?1:0);
+  player.moving = (vx!==0 || vy!==0);
+  if (player.moving){
+    player.dir = Math.abs(vx) > Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
     const len = Math.hypot(vx,vy) || 1;
     const nx = (vx/len) * player.speed * dt;
     const ny = (vy/len) * player.speed * dt;
     const newX = player.x + nx, newY = player.y + ny;
-    if(!collides(newX, newY)){ player.x = newX; player.y = newY; }
-    player.frameTime += dt;
-    if(player.frameTime >= 0.14){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
-  } else {
-    player.frame = 0;
-  }
+    if (!collides(newX,newY)){ player.x=newX; player.y=newY; }
+    player.frameTime += dt; if(player.frameTime >= 0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
+  } else { player.frame = 0; }
 
-  // pickup chanclas con área reducida
-  if (!hasShoes && sandalsImg) {
-    const reduce = 0.5;
-    const p = getPlayerRect();
-    const r = { x: p.x + p.w*(1-reduce)/2, y: p.y + p.h*(1-reduce)/2, w: p.w*reduce, h: p.h*reduce };
-    const s = sandalsPos;
-    if (r.x < s.x + s.w && r.x + r.w > s.x && r.y < s.y + s.h && r.y + r.h > s.y) {
-      equipShoes();
-    }
+  // pickup chanclas
+  if (!hasShoes && sandalsImg){
+    const reduce=0.5, p=getPlayerRect();
+    const r={ x:p.x+p.w*(1-reduce)/2, y:p.y+p.h*(1-reduce)/2, w:p.w*reduce, h:p.h*reduce };
+    const s=sandalsPos;
+    if (r.x < s.x + s.w && r.x + r.w > s.x && r.y < s.y + s.h && r.y + r.h > s.y) equipShoes();
   }
 }
 
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false;
-
-  // Fondo
-  if (bgImg) {
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (bgImg){
     const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
-    bgRect.dw = roomOriginal.w * s; bgRect.dh = roomOriginal.h * s;
-    bgRect.dx = (canvas.width - bgRect.dw) / 2; bgRect.dy = (canvas.height - bgRect.dh) / 2;
+    bgRect.dw = roomOriginal.w*s; bgRect.dh = roomOriginal.h*s;
+    bgRect.dx = (canvas.width-bgRect.dw)/2; bgRect.dy = (canvas.height-bgRect.dh)/2;
     ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
   }
-
   if (!assets) return;
 
-  const sw = currentMeta().size.w, sh = currentMeta().size.h;
-  const dw = Math.round(sw * SPRITES_NORMAL.scale);
-  const dh = Math.round(sh * SPRITES_NORMAL.scale);
+  const sw=currentMeta().size.w, sh=currentMeta().size.h;
+  const dw=Math.round(sw*SPRITES_NORMAL.scale), dh=Math.round(sh*SPRITES_NORMAL.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
-  // respiración
-  let stretchPx = 0;
-  if (!player.moving) {
-    const Hz = 0.6, t = performance.now() / 1000;
-    stretchPx = Math.round((Math.sin(t * Math.PI * 2 * Hz) * 0.5 + 0.5) * 1);
+  let stretchPx=0;
+  if (!player.moving){ const Hz=0.6, t=performance.now()/1000; stretchPx=Math.round((Math.sin(t*Math.PI*2*Hz)*0.5+0.5)*1); }
+
+  const list=[];
+  // TV
+  list.push({ y: tvPos.y, draw: ()=>{ const timg = tvOn ? tvOnImg : tvOffImg; if (timg && timg.width) ctx.drawImage(timg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);} });
+  if (plant1Img && plant1Img.width) list.push({ y: plant1Pos.y, draw: ()=>ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
+  if (sofaImg && sofaImg.width)     list.push({ y: sofaPos.y + sofaPos.h/2, draw: ()=>ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
+  if (bedImg && bedImg.width)       list.push({ y: bedPos.y + bedPos.h/2, draw: ()=>ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
+
+  if (!hasShoes && sandalsImg && sandalsImg.width){
+    list.push({ y: sandalsPos.y + sandalsPos.h/2, draw: ()=>ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h) });
   }
 
-  const drawShadow = () => {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.beginPath();
-    ctx.ellipse(Math.round(player.x), Math.round(player.y + dh / 2 - 4), dw / 2.5, dh / 6, 0, 0, Math.PI * 2);
-    ctx.fill();
-  };
-  const drawPlayer = () => {
-    ctx.drawImage(img, 0, 0, sw, sh, Math.round(player.x - dw / 2), Math.round(player.y - dh / 2) - stretchPx, dw, dh + stretchPx);
-  };
-
-  // Z-orden
-  const list = [];
-
-  // TV (on/off)
-  list.push({ y: tvPos.y, draw: () => {
-    const tvImg = tvOn ? tvOnImg : tvOffImg;
-    if (tvImg && tvImg.width) ctx.drawImage(tvImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
+  // player
+  list.push({ y: player.y, draw: ()=>{
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.drawImage(img, 0,0, sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2)-stretchPx, dw, dh+stretchPx);
   }});
-
-  if (plant1Img && plant1Img.width) list.push({ y: plant1Pos.y, draw: () => ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
-  if (sofaImg && sofaImg.width)     list.push({ y: sofaPos.y + sofaPos.h / 2, draw: () => ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
-  if (bedImg && bedImg.width)       list.push({ y: bedPos.y + bedPos.h / 2, draw: () => ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
-
-  if (!hasShoes && sandalsImg && sandalsImg.width) {
-    list.push({ y: sandalsPos.y + sandalsPos.h / 2, draw: () => ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h) });
-  }
-
-  list.push({ y: player.y, draw: () => { drawShadow(); drawPlayer(); } });
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
-  // oscurecido general
-  ctx.fillStyle = 'rgba(0,0,0,0.40)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // oscurecido
+  ctx.fillStyle='rgba(0,0,0,0.40)';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // luz de la tele solo si está encendida
-  if (tvOn) {
-    const flicker = 0.35 + Math.random() * 0.05;
-    drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
+  // luz TV solo si está ON
+  if (tvOn){
+    const flicker = 0.35 + Math.random()*0.05;
+    drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker);
   }
 
-  /* DEBUG opcional: dibuja la zona invisible delante de la TV
-  ctx.save();
-  ctx.fillStyle = 'rgba(0, 200, 255, 0.12)';
-  ctx.fillRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
-  ctx.strokeStyle = 'rgba(0, 200, 255, 0.35)';
-  ctx.strokeRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
-  ctx.restore();
-  */
+  // DEBUG: zona de interacción
+  if (DEBUG){
+    ctx.save();
+    ctx.fillStyle='rgba(0,200,255,0.12)';
+    ctx.fillRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
+    ctx.strokeStyle='rgba(0,200,255,0.35)';
+    ctx.strokeRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
+    ctx.restore();
+  }
 }
 
-function drawLightClipped(x, y, radius, intensity) {
+function drawLightClipped(x,y,radius,intensity){
   if (!bgRect || !bgRect.dw || !bgRect.dh) return;
   const radiusScaled = radius * (bgRect.dw / roomOriginal.w);
   ctx.save();
   ctx.beginPath(); ctx.rect(bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh); ctx.clip();
-  const g = ctx.createRadialGradient(x, y, 0, x, y, radiusScaled);
-  g.addColorStop(0, `rgba(255, 255, 200, ${intensity})`);
-  g.addColorStop(1, 'rgba(255, 255, 200, 0)');
-  ctx.globalCompositeOperation = "lighter";
-  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, radiusScaled, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-  ctx.globalCompositeOperation = "source-over";
+  const g = ctx.createRadialGradient(x,y,0,x,y,radiusScaled);
+  g.addColorStop(0, `rgba(255,255,200,${intensity})`);
+  g.addColorStop(1, 'rgba(255,255,200,0)');
+  ctx.globalCompositeOperation="lighter";
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,radiusScaled,0,Math.PI*2); ctx.fill();
+  ctx.restore(); ctx.globalCompositeOperation="source-over";
 }
 
 function loop(now){
   if(!loop.last) loop.last=now;
   const dt = Math.min(1/30,(now-loop.last)/1000);
-  loop.last=now;
-  update(dt); draw();
-  requestAnimationFrame(loop);
+  loop.last=now; update(dt); draw(); requestAnimationFrame(loop);
 }
 
-async function init() {
-  const [
-    bg, sofa, tvOnI, tvOffI, bed, plant, sandals,
-    normalSet, shoesSet
-  ] = await Promise.all([
-    loadImage(BACKGROUND),
-    loadImage(SOFA_IMG),
-    loadImage(TVON_IMG),
-    loadImage(TVOFF_IMG),
-    loadImage(BED_IMG),
-    loadImage(PLANT1_IMG),
-    loadImage(SANDALS_IMG),
-    preloadSprites(SPRITES_NORMAL),
-    preloadSprites(SPRITES_SHOES)
+/* ===== INIT ===== */
+async function init(){
+  const [bg, sofa, tvOnI, tvOffI, bed, plant, sandals, normalSet, shoesSet] = await Promise.all([
+    loadImage(BACKGROUND), loadImage(SOFA_IMG), loadImage(TVON_IMG), loadImage(TVOFF_IMG),
+    loadImage(BED_IMG), loadImage(PLANT1_IMG), loadImage(SANDALS_IMG),
+    preloadSprites(SPRITES_NORMAL), preloadSprites(SPRITES_SHOES)
   ]);
-
-  bgImg = bg;
-  sofaImg = sofa;
-  tvOnImg = tvOnI;
-  tvOffImg = tvOffI;   // <- asegúrate de que existe en esa ruta
-  bedImg = bed;
-  plant1Img = plant;
-  sandalsImg = sandals;
-
-  assetsNormal = normalSet;
-  assetsShoes = shoesSet;
-  assets = assetsNormal;
-
-  try { bgMusic.play(); } catch(e){}
+  bgImg=bg; sofaImg=sofa; tvOnImg=tvOnI; tvOffImg=tvOffI; bedImg=bed; plant1Img=plant; sandalsImg=sandals;
+  assetsNormal=normalSet; assetsShoes=shoesSet; assets=assetsNormal;
+  try{ bgMusic.play(); }catch(e){}
   resizeCanvas();
   requestAnimationFrame(loop);
 }
-
 init();
 </script>
 </body>
