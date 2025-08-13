@@ -362,7 +362,14 @@ function handleAction() {
   }
 
   // Lámpara (toggle)
-  const insideLamp = aabb(getPlayerRect(), lampInteractPos);
+const reducedLamp= {
+  x: lampPos.x,  // margen izquierda
+  y: lampPos.y + lampPos.h - 20, // solo la parte baja
+  w: lampPos.w - 5,  // margen derecha
+  h: 50              // altura pequeña
+};
+
+  const insideLamp = aabb(getPlayerRect(), reducedLamp);
   if (insideLamp) {
     lampOn = !lampOn;
     return;
@@ -416,9 +423,10 @@ function update(dt){
   player.speed = lightOk ? base : base * DARK_MULTIPLIER;
 
   if (!lightOk) {
-    if (!darkWarnShown) { showToast('Está oscuro, debo ir con cuidado.'); darkWarnShown = true; }
+    if (!darkWarnShown) { showToast('Despacio, está oscuro.'); darkWarnShown = true; }
   } else {
     darkWarnShown = false;
+    showToast('Ahora mejor.');
   }
 
   // Movimiento
@@ -441,12 +449,6 @@ function update(dt){
     if(player.frameTime >= 0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else {
     player.frame = 0;
-  }
-
-  // Primer toast demo
-  if (movedUpThisFrame && !forwardToastShown){
-    forwardToastShown = true;
-    showToast('Ya he jugado bastante por hoy.');
   }
 
   // Pickup chanclas (hitbox reducida)
