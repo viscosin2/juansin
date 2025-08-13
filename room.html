@@ -393,7 +393,7 @@ function pointRectDistance(px, py, r){
 }
 /* Estás cerca si la distancia al rect de la TV es < umbral */
 function isNearTV(){
-  const threshold = 48 * scaleFactor; // <-- sube/baja si quieres
+  const threshold = 64 * scaleFactor; // <-- sube/baja si quieres
   return pointRectDistance(player.x, player.y, tvPos) <= threshold;
 }
 
