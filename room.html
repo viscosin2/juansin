@@ -376,7 +376,14 @@ const reducedLamp= {
   }
 
   // Planta
-  const insidePlant = aabb(getPlayerRect(), plant1Pos);
+const reducedPlant= {
+  x: plant1Pos.x,  // margen izquierda
+  y: plant1Pos.y + plant1Pos.h - 20, // solo la parte baja
+  w: plant1Pos.w -5,  // margen derecha
+  h: 50              // altura pequeña
+};
+
+  const insidePlant = aabb(getPlayerRect(), reducedPlant);
   if (insidePlant) { showToast('10 años regándola y ni un solo aguacate...'); return; }
 
 // CAMA
