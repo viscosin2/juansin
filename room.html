@@ -68,9 +68,9 @@
     display: grid;
     grid-template-columns: repeat(3, 64px);
     grid-template-rows: repeat(3, 64px);
-    gap: 0px;                  /* más juntas sin cambiar tamaño de celda */
+    gap: 0px;
     justify-content: center;
-    margin-left: 12px;         /* mueve todo el bloque un poco a la dcha */
+    margin-left: 12px;         /* mueve el bloque un poco a la dcha */
     align-content: center;
     overflow: visible;
   }
@@ -404,20 +404,28 @@ function aabbIntersect(a, b) {
          a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
-/* ===== Interacción TV ===== */
-function rectInflate(r, pad) {
-  return { x: r.x - pad, y: r.y - pad, w: r.w + pad*2, h: r.h + pad*2 };
+/* ===== Interacción TV (FIX: zona delante de la TV) ===== */
+function tvFrontZone(){
+  // Franja “en el suelo” delante de la TV. Ajusta a gusto:
+  const marginX = 16 * scaleFactor;   // anchura adicional a cada lado
+  const depth   = 36 * scaleFactor;   // “profundidad” hacia abajo
+  return {
+    x: tvPos.x - marginX,
+    y: tvPos.y + tvPos.h - (6 * scaleFactor), // arranca justo bajo la TV
+    w: tvPos.w + marginX * 2,
+    h: depth
+  };
 }
 function isNearTV() {
   const pRect = getPlayerRect();
-  const interactZone = rectInflate(tvPos, 12); // ajustable
-  return aabbIntersect(pRect, interactZone);
+  const zone  = tvFrontZone();
+  return aabbIntersect(pRect, zone);
 }
 function handleAction(){
   if (isNearTV()){
     tvOn = !tvOn; // toggle on/off
   }
-  // aquí puedes añadir más interacciones según zonas
+  // más interacciones aquí si quieres
 }
 document.getElementById('btn-act').addEventListener('click', handleAction);
 window.addEventListener('keydown', e => {
@@ -577,6 +585,14 @@ function draw() {
     const flicker = 0.35 + Math.random() * 0.05;
     drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
   }
+
+  /* ==== DEBUG: pinta la zona de interacción (quítalo si no lo necesitas) ====
+  const z = tvFrontZone();
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 200, 255, 0.12)';
+  ctx.fillRect(z.x, z.y, z.w, z.h);
+  ctx.restore();
+  // ======================================================================= */
 }
 
 function drawLightClipped(x, y, radius, intensity) {
@@ -630,7 +646,7 @@ async function init() {
   bgImg = bg;
   sofaImg = sofa;
   tvOnImg = tvOnI;
-  tvOffImg = tvOffI;   // <-- IMPORTANTE: asignar la TV OFF
+  tvOffImg = tvOffI;
   bedImg = bed;
   plant1Img = plant;
   sandalsImg = sandals;
