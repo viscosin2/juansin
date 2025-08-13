@@ -365,20 +365,11 @@ document.getElementById('btn-act').addEventListener('click', tryStartGame);
 /* Teclado: flechas/WASD ya van; añadimos Enter/Espacio para empezar */
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { 
-  if (!gameStarted && (e.code === 'Enter' || e.code === 'Space')) { e.preventDefault(); tryStartGame(); return; }
   const d=mapKey[e.code]; 
   if(d){keys[d]=true; e.preventDefault();}
 });
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
 
-/* También tap/click sobre el overlay de inicio */
-document.addEventListener('DOMContentLoaded', () => {
-  const ov = startOverlay();
-  if (ov) {
-    ov.addEventListener('click', tryStartGame);
-    ov.addEventListener('touchstart', (e)=>{ e.preventDefault(); tryStartGame(); }, {passive:false});
-  }
-});
 
 /* Movimiento bloqueado si no ha empezado */
 function collides(x, y) {
