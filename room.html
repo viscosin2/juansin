@@ -44,6 +44,7 @@
     border-radius: 8px;
     overflow: hidden;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    position: relative;
   }
   canvas {
     width: 100%;
@@ -67,47 +68,52 @@
     display: grid;
     grid-template-columns: repeat(3, 64px);
     grid-template-rows: repeat(3, 64px);
-    gap: 0;
+    gap: 0px;
     justify-content: center;
     margin-left: 12px;
     align-content: center;
     overflow: visible;
   }
-  /* Flechas PNG */
   .img-btn {
-    width: 64px; height: 64px;
+    width: 64px;
+    height: 64px;
     border: none; outline: none; padding: 0;
-    background: transparent; cursor: pointer;
+    background: transparent;
+    cursor: pointer;
     filter: drop-shadow(0 3px 4px rgba(0,0,0,0.85));
     transition: transform 0.06s ease, filter 0.06s ease;
     -webkit-tap-highlight-color: transparent;
   }
   .img-btn.arrow::before {
-    content: ""; display: block; width: 100%; height: 100%;
+    content: "";
+    width: 100%; height: 100%;
     background: url("assets/ui/arrow.PNG") center/contain no-repeat;
     image-rendering: pixelated;
+    display: block;
     transform: rotate(var(--rot, 0deg)) scale(1.28);
     transform-origin: center center;
   }
   .btn-up    { --rot: 180deg; }
   .btn-left  { --rot:  90deg; }
   .btn-right { --rot: -90deg; }
-  .btn-down  { --rot:   0deg;  }
+  .btn-down  { --rot:   0deg; }
 
-  /* Botón de acción PNG */
   .img-act {
     width: 120px; height: 120px;
     border: none; outline: none; padding: 0;
     background: transparent; cursor: pointer;
     filter: drop-shadow(0 5px 6px rgba(0,0,0,0.85));
     transition: transform 0.06s ease, filter 0.06s ease;
-    margin-top: 45px; justify-self: center;
+    margin-top: 45px;
+    justify-self: center;
     -webkit-tap-highlight-color: transparent;
   }
   .img-act::before {
-    content: ""; display: block; width: 100%; height: 100%;
+    content: "";
+    width: 100%; height: 100%;
     background: url("assets/ui/action_btn.PNG") center/contain no-repeat;
     image-rendering: pixelated;
+    display: block;
     transform: scale(1.02);
   }
   .img-btn:active, .img-btn.pressed,
@@ -116,7 +122,7 @@
     filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9);
   }
 
-  /* Toast mini para feedback de acción */
+  /* Toast para feedback */
   .toast{
     position:absolute; top:8px; left:50%; transform:translateX(-50%);
     background:rgba(0,0,0,.75); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
@@ -211,8 +217,10 @@ let bedImg = null;
 const SANDALS_IMG = "assets/objects/shoes.PNG";
 let sandalsImg = null; let hasShoes = false;
 
+/* Canvas / escalado */
 const roomOriginal = { w: 512, h: 350 }; 
 let bgRect = { dx: 0, dy: 0, dw: 0, dh: 0 };
+let scaleFactor = 1;
 
 /* ==== BOUNDS Y OBSTÁCULOS ==== */
 const boundsBase = { x: 20, y: 85, w: 465, h: 235 };
@@ -225,16 +233,25 @@ const obstaclesBase = [
   { x: 195, y: 170, w: 170, h: 0.5 }  // Sofa
 ];
 
-const sofaBase   = { x: 170, y: 75,  w: 220, h: 180 };    
-const tvOnBase   = { x: 205, y: 35,  w: 125, h: 90  };
-const bedBase    = { x: 3,   y: 155, w: 120, h: 130 };
-const plant1Base = { x: 3,   y: 230, w: 60,  h: 90  };
-const sandalsBase= { x: 55,  y: 270, w: 50,  h: 50  };
+const sofaBase    = { x: 170, y: 75,  w: 220, h: 180 };    
+const tvOnBase    = { x: 205, y: 35,  w: 125, h: 90  };
+const bedBase     = { x: 3,   y: 155, w: 120, h: 130 };
+const plant1Base  = { x: 3,   y: 230, w: 60,  h: 90  };
+const sandalsBase = { x: 55,  y: 270, w: 50,  h: 50  };
+
+/* Zona invisible de interacción delante de la TV (en coords base) */
+const TV_INTERACT_MARGIN = 24;  // más ancho que la TV a cada lado
+const TV_INTERACT_DEPTH  = 110; // profundidad hacia abajo
+const tvInteractBase = {
+  x: tvOnBase.x - TV_INTERACT_MARGIN,
+  y: tvOnBase.y + tvOnBase.h - 2,          // empieza justo bajo la TV
+  w: tvOnBase.w + TV_INTERACT_MARGIN*2,
+  h: TV_INTERACT_DEPTH
+};
 
 const playerStartBase = { x: 260, y: 150 };
 
-let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={}, sandalsPos={};
-let scaleFactor = 1;
+let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, tvPos={}, sandalsPos={}, tvInteractPos={};
 
 function updateScaledBounds() {
   bounds = {
@@ -260,6 +277,12 @@ function updateScaledBounds() {
     y: bgRect.dy + Math.round(tvOnBase.y * scaleFactor),
     w: Math.round(tvOnBase.w * scaleFactor),
     h: Math.round(tvOnBase.h * scaleFactor),
+  };
+  tvInteractPos = {
+    x: bgRect.dx + Math.round(tvInteractBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(tvInteractBase.y * scaleFactor),
+    w: Math.round(tvInteractBase.w * scaleFactor),
+    h: Math.round(tvInteractBase.h * scaleFactor),
   };
   bedPos = {
     x: bgRect.dx + Math.round(bedBase.x * scaleFactor),
@@ -361,8 +384,7 @@ const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLe
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){keys[d]=true; e.preventDefault();}});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){keys[d]=false; e.preventDefault();}});
 
-/* ===== UTIL TAM/ESCALA ===== */
-let assets = null, assetsNormal = null, assetsShoes = null; // sets
+let assets = null, assetsNormal = null, assetsShoes = null;
 function currentMeta(){
   return { size: assets.size, scale: assets.size ? (assets.scale ?? SPRITES_NORMAL.scale) : SPRITES_NORMAL.scale, ...assets };
 }
@@ -384,37 +406,23 @@ function getPlayerRect(x = player.x, y = player.y) {
   return { x: x - halfW, y: y - halfH, w: halfW * 2, h: halfH * 2 };
 }
 
-/* ===== Interacción TV por DISTANCIA ===== */
-/* Distancia mínima desde un punto (player) a un rect (TV) */
-function pointRectDistance(px, py, r){
-  const dx = Math.max(r.x - px, 0, px - (r.x + r.w));
-  const dy = Math.max(r.y - py, 0, py - (r.y + r.h));
-  return Math.hypot(dx, dy);
-}
-/* Estás cerca si la distancia al rect de la TV es < umbral */
-function isNearTV(){
-  const threshold = 64 * scaleFactor; // <-- sube/baja si quieres
-  return pointRectDistance(player.x, player.y, tvPos) <= threshold;
-}
+/* ===== Interacción TV por zona INVISIBLE y acción de una sola vez ===== */
+function pointInRect(px, py, r){ return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h; }
 
-/* Toggle acción */
-let actionCooldown = 0;
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(showToast._to); showToast._to = setTimeout(()=>t.classList.remove('show'), 700);
-}
+let tvAlreadyOff = false; // para asegurar que no se vuelva a encender por error
 function handleAction(){
-  const now = performance.now();
-  if (now < actionCooldown) return; // evita spam
-  actionCooldown = now + 180;       // ms
-
-  if (isNearTV()){
-    tvOn = !tvOn;
-    showToast(tvOn ? 'Tele ON' : 'Tele OFF');
+  if (!tvAlreadyOff && tvOn && pointInRect(player.x, player.y, tvInteractPos)) {
+    tvOn = false; tvAlreadyOff = true;
+    showToast('Tele OFF');
   } else {
     showToast('Nada cerca…');
   }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._to); showToast._to = setTimeout(()=>t.classList.remove('show'), 800);
 }
 document.getElementById('btn-act').addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
 window.addEventListener('keydown', e => {
@@ -455,9 +463,9 @@ function update(dt){
   if (!hasShoes && sandalsImg) {
     const reduce = 0.5;
     const p = getPlayerRect();
-    const reduced = { x: p.x + p.w*(1-reduce)/2, y: p.y + p.h*(1-reduce)/2, w: p.w*reduce, h: p.h*reduce };
+    const r = { x: p.x + p.w*(1-reduce)/2, y: p.y + p.h*(1-reduce)/2, w: p.w*reduce, h: p.h*reduce };
     const s = sandalsPos;
-    if (reduced.x < s.x + s.w && reduced.x + reduced.w > s.x && reduced.y < s.y + s.h && reduced.y + reduced.h > s.y) {
+    if (r.x < s.x + s.w && r.x + r.w > s.x && r.y < s.y + s.h && r.y + r.h > s.y) {
       equipShoes();
     }
   }
@@ -502,7 +510,7 @@ function draw() {
   // Z-orden
   const list = [];
 
-  // TV según estado
+  // TV (on/off)
   list.push({ y: tvPos.y, draw: () => {
     const tvImg = tvOn ? tvOnImg : tvOffImg;
     if (tvImg && tvImg.width) ctx.drawImage(tvImg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);
@@ -519,27 +527,29 @@ function draw() {
   list.push({ y: player.y, draw: () => { drawShadow(); drawPlayer(); } });
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
-  // Oscurecido general
+  // oscurecido general
   ctx.fillStyle = 'rgba(0,0,0,0.40)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Luz de la tele SOLO si está encendida
+  // luz de la tele solo si está encendida
   if (tvOn) {
     const flicker = 0.35 + Math.random() * 0.05;
     drawLightClipped(tvPos.x + tvPos.w / 2, tvPos.y + tvPos.h / 2, 100, flicker);
   }
 
-  /* DEBUG OPCIONAL: muestra círculo de “cerca TV”
-  const th = 48 * scaleFactor;
-  ctx.beginPath(); ctx.arc(player.x, player.y, th, 0, Math.PI*2);
-  ctx.strokeStyle = 'rgba(0,200,255,.25)'; ctx.lineWidth = 2; ctx.stroke();
+  /* DEBUG opcional: dibuja la zona invisible delante de la TV
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 200, 255, 0.12)';
+  ctx.fillRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
+  ctx.strokeStyle = 'rgba(0, 200, 255, 0.35)';
+  ctx.strokeRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
+  ctx.restore();
   */
 }
 
 function drawLightClipped(x, y, radius, intensity) {
   if (!bgRect || !bgRect.dw || !bgRect.dh) return;
   const radiusScaled = radius * (bgRect.dw / roomOriginal.w);
-
   ctx.save();
   ctx.beginPath(); ctx.rect(bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh); ctx.clip();
   const g = ctx.createRadialGradient(x, y, 0, x, y, radiusScaled);
@@ -578,7 +588,7 @@ async function init() {
   bgImg = bg;
   sofaImg = sofa;
   tvOnImg = tvOnI;
-  tvOffImg = tvOffI;   // <- IMPORTANTE
+  tvOffImg = tvOffI;   // <- asegúrate de que existe en esa ruta
   bedImg = bed;
   plant1Img = plant;
   sandalsImg = sandals;
