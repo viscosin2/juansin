@@ -131,9 +131,20 @@
   image-rendering: pixelated;
   filter: drop-shadow(0 0 8px rgba(255,255,200,.55))
           drop-shadow(0 0 16px rgba(255,255,200,.35));
-  animation: startPulse 1.4s ease-in-out infinite;
+  animation: startPulse 1.4s ease-in-out infinite, bluePulse 1.4s ease-in-out infinite;
   transition: transform .12s ease, opacity .18s ease, filter .18s ease;
   z-index: 3;
+}
+
+@keyframes bluePulse{
+  0%,100%{
+    filter: drop-shadow(0 0 6px rgba(0,150,255,.6))
+            drop-shadow(0 0 14px rgba(0,150,255,.4));
+  }
+  50%{
+    filter: drop-shadow(0 0 10px rgba(0,180,255,.85))
+            drop-shadow(0 0 20px rgba(0,180,255,.6));
+  }
 }
 
 @keyframes startPulse{
