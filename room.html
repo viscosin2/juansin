@@ -51,7 +51,7 @@
 
   /* Toast */
   .toast{
-    position:absolute; top:20px; left:50%; transform:translateX(-50%);
+    position:absolute; top:24px; left:50%; transform:translateX(-50%);
     background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; pointer-events:none; z-index:5;
   }
@@ -86,7 +86,7 @@
 
 <script>
 /* ===== CONFIG DEBUG ===== */
-const DEBUG = false; // cambia a false cuando lo tengas
+const DEBUG = false;
 
 /* ===== SPRITES ===== */
 const SPRITES_NORMAL = {
@@ -137,8 +137,8 @@ const plant1Base  = { x:3,   y:230, w:60,  h:90  };
 const sandalsBase = { x:55,  y:270, w:50,  h:50  };
 
 /* ===== ZONA INVISIBLE DELANTE DE LA TV ===== */
-const TV_INTERACT_MARGIN = 0;  // ancho extra a cada lado
-const TV_INTERACT_DEPTH  = 2; // profundidad hacia abajo (suelo frente TV)
+const TV_INTERACT_MARGIN = 0;   // ancho extra a cada lado
+const TV_INTERACT_DEPTH  = 2;   // profundidad hacia abajo
 const tvInteractBase = {
   x: tvOnBase.x - TV_INTERACT_MARGIN,
   y: tvOnBase.y + tvOnBase.h - 40,
@@ -265,21 +265,29 @@ function getPlayerRect(x=player.x,y=player.y){
 }
 function aabb(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
 
-/* ===== ACCIÓN: APAGAR TV UNA SOLA VEZ ===== */
-let tvAlreadyOff = false;
-function showToast(msg){
+/* ===== TOASTS ===== */
+function showToast(msg, ms=2000){
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(showToast._to); showToast._to = setTimeout(()=>t.classList.remove('show'), 900);
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._to);
+  showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
 }
+
+/* ===== ACCIÓN TV (una sola vez apagar) ===== */
+let tvAlreadyOff = false;
 function handleAction(){
-  showToast('ACCION'); // para comprobar que el evento llega SIEMPRE
   // ¿está el player dentro de la zona invisible?
   const inside = aabb(getPlayerRect(), tvInteractPos);
-  if (tvOn && !tvAlreadyOff && inside){
-    tvOn = false; tvAlreadyOff = true;
-    showToast('Tele apagada');
+  if (inside){
+    if (tvOn && !tvAlreadyOff){
+      tvOn = false; tvAlreadyOff = true;
+      showToast('Tele apagada'); // <- quítalo si NO quieres toast al apagar bien
+    } else if (!tvOn){
+      showToast('Ya la he apagado');
+    }
   }
+  // si no está "inside", no mostramos nada
 }
 const actBtn = document.getElementById('btn-act');
 actBtn.addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
@@ -297,22 +305,42 @@ function equipShoes(){
   assets = assetsShoes || assets;
   player.speed = 230;
   sandalsImg = null;
+  showToast('Chanclas puestas'); // toast al equipar
 }
+
+/* ===== PRIMER AVANCE (arriba) ===== */
+let forwardToastShown = false;
 
 /* ===== LOOP ===== */
 function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
   player.moving = (vx!==0 || vy!==0);
+
+  // cálculo de movimiento propuesto
+  let movedUpThisFrame = false;
   if (player.moving){
     player.dir = Math.abs(vx) > Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
     const len = Math.hypot(vx,vy) || 1;
     const nx = (vx/len) * player.speed * dt;
     const ny = (vy/len) * player.speed * dt;
     const newX = player.x + nx, newY = player.y + ny;
-    if (!collides(newX,newY)){ player.x=newX; player.y=newY; }
+    const canMove = !collides(newX,newY);
+    if (canMove){
+      // detecta si realmente avanzó hacia arriba este frame
+      if (vy < 0) movedUpThisFrame = true;
+      player.x=newX; player.y=newY;
+    }
     player.frameTime += dt; if(player.frameTime >= 0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
-  } else { player.frame = 0; }
+  } else {
+    player.frame = 0;
+  }
+
+  // toast de “primer avance” solo 1 vez y solo si se movió arriba de verdad
+  if (movedUpThisFrame && !forwardToastShown){
+    forwardToastShown = true;
+    showToast('Ya he jugado bastante por hoy.');
+  }
 
   // pickup chanclas
   if (!hasShoes && sandalsImg){
