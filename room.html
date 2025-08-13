@@ -281,7 +281,6 @@ function handleAction() {
   if (insideTV) {
     if (tvOn && !tvAlreadyOff) {
       tvOn = false; tvAlreadyOff = true;
-      showToast('Tele apagada');
     } else if (!tvOn) {
       showToast('Ya la he apagado');
     }
@@ -317,7 +316,6 @@ function equipShoes(){
   assets = assetsShoes || assets;
   player.speed = 230;
   sandalsImg = null;
-  showToast('Chanclas puestas'); // toast al equipar
 }
 
 /* ===== PRIMER AVANCE (arriba) ===== */
