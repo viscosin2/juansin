@@ -85,7 +85,7 @@
 </div>
 
 <script>
-/* ===== CONFIG DEBUG ===== */
+/* ===== CONFIG ===== */
 const DEBUG = false;
 
 /* ===== SPRITES ===== */
@@ -112,22 +112,25 @@ const TVON_IMG   = "assets/objects/tv_on.png";
 const TVOFF_IMG  = "assets/objects/tv_off.png";
 const BED_IMG    = "assets/objects/bed.PNG";
 const SANDALS_IMG= "assets/objects/shoes.PNG";
-const LAMP_IMG= "assets/objects/lamp.PNG";
+const LAMP_IMG   = "assets/objects/lamp.PNG";
 
-let bgImg=null, plant1Img=null, lampImg=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null;
+let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null, lampImg=null;
+
+/* ===== ESTADO ILUMINACIÓN ===== */
 let tvOn = true;
-let lampOn = false; 
+let tvAlreadyOff = false;
+let lampOn = false;
+
+/* Oscuridad global (solo desaparece si lampOn) */
+let darkness = 0.40, targetDarkness = 0.40;
+const DARK_OFF = 0.40;   // oscuridad normal
+const DARK_NONE = 0.00;  // sin oscuridad (con lámpara)
+const BASE_SPEED = 200, SHOES_BONUS = 30, DARK_MULTIPLIER = 0.5;
+let darkWarnShown = false;
 
 /* ===== CANVAS/ESCALADO ===== */
 const roomOriginal = { w: 512, h: 350 };
 let bgRect = { dx:0, dy:0, dw:0, dh:0 }, scaleFactor = 1;
-
-// Oscuridad global (0 = nada, 0.40 = muy oscuro)
-let darkness = 0.40;       // valor actual que se usa al dibujar
-let targetDarkness = 0.40; // a dónde queremos ir (transición suave)
-const DARK_OFF = 0.40;     // sin luces
-const DARK_DIM = 0.18;     // con una luz (lámpara o TV)
-const DARK_NONE = 0.00;    // si quieres “quitarla del todo”
 
 /* ===== BOUNDS/OBJETOS (BASE) ===== */
 const boundsBase   = { x: 20, y: 85, w: 465, h: 235 };
@@ -144,23 +147,51 @@ const tvOnBase    = { x:205, y:35,  w:125, h:90  };
 const bedBase     = { x:3,   y:155, w:120, h:130 };
 const plant1Base  = { x:3,   y:230, w:60,  h:90  };
 const sandalsBase = { x:55,  y:270, w:50,  h:50  };
-const lampBase = { x: 110, y: 15, w: 65, h: 95 };
+const lampBase    = { x:110, y:15,  w:65,  h:95 };
 
-/* ===== ZONA INVISIBLE DELANTE DE LA TV ===== */
-const TV_INTERACT_MARGIN = 0;   // ancho extra a cada lado
-const TV_INTERACT_DEPTH  = 2;   // profundidad hacia abajo
+/* ===== ZONAS INVISIBLES DE INTERACCIÓN ===== */
+const TV_INTERACT_DEPTH  = 2;
 const tvInteractBase = {
-  x: tvOnBase.x - TV_INTERACT_MARGIN,
+  x: tvOnBase.x,
   y: tvOnBase.y + tvOnBase.h - 40,
-  w: tvOnBase.w + TV_INTERACT_MARGIN*2,
+  w: tvOnBase.w,
   h: TV_INTERACT_DEPTH
+};
+
+const LAMP_INTERACT_MARGIN = 0;
+const LAMP_INTERACT_DEPTH  = 16;
+// Bandeja delante de la lámpara, forzada a quedar dentro del área jugable
+const lampInteractBase = {
+  x: lampBase.x - LAMP_INTERACT_MARGIN,
+  y: Math.max(boundsBase.y, lampBase.y + lampBase.h - 18),
+  w: lampBase.w + LAMP_INTERACT_MARGIN*2,
+  h: LAMP_INTERACT_DEPTH
 };
 
 const playerStartBase = { x: 260, y: 150 };
 
 /* ===== POS ESCALADAS ===== */
-let bounds={}, obstacles=[], bedPos={}, sofaPos={}, lampPos={}, plant1Pos={}, tvPos={}, sandalsPos={}, tvInteractPos={};
+let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={};
 
+/* ===== UTILS ===== */
+const loadImage = (src) => new Promise(res=>{
+  const img = new Image();
+  img.onload = ()=>res(img);
+  img.onerror = ()=>{
+    console.warn('No se pudo cargar:', src);
+    const ph = document.createElement('canvas'); ph.width=ph.height=1; res(ph);
+  };
+  img.src = src;
+});
+async function preloadSprites(map){
+  const result = { idle:{}, walk:{}, size: map.size, scale: map.scale };
+  for (const state of ["idle","walk"]){
+    for (const dir of Object.keys(map[state])){
+      result[state][dir] = await Promise.all(map[state][dir].map(loadImage));
+    }
+  }
+  return result;
+}
 function updateScaledBounds(){
   bounds = {
     x: bgRect.dx + Math.round(boundsBase.x * scaleFactor),
@@ -180,33 +211,13 @@ function updateScaledBounds(){
   bedPos  = { x:bgRect.dx+Math.round(bedBase.x*scaleFactor), y:bgRect.dy+Math.round(bedBase.y*scaleFactor), w:Math.round(bedBase.w*scaleFactor), h:Math.round(bedBase.h*scaleFactor) };
   plant1Pos = { x:bgRect.dx+Math.round(plant1Base.x*scaleFactor), y:bgRect.dy+Math.round(plant1Base.y*scaleFactor), w:Math.round(plant1Base.w*scaleFactor), h:Math.round(plant1Base.h*scaleFactor) };
   lampPos = { x:bgRect.dx+Math.round(lampBase.x*scaleFactor), y:bgRect.dy+Math.round(lampBase.y*scaleFactor), w:Math.round(lampBase.w*scaleFactor), h:Math.round(lampBase.h*scaleFactor) };
+  lampInteractPos = { x:bgRect.dx+Math.round(lampInteractBase.x*scaleFactor), y:bgRect.dy+Math.round(lampInteractBase.y*scaleFactor), w:Math.round(lampInteractBase.w*scaleFactor), h:Math.round(lampInteractBase.h*scaleFactor) };
   sandalsPos = { x:bgRect.dx+Math.round(sandalsBase.x*scaleFactor), y:bgRect.dy+Math.round(sandalsBase.y*scaleFactor), w:Math.round(sandalsBase.w*scaleFactor), h:Math.round(sandalsBase.h*scaleFactor) };
-}
-
-const loadImage = (src) => new Promise(res=>{
-  const img = new Image();
-  img.onload = ()=>res(img);
-  img.onerror = ()=>{
-    console.warn('No se pudo cargar:', src);
-    const ph = document.createElement('canvas'); ph.width=ph.height=1; res(ph);
-  };
-  img.src = src;
-});
-
-async function preloadSprites(map){
-  const result = { idle:{}, walk:{}, size: map.size, scale: map.scale };
-  for (const state of ["idle","walk"]){
-    for (const dir of Object.keys(map[state])){
-      result[state][dir] = await Promise.all(map[state][dir].map(loadImage));
-    }
-  }
-  return result;
 }
 
 /* ===== CANVAS ===== */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
-
 function resizeCanvas(){
   const screen = document.querySelector('.screen');
   canvas.width = screen.clientWidth;
@@ -218,7 +229,7 @@ function resizeCanvas(){
     bgRect.dx = (canvas.width - bgRect.dw) / 2;
     bgRect.dy = (canvas.height - bgRect.dh) / 2;
     updateScaledBounds();
-    // Coloca al jugador tras recalcular posiciones
+    // Reposicionar player tras escalar
     player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
     player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
   }
@@ -228,7 +239,6 @@ window.addEventListener('resize', resizeCanvas);
 /* ===== INPUT ===== */
 const player = { x:0, y:0, speed:200, dir:'up', moving:false, frame:0, frameTime:0 };
 const keys = { up:false, down:false, left:false, right:false };
-
 function bindHold(btn, on, off){
   const start = e => { e.preventDefault(); on(); };
   const end   = e => { e.preventDefault(); off(); };
@@ -242,7 +252,6 @@ bindHold(document.getElementById('btn-up'),    ()=>keys.up=true,    ()=>keys.up=
 bindHold(document.getElementById('btn-down'),  ()=>keys.down=true,  ()=>keys.down=false);
 bindHold(document.getElementById('btn-left'),  ()=>keys.left=true,  ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.right=false);
-
 function bindPressVisual(el){
   const on = ()=>el.classList.add('pressed');
   const off= ()=>el.classList.remove('pressed');
@@ -251,7 +260,6 @@ function bindPressVisual(el){
   el.addEventListener('touchend', off, {passive:false}); el.addEventListener('touchcancel', off, {passive:false});
 }
 ['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>{ const el=document.getElementById(id); if(el) bindPressVisual(el); });
-
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
@@ -285,9 +293,9 @@ function showToast(msg, ms=2000){
   showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
 }
 
-/* ===== ACCIÓN TV (una sola vez apagar) ===== */
-let tvAlreadyOff = false;
+/* ===== ACCIONES ===== */
 function handleAction() {
+  // TV
   const insideTV = aabb(getPlayerRect(), tvInteractPos);
   if (insideTV) {
     if (tvOn && !tvAlreadyOff) {
@@ -295,18 +303,10 @@ function handleAction() {
     } else if (!tvOn) {
       showToast('No más Tekken por hoy.');
     }
-    return; // <- para que no siga comprobando planta en el mismo click
+    return;
   }
 
-
-  // LÁMPARA
-const lampInteractPos = {
-    x: lampPos.x,
-    y: lampPos.y,
-    w: lampPos.w,
-    h: lampPos.h
-  };
-
+  // LÁMPARA (usar bandeja)
   const insideLamp = aabb(getPlayerRect(), lampInteractPos);
   if (insideLamp) {
     lampOn = !lampOn;
@@ -314,31 +314,13 @@ const lampInteractPos = {
     return;
   }
 
+  // PLANTA
+  const insidePlant = aabb(getPlayerRect(), plant1Pos);
+  if (insidePlant) { showToast('10 años regándola y ni un solo aguacate...'); return; }
 
-  // --- NUEVO: zona de interacción con planta ---
-  const plantInteractPos = {
-    x: plant1Pos.x,
-    y: plant1Pos.y,
-    w: plant1Pos.w,
-    h: plant1Pos.h
-  };
-  const insidePlant = aabb(getPlayerRect(), plantInteractPos);
-  if (insidePlant) {
-    showToast('10 años regándola y ni un solo aguacate...');
-    return;
-  }
-
-  const bedInteractPos = {
-    x: bedPos.x,
-    y: bedPos.y,
-    w: bedPos.w,
-    h: bedPos.h
-  };
-  const insideBed = aabb(getPlayerRect(), bedInteractPos);
-  if (insideBed) {
-    showToast('Todavía no es hora de dormir.');
-    return;
-  }
+  // CAMA
+  const insideBed = aabb(getPlayerRect(), bedPos);
+  if (insideBed) { showToast('Todavía no es hora de dormir.'); return; }
 }
 const actBtn = document.getElementById('btn-act');
 actBtn.addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
@@ -354,33 +336,37 @@ function equipShoes(){
   hasShoes = true;
   try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){}
   assets = assetsShoes || assets;
-  player.speed = 230;
+  // no fijamos speed aquí; lo calcula update() dinámicamente
   sandalsImg = null;
 }
 
-/* ===== PRIMER AVANCE (arriba) ===== */
+/* ===== PRIMER AVANCE (arriba) OPCIONAL ===== */
 let forwardToastShown = false;
 
 /* ===== LOOP ===== */
 function update(dt){
+  // Oscuridad: solo desaparece con lámpara encendida
+  targetDarkness = lampOn ? DARK_NONE : DARK_OFF;
+  const fadeSpeed = 8;
+  darkness += (targetDarkness - darkness) * Math.min(1, dt * fadeSpeed);
+
+  // Velocidad: a la mitad si TV off y lámpara off
+  const lightOk = tvOn || lampOn;
+  const base = BASE_SPEED + (hasShoes ? SHOES_BONUS : 0);
+  player.speed = lightOk ? base : base * DARK_MULTIPLIER;
+
+  // Toast de oscuridad (antispam)
+  if (!lightOk) {
+    if (!darkWarnShown) { showToast('No veo bien, debo ir con cuidado'); darkWarnShown = true; }
+  } else {
+    darkWarnShown = false;
+  }
+
+  // Movimiento
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
   player.moving = (vx!==0 || vy!==0);
 
-// Si la lámpara está encendida, quitamos la oscuridad.
-// Si está apagada (da igual la TV), mantenemos la oscuridad normal.
-targetDarkness = lampOn ? DARK_NONE : DARK_OFF;
-
-// Interpolación suave (fade)
-const fadeSpeed = 8; // más alto = más rápido
-darkness += (targetDarkness - darkness) * Math.min(1, dt * fadeSpeed);
-
-// (tu lógica de velocidad puede seguir usando esto:)
-const lightOk = tvOn || lampOn;
-const base = BASE_SPEED + (hasShoes ? SHOES_BONUS : 0);
-player.speed = lightOk ? base : base * DARK_MULTIPLIER;
-
-  // cálculo de movimiento propuesto
   let movedUpThisFrame = false;
   if (player.moving){
     player.dir = Math.abs(vx) > Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
@@ -390,7 +376,6 @@ player.speed = lightOk ? base : base * DARK_MULTIPLIER;
     const newX = player.x + nx, newY = player.y + ny;
     const canMove = !collides(newX,newY);
     if (canMove){
-      // detecta si realmente avanzó hacia arriba este frame
       if (vy < 0) movedUpThisFrame = true;
       player.x=newX; player.y=newY;
     }
@@ -399,13 +384,13 @@ player.speed = lightOk ? base : base * DARK_MULTIPLIER;
     player.frame = 0;
   }
 
-  // toast de “primer avance” solo 1 vez y solo si se movió arriba de verdad
+  // Primer toast opcional
   if (movedUpThisFrame && !forwardToastShown){
     forwardToastShown = true;
     showToast('Ya he jugado bastante por hoy.');
   }
 
-  // pickup chanclas
+  // Pickup chanclas
   if (!hasShoes && sandalsImg){
     const reduce=0.5, p=getPlayerRect();
     const r={ x:p.x+p.w*(1-reduce)/2, y:p.y+p.h*(1-reduce)/2, w:p.w*reduce, h:p.h*reduce };
@@ -434,18 +419,18 @@ function draw(){
   const list=[];
   // TV
   list.push({ y: tvPos.y, draw: ()=>{ const timg = tvOn ? tvOnImg : tvOffImg; if (timg && timg.width) ctx.drawImage(timg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);} });
-  if (lampImg && lampImg.width) {
-    list.push({ y: lampPos.y + lampPos.h/2, draw: ()=>ctx.drawImage(lampImg, lampPos.x, lampPos.y, lampPos.w, lampPos.h) });
-  }
+  // Lámpara
+  if (lampImg && lampImg.width) list.push({ y: lampPos.y + lampPos.h/2, draw: ()=>ctx.drawImage(lampImg, lampPos.x, lampPos.y, lampPos.w, lampPos.h) });
+  // Resto objetos
   if (plant1Img && plant1Img.width) list.push({ y: plant1Pos.y, draw: ()=>ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
   if (sofaImg && sofaImg.width)     list.push({ y: sofaPos.y + sofaPos.h/2, draw: ()=>ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
   if (bedImg && bedImg.width)       list.push({ y: bedPos.y + bedPos.h/2, draw: ()=>ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
-
+  // Chanclas
   if (!hasShoes && sandalsImg && sandalsImg.width){
     list.push({ y: sandalsPos.y + sandalsPos.h/2, draw: ()=>ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h) });
   }
 
-  // player
+  // Player
   list.push({ y: player.y, draw: ()=>{
     ctx.fillStyle='rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
@@ -453,32 +438,35 @@ function draw(){
   }});
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
+  // Oscurecido con opacidad animada (solo desaparece con lámpara)
+  if (darkness > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${darkness.toFixed(3)})`;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
 
-// oscurecido con opacidad animada
-if (darkness > 0) {
-  ctx.fillStyle = `rgba(0,0,0,${darkness.toFixed(3)})`;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-}
-
-  // luz TV solo si está ON
+  // Luz TV si está ON
   if (tvOn){
     const flicker = 0.35 + Math.random()*0.05;
     drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker);
   }
-  
+  // Luz lámpara si está ON
   if (lampOn){
     const flicker = 0.30 + Math.random()*0.04;
-    drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 90, flicker);
+    drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 110, flicker);
   }
 
-
-  // DEBUG: zona de interacción
+  // DEBUG zonas
   if (DEBUG){
     ctx.save();
     ctx.fillStyle='rgba(0,200,255,0.12)';
     ctx.fillRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
     ctx.strokeStyle='rgba(0,200,255,0.35)';
     ctx.strokeRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
+
+    ctx.fillStyle='rgba(255,200,0,0.12)';
+    ctx.fillRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
+    ctx.strokeStyle='rgba(255,200,0,0.35)';
+    ctx.strokeRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
     ctx.restore();
   }
 }
@@ -503,19 +491,27 @@ function loop(now){
 }
 
 /* ===== INIT ===== */
+let assetsNormal, assetsShoes, assets;
 async function init(){
   const [bg, sofa, tvOnI, tvOffI, bed, plant, sandals, lamp, normalSet, shoesSet] = await Promise.all([
     loadImage(BACKGROUND), loadImage(SOFA_IMG), loadImage(TVON_IMG), loadImage(TVOFF_IMG),
     loadImage(BED_IMG), loadImage(PLANT1_IMG), loadImage(SANDALS_IMG), loadImage(LAMP_IMG),
     preloadSprites(SPRITES_NORMAL), preloadSprites(SPRITES_SHOES)
   ]);
-  bgImg=bg; sofaImg=sofa; tvOnImg=tvOnI; lampImg=lamp; tvOffImg=tvOffI; bedImg=bed; plant1Img=plant; sandalsImg=sandals;
+  bgImg=bg; sofaImg=sofa; tvOnImg=tvOnI; tvOffImg=tvOffI; bedImg=bed; plant1Img=plant; sandalsImg=sandals; lampImg=lamp;
   assetsNormal=normalSet; assetsShoes=shoesSet; assets=assetsNormal;
   try{ bgMusic.play(); }catch(e){}
   resizeCanvas();
   requestAnimationFrame(loop);
 }
 init();
+
+/* ===== BOTÓN ACCIÓN (bind al final para asegurar que existe) ===== */
+document.getElementById('btn-act').addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
+document.getElementById('btn-act').addEventListener('touchstart', (e)=>{ e.preventDefault(); handleAction(); }, {passive:false});
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); handleAction(); }
+}, { passive:false });
 </script>
 </body>
 </html>
