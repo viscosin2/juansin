@@ -122,6 +122,13 @@ let lampOn = false;
 const roomOriginal = { w: 512, h: 350 };
 let bgRect = { dx:0, dy:0, dw:0, dh:0 }, scaleFactor = 1;
 
+// Oscuridad global (0 = nada, 0.40 = muy oscuro)
+let darkness = 0.40;       // valor actual que se usa al dibujar
+let targetDarkness = 0.40; // a dónde queremos ir (transición suave)
+const DARK_OFF = 0.40;     // sin luces
+const DARK_DIM = 0.18;     // con una luz (lámpara o TV)
+const DARK_NONE = 0.00;    // si quieres “quitarla del todo”
+
 /* ===== BOUNDS/OBJETOS (BASE) ===== */
 const boundsBase   = { x: 20, y: 85, w: 465, h: 235 };
 const obstaclesBase= [
@@ -360,6 +367,19 @@ function update(dt){
   const vy = (keys.up?-1:0) + (keys.down?1:0);
   player.moving = (vx!==0 || vy!==0);
 
+// Si la lámpara está encendida, quitamos la oscuridad.
+// Si está apagada (da igual la TV), mantenemos la oscuridad normal.
+targetDarkness = lampOn ? DARK_NONE : DARK_OFF;
+
+// Interpolación suave (fade)
+const fadeSpeed = 8; // más alto = más rápido
+darkness += (targetDarkness - darkness) * Math.min(1, dt * fadeSpeed);
+
+// (tu lógica de velocidad puede seguir usando esto:)
+const lightOk = tvOn || lampOn;
+const base = BASE_SPEED + (hasShoes ? SHOES_BONUS : 0);
+player.speed = lightOk ? base : base * DARK_MULTIPLIER;
+
   // cálculo de movimiento propuesto
   let movedUpThisFrame = false;
   if (player.moving){
@@ -433,9 +453,12 @@ function draw(){
   }});
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
-  // oscurecido
-  ctx.fillStyle='rgba(0,0,0,0.40)';
+
+// oscurecido con opacidad animada
+if (darkness > 0) {
+  ctx.fillStyle = `rgba(0,0,0,${darkness.toFixed(3)})`;
   ctx.fillRect(0,0,canvas.width,canvas.height);
+}
 
   // luz TV solo si está ON
   if (tvOn){
