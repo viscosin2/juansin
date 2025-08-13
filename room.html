@@ -408,7 +408,7 @@ function aabbIntersect(a, b) {
 function tvFrontZone(){
   // Franja “en el suelo” delante de la TV. Ajusta a gusto:
   const marginX = 16 * scaleFactor;   // anchura adicional a cada lado
-  const depth   = 36 * scaleFactor;   // “profundidad” hacia abajo
+  const depth   = 100 * scaleFactor;   // “profundidad” hacia abajo
   return {
     x: tvPos.x - marginX,
     y: tvPos.y + tvPos.h - (6 * scaleFactor), // arranca justo bajo la TV
