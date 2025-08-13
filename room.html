@@ -481,7 +481,7 @@ function loop(now){
 
 /* ===== INIT ===== */
 async function init(){
-  const [bg, sofa, tvOnI, tvOffI, bed, plant, lamp, sandals, normalSet, shoesSet] = await Promise.all([
+  const [bg, sofa, tvOnI, tvOffI, bed, plant, sandals, lamp, normalSet, shoesSet] = await Promise.all([
     loadImage(BACKGROUND), loadImage(SOFA_IMG), loadImage(TVON_IMG), loadImage(TVOFF_IMG),
     loadImage(BED_IMG), loadImage(PLANT1_IMG), loadImage(SANDALS_IMG), loadImage(LAMP_IMG),
     preloadSprites(SPRITES_NORMAL), preloadSprites(SPRITES_SHOES)
