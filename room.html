@@ -4,7 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Juansin 30th birthday - room</title>
+
 <style>
+  /* ===== ESTILOS BASE ===== */
   html, body {
     height: 100%; margin: 0; background: #111;
     display: flex; justify-content: center; align-items: center;
@@ -27,7 +29,7 @@
   }
   canvas { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; background: black; }
 
-  /* Controles */
+  /* ===== CONTROLES ===== */
   .controls {
     height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr;
     gap: 14px; padding: 14px; box-sizing: border-box;
@@ -49,7 +51,7 @@
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering: pixelated; transform: scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform: scale(0.95); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9); }
 
-  /* Toast */
+  /* ===== TOAST (mensajes) ===== */
   .toast{
     position:absolute; top:19px; left:50%; transform:translateX(-50%);
     background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
@@ -84,12 +86,22 @@
   </div>
 </div>
 
-
 <script>
-/* ===== CONFIG ===== */
+/* ===========================
+   CONFIGURACIÓN Y CONSTANTES
+   =========================== */
 const DEBUG = false;
 
-/* ===== SPRITES ===== */
+/* Velocidad y oscuridad */
+const BASE_SPEED = 200;
+const SHOES_BONUS = 30;
+const DARK_MULTIPLIER = 0.5; // 50% más lento a oscuras (TV off + lámpara off)
+const DARK_OFF = 0.40;  // nivel de oscuridad por defecto
+const DARK_NONE = 0.00; // sin oscuridad (cuando la lámpara está encendida)
+
+/* ===========================
+   SPRITES DEL PERSONAJE
+   =========================== */
 const SPRITES_NORMAL = {
   size: { w: 36, h: 40 }, scale: 0.9,
   idle: { down:["assets/juan_character/idle_down.png"], up:["assets/juan_character/idle_up.png"], left:["assets/juan_character/idle_left.png"], right:["assets/juan_character/idle_right.png"] },
@@ -101,11 +113,15 @@ const SPRITES_SHOES = {
   walk: { down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
 
-/* ===== AUDIO ===== */
+/* ===========================
+   AUDIO
+   =========================== */
 let bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.4;
 const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
 
-/* ===== IMÁGENES ===== */
+/* ===========================
+   IMÁGENES (RUTAS)
+   =========================== */
 const BACKGROUND = "assets/locations/room.PNG";
 const PLANT1_IMG = "assets/objects/plant1.PNG";
 const SOFA_IMG   = "assets/objects/sofa.png";
@@ -115,25 +131,26 @@ const BED_IMG    = "assets/objects/bed.PNG";
 const SANDALS_IMG= "assets/objects/shoes.PNG";
 const LAMP_IMG   = "assets/objects/lamp.PNG";
 
+/* ===========================
+   ESTADO GLOBAL
+   =========================== */
 let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null, lampImg=null;
+let tvOn = true;          // la tele empieza encendida
+let tvAlreadyOff = false; // solo la puedes apagar una vez con acción
+let lampOn = false;       // lámpara empieza apagada
+let darkness = 0.40;      // opacidad actual de la oscuridad
+let targetDarkness = 0.40;// objetivo hacia el que interpolamos (fade)
+let darkWarnShown = false;// para no spamear el toast de “no veo bien”
 
-/* ===== ESTADO ILUMINACIÓN ===== */
-let tvOn = true;
-let tvAlreadyOff = false;
-let lampOn = false;
-
-/* Oscuridad global (solo desaparece si lampOn) */
-let darkness = 0.40, targetDarkness = 0.40;
-const DARK_OFF = 0.40;   // oscuridad normal
-const DARK_NONE = 0.00;  // sin oscuridad (con lámpara)
-const BASE_SPEED = 200, SHOES_BONUS = 30, DARK_MULTIPLIER = 0.5;
-let darkWarnShown = false;
-
-/* ===== CANVAS/ESCALADO ===== */
+/* ===========================
+   CANVAS Y ESCALADO
+   =========================== */
 const roomOriginal = { w: 512, h: 350 };
 let bgRect = { dx:0, dy:0, dw:0, dh:0 }, scaleFactor = 1;
 
-/* ===== BOUNDS/OBJETOS (BASE) ===== */
+/* ===========================
+   BOUNDS Y OBJETOS (BASE)
+   =========================== */
 const boundsBase   = { x: 20, y: 85, w: 465, h: 235 };
 const obstaclesBase= [
   { x: 230, y: 25,  w: 70,  h: 50 }, // TV
@@ -150,7 +167,7 @@ const plant1Base  = { x:3,   y:230, w:60,  h:90  };
 const sandalsBase = { x:55,  y:270, w:50,  h:50  };
 const lampBase    = { x:110, y:15,  w:65,  h:95 };
 
-/* ===== ZONAS INVISIBLES DE INTERACCIÓN ===== */
+/* Zonas invisibles de interacción (delante de objetos) */
 const TV_INTERACT_DEPTH  = 2;
 const tvInteractBase = {
   x: tvOnBase.x,
@@ -161,7 +178,7 @@ const tvInteractBase = {
 
 const LAMP_INTERACT_MARGIN = 0;
 const LAMP_INTERACT_DEPTH  = 16;
-// Bandeja delante de la lámpara, forzada a quedar dentro del área jugable
+/* Bandeja delante de la lámpara (asegurada dentro del área jugable) */
 const lampInteractBase = {
   x: lampBase.x - LAMP_INTERACT_MARGIN,
   y: Math.max(boundsBase.y, lampBase.y + lampBase.h - 18),
@@ -171,10 +188,14 @@ const lampInteractBase = {
 
 const playerStartBase = { x: 260, y: 150 };
 
-/* ===== POS ESCALADAS ===== */
+/* ===========================
+   POS ESCALADAS (DERIVADAS)
+   =========================== */
 let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={};
 
-/* ===== UTILS ===== */
+/* ===========================
+   HELPERS / UTILIDADES
+   =========================== */
 const loadImage = (src) => new Promise(res=>{
   const img = new Image();
   img.onload = ()=>res(img);
@@ -184,6 +205,7 @@ const loadImage = (src) => new Promise(res=>{
   };
   img.src = src;
 });
+
 async function preloadSprites(map){
   const result = { idle:{}, walk:{}, size: map.size, scale: map.scale };
   for (const state of ["idle","walk"]){
@@ -193,6 +215,8 @@ async function preloadSprites(map){
   }
   return result;
 }
+
+/* Recalcula posiciones escaladas cada vez que cambia el tamaño del canvas */
 function updateScaledBounds(){
   bounds = {
     x: bgRect.dx + Math.round(boundsBase.x * scaleFactor),
@@ -216,13 +240,17 @@ function updateScaledBounds(){
   sandalsPos = { x:bgRect.dx+Math.round(sandalsBase.x*scaleFactor), y:bgRect.dy+Math.round(sandalsBase.y*scaleFactor), w:Math.round(sandalsBase.w*scaleFactor), h:Math.round(sandalsBase.h*scaleFactor) };
 }
 
-/* ===== CANVAS ===== */
+/* ===========================
+   CANVAS / RESIZE
+   =========================== */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+
 function resizeCanvas(){
   const screen = document.querySelector('.screen');
   canvas.width = screen.clientWidth;
   canvas.height = screen.clientHeight;
+
   if (bgImg){
     scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     bgRect.dw = roomOriginal.w * scaleFactor;
@@ -230,16 +258,19 @@ function resizeCanvas(){
     bgRect.dx = (canvas.width - bgRect.dw) / 2;
     bgRect.dy = (canvas.height - bgRect.dh) / 2;
     updateScaledBounds();
-    // Reposicionar player tras escalar
+    // Coloca al jugador según la escala
     player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
     player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
   }
 }
 window.addEventListener('resize', resizeCanvas);
 
-/* ===== INPUT ===== */
-const player = { x:0, y:0, speed:200, dir:'up', moving:false, frame:0, frameTime:0 };
+/* ===========================
+   INPUT / CONTROLES
+   =========================== */
+const player = { x:0, y:0, speed:BASE_SPEED, dir:'up', moving:false, frame:0, frameTime:0 };
 const keys = { up:false, down:false, left:false, right:false };
+
 function bindHold(btn, on, off){
   const start = e => { e.preventDefault(); on(); };
   const end   = e => { e.preventDefault(); off(); };
@@ -253,29 +284,48 @@ bindHold(document.getElementById('btn-up'),    ()=>keys.up=true,    ()=>keys.up=
 bindHold(document.getElementById('btn-down'),  ()=>keys.down=true,  ()=>keys.down=false);
 bindHold(document.getElementById('btn-left'),  ()=>keys.left=true,  ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.right=false);
+
 function bindPressVisual(el){
   const on = ()=>el.classList.add('pressed');
   const off= ()=>el.classList.remove('pressed');
-  el.addEventListener('mousedown', on); el.addEventListener('mouseup', off); el.addEventListener('mouseleave', off);
+  el.addEventListener('mousedown', on);
+  el.addEventListener('mouseup', off);
+  el.addEventListener('mouseleave', off);
   el.addEventListener('touchstart', (e)=>{ e.preventDefault(); on(); }, {passive:false});
-  el.addEventListener('touchend', off, {passive:false}); el.addEventListener('touchcancel', off, {passive:false});
+  el.addEventListener('touchend', off, {passive:false});
+  el.addEventListener('touchcancel', off, {passive:false});
 }
-['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>{ const el=document.getElementById(id); if(el) bindPressVisual(el); });
+['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>{
+  const el=document.getElementById(id); if(el) bindPressVisual(el);
+});
+
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
 
-/* ===== META/ASSETS ===== */
+/* ===========================
+   SPRITES CARGADOS / META
+   =========================== */
 let assets=null, assetsNormal=null, assetsShoes=null;
-function currentMeta(){ return { size: assets.size, scale: assets.scale ?? SPRITES_NORMAL.scale, ...assets }; }
+/* Safe: si assets aún no está listo, usa SPRITES_NORMAL para medir colisiones */
+function currentMeta(){
+  const base = assets ?? SPRITES_NORMAL;
+  return { size: base.size, scale: base.scale ?? SPRITES_NORMAL.scale, ...base };
+}
 
-/* ===== COLISIONES ===== */
+/* ===========================
+   COLISIONES
+   =========================== */
 function collides(x, y){
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
   const halfH = currentMeta().size.h * currentMeta().scale / 2;
   const px = x - halfW, py = y - halfH, pw = halfW*2, ph = halfH*2;
+  // bordes
   if (x < bounds.x || x > bounds.x + bounds.w || y < bounds.y || y > bounds.y + bounds.h) return true;
-  for (const o of obstacles){ if (px < o.x + o.w && px + pw > o.x && py < o.y + o.h && py + ph > o.y) return true; }
+  // objetos
+  for (const o of obstacles){
+    if (px < o.x + o.w && px + pw > o.x && py < o.y + o.h && py + ph > o.y) return true;
+  }
   return false;
 }
 function getPlayerRect(x=player.x,y=player.y){
@@ -285,7 +335,9 @@ function getPlayerRect(x=player.x,y=player.y){
 }
 function aabb(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
 
-/* ===== TOASTS ===== */
+/* ===========================
+   TOASTS
+   =========================== */
 function showToast(msg, ms=2000){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -294,9 +346,11 @@ function showToast(msg, ms=2000){
   showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
 }
 
-/* ===== ACCIONES ===== */
+/* ===========================
+   ACCIONES (botón acción)
+   =========================== */
 function handleAction() {
-  // TV
+  // TV (solo apagar una vez)
   const insideTV = aabb(getPlayerRect(), tvInteractPos);
   if (insideTV) {
     if (tvOn && !tvAlreadyOff) {
@@ -307,7 +361,7 @@ function handleAction() {
     return;
   }
 
-  // LÁMPARA (usar bandeja)
+  // Lámpara (toggle)
   const insideLamp = aabb(getPlayerRect(), lampInteractPos);
   if (insideLamp) {
     lampOn = !lampOn;
@@ -315,48 +369,43 @@ function handleAction() {
     return;
   }
 
-  // PLANTA
+  // Planta
   const insidePlant = aabb(getPlayerRect(), plant1Pos);
   if (insidePlant) { showToast('10 años regándola y ni un solo aguacate...'); return; }
 
-  // CAMA
+  // Cama
   const insideBed = aabb(getPlayerRect(), bedPos);
   if (insideBed) { showToast('Todavía no es hora de dormir.'); return; }
 }
-const actBtn = document.getElementById('btn-act');
-actBtn.addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
-actBtn.addEventListener('touchstart', (e)=>{ e.preventDefault(); handleAction(); }, {passive:false});
-window.addEventListener('keydown', e => {
-  if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); handleAction(); }
-}, { passive:false });
 
-/* ===== EQUIP ===== */
+/* ===========================
+   EQUIPO (chanclas)
+   =========================== */
 let hasShoes = false;
 function equipShoes(){
   if (hasShoes) return;
   hasShoes = true;
   try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){}
   assets = assetsShoes || assets;
-  // no fijamos speed aquí; lo calcula update() dinámicamente
-  sandalsImg = null;
+  sandalsImg = null; // las ocultamos del escenario
 }
 
-/* ===== PRIMER AVANCE (arriba) OPCIONAL ===== */
-let forwardToastShown = false;
+/* ===========================
+   LOOP: UPDATE + DRAW
+   =========================== */
+let forwardToastShown = false; // demo: primer avance arriba muestra un toast
 
-/* ===== LOOP ===== */
 function update(dt){
-  // Oscuridad: solo desaparece con lámpara encendida
+  /* Oscuridad: SOLO se quita si la lámpara está encendida */
   targetDarkness = lampOn ? DARK_NONE : DARK_OFF;
   const fadeSpeed = 8;
   darkness += (targetDarkness - darkness) * Math.min(1, dt * fadeSpeed);
 
-  // Velocidad: a la mitad si TV off y lámpara off
+  /* Velocidad: si TV off y lámpara off -> lento + toast */
   const lightOk = tvOn || lampOn;
   const base = BASE_SPEED + (hasShoes ? SHOES_BONUS : 0);
   player.speed = lightOk ? base : base * DARK_MULTIPLIER;
 
-  // Toast de oscuridad (antispam)
   if (!lightOk) {
     if (!darkWarnShown) { showToast('No veo bien, debo ir con cuidado'); darkWarnShown = true; }
   } else {
@@ -375,23 +424,23 @@ function update(dt){
     const nx = (vx/len) * player.speed * dt;
     const ny = (vy/len) * player.speed * dt;
     const newX = player.x + nx, newY = player.y + ny;
-    const canMove = !collides(newX,newY);
-    if (canMove){
+    if (!collides(newX,newY)){
       if (vy < 0) movedUpThisFrame = true;
       player.x=newX; player.y=newY;
     }
-    player.frameTime += dt; if(player.frameTime >= 0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
+    player.frameTime += dt;
+    if(player.frameTime >= 0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else {
     player.frame = 0;
   }
 
-  // Primer toast opcional
+  // Primer toast demo
   if (movedUpThisFrame && !forwardToastShown){
     forwardToastShown = true;
     showToast('Ya he jugado bastante por hoy.');
   }
 
-  // Pickup chanclas
+  // Pickup chanclas (hitbox reducida)
   if (!hasShoes && sandalsImg){
     const reduce=0.5, p=getPlayerRect();
     const r={ x:p.x+p.w*(1-reduce)/2, y:p.y+p.h*(1-reduce)/2, w:p.w*reduce, h:p.h*reduce };
@@ -402,6 +451,8 @@ function update(dt){
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Fondo
   if (bgImg){
     const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     bgRect.dw = roomOriginal.w*s; bgRect.dh = roomOriginal.h*s;
@@ -410,53 +461,60 @@ function draw(){
   }
   if (!assets) return;
 
+  // Sprite del jugador
   const sw=currentMeta().size.w, sh=currentMeta().size.h;
   const dw=Math.round(sw*SPRITES_NORMAL.scale), dh=Math.round(sh*SPRITES_NORMAL.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
+  // Micro “idle stretch”
   let stretchPx=0;
-  if (!player.moving){ const Hz=0.6, t=performance.now()/1000; stretchPx=Math.round((Math.sin(t*Math.PI*2*Hz)*0.5+0.5)*1); }
+  if (!player.moving){
+    const Hz=0.6, t=performance.now()/1000;
+    stretchPx=Math.round((Math.sin(t*Math.PI*2*Hz)*0.5+0.5)*1);
+  }
 
+  // Orden de dibujo por “y” (pobrecito pseudo-z)
   const list=[];
-  // TV
+  // TV (on/off)
   list.push({ y: tvPos.y, draw: ()=>{ const timg = tvOn ? tvOnImg : tvOffImg; if (timg && timg.width) ctx.drawImage(timg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);} });
   // Lámpara
   if (lampImg && lampImg.width) list.push({ y: lampPos.y + lampPos.h/2, draw: ()=>ctx.drawImage(lampImg, lampPos.x, lampPos.y, lampPos.w, lampPos.h) });
-  // Resto objetos
+  // Planta, sofá, cama
   if (plant1Img && plant1Img.width) list.push({ y: plant1Pos.y, draw: ()=>ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
   if (sofaImg && sofaImg.width)     list.push({ y: sofaPos.y + sofaPos.h/2, draw: ()=>ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
   if (bedImg && bedImg.width)       list.push({ y: bedPos.y + bedPos.h/2, draw: ()=>ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
-  // Chanclas
+  // Chanclas si no equipadas
   if (!hasShoes && sandalsImg && sandalsImg.width){
     list.push({ y: sandalsPos.y + sandalsPos.h/2, draw: ()=>ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h) });
   }
-
   // Player
   list.push({ y: player.y, draw: ()=>{
+    // Sombra
     ctx.fillStyle='rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
+    // Sprite
     ctx.drawImage(img, 0,0, sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2)-stretchPx, dw, dh+stretchPx);
   }});
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
-  // Oscurecido con opacidad animada (solo desaparece con lámpara)
+  // Oscurecido (solo desaparece con lámpara)
   if (darkness > 0) {
     ctx.fillStyle = `rgba(0,0,0,${darkness.toFixed(3)})`;
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
-  // Luz TV si está ON
+  // Luz TV (glow) si está ON
   if (tvOn){
     const flicker = 0.35 + Math.random()*0.05;
     drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker);
   }
-  // Luz lámpara si está ON
+  // Luz lámpara (glow) si está ON
   if (lampOn){
     const flicker = 0.30 + Math.random()*0.04;
     drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 110, flicker);
   }
 
-  // DEBUG zonas
+  // DEBUG: mostrar zonas de interacción
   if (DEBUG){
     ctx.save();
     ctx.fillStyle='rgba(0,200,255,0.12)';
@@ -472,6 +530,7 @@ function draw(){
   }
 }
 
+/* Luz radial recortada al área del fondo (para que no “sangre” fuera) */
 function drawLightClipped(x,y,radius,intensity){
   if (!bgRect || !bgRect.dw || !bgRect.dh) return;
   const radiusScaled = radius * (bgRect.dw / roomOriginal.w);
@@ -481,18 +540,27 @@ function drawLightClipped(x,y,radius,intensity){
   g.addColorStop(0, `rgba(255,255,200,${intensity})`);
   g.addColorStop(1, 'rgba(255,255,200,0)');
   ctx.globalCompositeOperation="lighter";
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,radiusScaled,0,Math.PI*2); ctx.fill();
-  ctx.restore(); ctx.globalCompositeOperation="source-over";
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.arc(x,y,radiusScaled,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  ctx.globalCompositeOperation="source-over";
 }
 
+/* ===========================
+   LOOP PRINCIPAL
+   =========================== */
 function loop(now){
   if(!loop.last) loop.last=now;
   const dt = Math.min(1/30,(now-loop.last)/1000);
-  loop.last=now; update(dt); draw(); requestAnimationFrame(loop);
+  loop.last=now;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
 }
 
-/* ===== INIT ===== */
-let assetsNormal, assetsShoes, assets;
+/* ===========================
+   INIT (carga de assets)
+   =========================== */
 async function init(){
   const [bg, sofa, tvOnI, tvOffI, bed, plant, sandals, lamp, normalSet, shoesSet] = await Promise.all([
     loadImage(BACKGROUND), loadImage(SOFA_IMG), loadImage(TVON_IMG), loadImage(TVOFF_IMG),
@@ -507,7 +575,10 @@ async function init(){
 }
 init();
 
-/* ===== BOTÓN ACCIÓN (bind al final para asegurar que existe) ===== */
+/* ===========================
+   BIND DEL BOTÓN ACCIÓN
+   (solo aquí, para evitar duplicados)
+   =========================== */
 document.getElementById('btn-act').addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
 document.getElementById('btn-act').addEventListener('touchstart', (e)=>{ e.preventDefault(); handleAction(); }, {passive:false});
 window.addEventListener('keydown', e => {
