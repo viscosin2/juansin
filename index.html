@@ -26,18 +26,18 @@
     box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
   }
 
-  /* Fondo de inicio (tu imagen) */
+  /* Fondo de inicio */
   .start-bg {
     position: absolute; inset: 0;
     background: #000 url("assets/ui/start_bg.jpg") center center / contain no-repeat;
     z-index: 1;
   }
-  /* Confeti encima del fondo */
+  /* Confeti */
   #confettiCanvas {
     position: absolute; inset: 0; width: 100%; height: 100%;
     z-index: 2; pointer-events: none; image-rendering: pixelated; background: transparent;
   }
-  /* Icono/botón START con neón azul */
+  /* Start (neón azul) */
   .start-icon{
     position: absolute; left: 50%; bottom: 0%;
     transform: translateX(-50%) scale(1);
@@ -55,25 +55,25 @@
   }
   .start-icon.pressed{ transform: translateX(-50%) scale(0.92); opacity: 0; filter: none; }
 
-  /* Cortinilla para el fade */
+  /* Cortinilla fade */
   .curtain { position: absolute; inset: 0; background:#000; opacity:0; transition: opacity .6s ease; z-index: 10; pointer-events:none; }
   .opaque { opacity: 1; }
 
-  /* ===== CONTROLES (con PNG como en room) ===== */
+  /* ===== CONTROLES (PNG como en room) ===== */
   .controls {
     height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr;
     gap: 14px; padding: 14px; box-sizing: border-box;
   }
-  /* D-PAD: celdas 64px, pegadas y desplazadas un pelín a la dcha */
+  /* D-PAD: celdas 64px, pegadas y un pelín a la dcha */
   .dpad{
     display: grid;
     grid-template-columns: repeat(3, 64px);
     grid-template-rows: repeat(3, 64px);
-    gap: 0;                  /* juntas sin afectar layout */
+    gap: 0;
     justify-content: center;
     align-content: center;
-    margin-left: 12px;       /* mueve TODO el bloque un poco a la dcha */
-    overflow: visible;       /* por si la imagen escalada sobresale */
+    margin-left: 12px;
+    overflow: visible;
   }
 
   /* Botones imagen (flechas) */
@@ -83,12 +83,13 @@
     background: transparent; cursor: pointer;
     filter: drop-shadow(0 3px 4px rgba(0,0,0,0.85));
     transition: transform 0.06s ease, filter 0.06s ease;
+    -webkit-tap-highlight-color: transparent;
   }
   .img-btn.arrow::before{
     content: ""; display: block; width: 100%; height: 100%;
     background: url("assets/ui/arrow.PNG") center/contain no-repeat;
     image-rendering: pixelated;
-    transform: rotate(var(--rot, 0deg)) scale(1.28); /* más grande, sin tocar la celda */
+    transform: rotate(var(--rot, 0deg)) scale(1.28);
     transform-origin: center center;
   }
   .btn-up    { --rot: 180deg; }
@@ -103,8 +104,9 @@
     background: transparent; cursor: pointer;
     filter: drop-shadow(0 5px 6px rgba(0,0,0,0.85));
     transition: transform 0.06s ease, filter 0.06s ease;
-    margin-top: 45px;        /* bájalo un poco como en room */
+    margin-top: 45px;
     justify-self: center;
+    -webkit-tap-highlight-color: transparent;
   }
   .img-act::before{
     content: ""; display: block; width: 100%; height: 100%;
@@ -113,7 +115,7 @@
     transform: scale(1.02);
   }
 
-  /* Feedback “pressed” (táctil/escritorio) */
+  /* Feedback “pressed” */
   .img-btn:active, .img-btn.pressed,
   .img-act:active, .img-act.pressed{
     transform: scale(0.95);
@@ -132,7 +134,7 @@
       </div>
     </div>
 
-    <!-- Controles con PNG como en room -->
+    <!-- Controles con PNG -->
     <div class="controls">
       <div class="dpad">
         <div></div>
@@ -185,31 +187,50 @@ function burstFromIcon(){
 window.addEventListener('load', ()=>{ resize(); seed(90); startConfetti(); });
 window.addEventListener('resize', ()=>{ resize(); });
 
-/* ===== feedback visual en botones PNG ===== */
-function bindPressVisual(el){
-  const on = () => el.classList.add('pressed');
+/* ===== feedback visual sin romper el click del botón de acción ===== */
+function bindPressVisual(el, {preventOnTouchStart=true} = {}){
+  const on  = () => el.classList.add('pressed');
   const off = () => el.classList.remove('pressed');
+
   el.addEventListener('mousedown', on);
   el.addEventListener('mouseup', off);
   el.addEventListener('mouseleave', off);
-  el.addEventListener('touchstart', (e)=>{ e.preventDefault(); on(); }, {passive:false});
-  el.addEventListener('touchend', off, {passive:false});
-  el.addEventListener('touchcancel', off, {passive:false});
+
+  el.addEventListener('touchstart', (e)=>{
+    if (preventOnTouchStart) e.preventDefault(); // flechas sí; acción no
+    on();
+  }, {passive:false});
+  el.addEventListener('touchend', off,   {passive:true});
+  el.addEventListener('touchcancel', off,{passive:true});
 }
-['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>{
+
+// Flechas: prevenimos (para que no hagan scroll)
+['btn-up','btn-down','btn-left','btn-right'].forEach(id=>{
   const el = document.getElementById(id);
-  if (el) bindPressVisual(el);
+  if (el) bindPressVisual(el, {preventOnTouchStart:true});
 });
 
-/* ===== Navegar a room.html con flash + fade ===== */
+// Acción: NO prevenimos para que el click exista en móvil
+const actBtn = document.getElementById('btn-act');
+if (actBtn) bindPressVisual(actBtn, {preventOnTouchStart:false});
+
+/* ===== Navegar a room.html con flash + fade (robusto para móvil) ===== */
 const curtain = document.getElementById('curtain');
-document.getElementById('btn-act').addEventListener('click', ()=>{
+function goToRoom(){
+  if (goToRoom.lock) return;
+  goToRoom.lock = true;
+
   const icon=document.getElementById('startIcon');
-  icon.classList.add('pressed');
+  if (icon) icon.classList.add('pressed');
+
   burstFromIcon();
   curtain.classList.add('opaque');
   setTimeout(()=>{ window.location.href = 'room.html'; }, 650);
-});
+}
+
+// Disparo en click y en touchend (por si algún navegador no emite click tras touch)
+actBtn.addEventListener('click', goToRoom);
+actBtn.addEventListener('touchend', goToRoom, {passive:true});
 </script>
 </body>
 </html>
