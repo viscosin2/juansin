@@ -365,7 +365,6 @@ function handleAction() {
   const insideLamp = aabb(getPlayerRect(), lampInteractPos);
   if (insideLamp) {
     lampOn = !lampOn;
-    showToast(lampOn ? 'Lámpara encendida' : 'Lámpara apagada');
     return;
   }
 
