@@ -378,7 +378,7 @@ const reducedLamp= {
   // Planta
 const reducedPlant= {
   x: plant1Pos.x - 5,  // margen izquierda
-  y: plant1Pos.y, // solo la parte baja
+  y: plant1Pos.y + 50, // solo la parte baja
   w: plant1Pos.w - 5,  // margen derecha
   h: 40             // altura pequeña
 };
@@ -391,7 +391,7 @@ const reducedBed = {
   x: bedPos.x,  // margen izquierda
   y: bedPos.y + 20, // solo la parte baja
   w: bedPos.w - 15,  // margen derecha
-  h: 30           // altura pequeña
+  h: 35           // altura pequeña
 };
 
 const insideBed = aabb(getPlayerRect(), reducedBed);
