@@ -389,9 +389,9 @@ const reducedPlant= {
 // CAMA
 const reducedBed = {
   x: bedPos.x,  // margen izquierda
-  y: bedPos.y + bedPos.h - 55, // solo la parte baja
+  y: bedPos.y - 40, // solo la parte baja
   w: bedPos.w - 15,  // margen derecha
-  h: 9           // altura pequeña
+  h: 30           // altura pequeña
 };
 
 const insideBed = aabb(getPlayerRect(), reducedBed);
