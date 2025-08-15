@@ -328,42 +328,49 @@ function startExitSequence(){
 }
 
 /* ===== ACCIÓN ===== */
-function handleAction(){
-  if (preDialogLock) return;
-  if (dialogOpen){ advanceDialog(); return; }
+function handleAction() {
+  // 1) Si hay diálogo abierto, SIEMPRE prioriza avanzar el diálogo
+  if (dialogOpen) {
+    advanceDialog();
+    return;
+  }
 
+  // 2) Si aún estamos en el lock previo al primer diálogo, no hagas nada más
+  if (preDialogLock) return;
+
+  // 3) A partir de aquí, lógica normal de acción (puerta, tv, lámpara, etc.)
   const atDoor = aabb(getPlayerRect(), doorInteractPos);
-  if (atDoor){
+  if (atDoor) {
     if (!hasShoes) { showToast('Ponte las chanclas.'); return; }
     if (tvOn)      { showToast('Apaga la tele.'); return; }
     if (lampOn)    { showToast('Apaga la luz.'); return; }
-    startExitSequence(); return;
+    startExitSequence();
+    return;
   }
 
   // TV
   const insideTV = aabb(getPlayerRect(), tvInteractPos);
-  if (insideTV){
+  if (insideTV) {
     if (tvOn && !tvAlreadyOff) { tvOn = false; tvAlreadyOff = true; }
-    else if (!tvOn) showToast('No más Tekken por hoy.');
+    else if (!tvOn) { showToast('No más Tekken por hoy.'); }
     return;
   }
 
   // Lámpara
   const reducedLamp= { x: lampPos.x, y: lampPos.y + lampPos.h - 20, w: lampPos.w - 5, h: 3 };
   const insideLamp = aabb(getPlayerRect(), reducedLamp);
-  if (insideLamp){ lampOn = !lampOn; return; }
+  if (insideLamp) { lampOn = !lampOn; return; }
 
   // Planta
   const reducedPlant= { x: plant1Pos.x - 5, y: plant1Pos.y + 40, w: plant1Pos.w - 5, h: 0.2 };
   const insidePlant = aabb(getPlayerRect(), reducedPlant);
-  if (insidePlant){ showToast('10 años regándola y ni un solo aguacate...'); return; }
+  if (insidePlant) { showToast('10 años regándola y ni un solo aguacate...'); return; }
 
   // Cama
   const reducedBed = { x: bedPos.x, y: bedPos.y + 20, w: bedPos.w - 15, h: 35 };
   const insideBed = aabb(getPlayerRect(), reducedBed);
-  if (insideBed){ showToast('No es hora de cerrar el kiosko.'); return; }
+  if (insideBed) { showToast('No es hora de cerrar el kiosko.'); return; }
 }
-
 /* ===== EQUIPO ===== */
 let hasShoes = false;
 function equipShoes(){
