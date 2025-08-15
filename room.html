@@ -39,6 +39,14 @@
 
   .scene-fade{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; z-index:999; transition: opacity .45s ease; }
   .scene-fade.show{ opacity:1; }
+
+  /* ===== PRESS TO START ===== */
+  .banner{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family: monospace; font-size: 18px; letter-spacing:2px;
+    background: rgba(0,0,0,.6); color:#fff; user-select:none; z-index: 998;
+  }
+  .banner.hide{ display:none; }
 </style>
 </head>
 <body>
@@ -47,6 +55,10 @@
   <div class="screen-container">
     <div class="screen">
       <canvas id="game"></canvas>
+
+      <!-- PRESS TO START -->
+      <div id="pressStart" class="banner">PRESS TO START</div>
+
       <div id="toast" class="toast"></div>
       <div id="sceneFade" class="scene-fade"></div>
 
@@ -91,6 +103,11 @@ const DARK_MULTIPLIER = 0.2;
 const DARK_OFF = 0.60;
 const DARK_NONE = 0.00;
 
+/* ===== ESTADO DEL JUEGO / AUDIO ===== */
+let gameState = 'intro';         // 'intro' | 'playing' | 'transition'
+let hasStarted = false;
+let bgmHasEverPlayed = false;
+
 /* ===== SPRITES PERSONAJE ===== */
 const SPRITES_NORMAL = {
   size: { w: 36, h: 40 }, scale: 0.9,
@@ -109,7 +126,7 @@ const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
 const doorSnd   = new Audio("assets/sounds/door_clack.wav"); doorSnd.volume = 0.9;
 
 /* ===== IMÁGENES (¡OJO A MAYÚS/MINÚS!) ===== */
-const BACKGROUND = "assets/locations/room.PNG";   // <-- ajusta a .PNG si tu archivo es .PNG
+const BACKGROUND = "assets/locations/room.PNG";
 const PLANT1_IMG = "assets/objects/plant1.PNG";
 const SOFA_IMG   = "assets/objects/sofa.png";
 const TVON_IMG   = "assets/objects/tv_on.png";
@@ -173,7 +190,7 @@ async function preloadSprites(map){
   return result;
 }
 
-/* ===== playerStartBase ARRIBA (para no usarlo antes) ===== */
+/* ===== playerStartBase ARRIBA ===== */
 const playerStartBase = { x: 260, y: 150 };
 
 /* ===== ESCALA ===== */
@@ -317,30 +334,81 @@ function advanceDialog(){
   else { closeDialog(); }
 }
 
+/* ===== FADE AUDIO ===== */
+function fadeOutAudio(audio, ms=300){
+  return new Promise(res=>{
+    const startVol = audio.volume;
+    const steps = Math.max(1, Math.floor(ms/16));
+    let i = 0;
+    const int = setInterval(()=>{
+      i++;
+      audio.volume = Math.max(0, startVol*(1 - i/steps));
+      if (i>=steps){
+        clearInterval(int);
+        audio.volume = 0;
+        res();
+      }
+    },16);
+  });
+}
+
 /* ===== SALIDA/PUERTA + FADE ===== */
 let exiting = false, showDoorRect = false;
 const DOOR_HOLD_MS = 250, EXIT_FADE_MS = 450, NEXT_SCENE_URL = "outside.html";
-function startExitSequence(){
+async function startExitSequence(){
   if (exiting) return;
   exiting = true; showDoorRect = true;
   try { doorSnd.currentTime = 0; doorSnd.play(); } catch(e) {}
-  setTimeout(()=>{ document.getElementById('sceneFade')?.classList.add('show'); setTimeout(()=>{ window.location.href = NEXT_SCENE_URL; }, EXIT_FADE_MS); }, DOOR_HOLD_MS);
+
+  // Matar cualquier resto de música antes del cambio
+  try { await fadeOutAudio(bgMusic, 250); bgMusic.pause(); bgMusic.currentTime = 0; } catch(e){}
+
+  // Fade visual y cambio de escena
+  const sf = document.getElementById('sceneFade');
+  sf?.classList.add('show');
+  setTimeout(()=>{ window.location.href = NEXT_SCENE_URL; }, EXIT_FADE_MS);
+}
+
+/* ===== ARRANQUE CONTROLADO POR BANNER ===== */
+const pressStartEl = document.getElementById('pressStart');
+let audioCtx;
+function ensureAudioCtxUnlocked(){
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch(e){}
+}
+function startBGM(){
+  if (bgmHasEverPlayed) return;
+  bgMusic.volume = 0.4;
+  bgMusic.currentTime = 0;
+  bgMusic.play().then(()=>{ bgmHasEverPlayed = true; }).catch(()=>{ /* si el navegador bloquea, ya habrá otro gesto */ });
+}
+function startGameFromBanner(){
+  if (hasStarted) return;
+  hasStarted = true;
+  gameState = 'playing';
+  pressStartEl.classList.add('hide');
+  ensureAudioCtxUnlocked();
+  startBGM();
+
+  // Lanzar el primer diálogo tras un pelín (queda más natural)
+  setTimeout(()=>{ dialogIndex = 0; openDialog(); startTyping(dialogQueue[dialogIndex]); }, 400);
 }
 
 /* ===== ACCIÓN ===== */
 function handleAction() {
-  // 1) Si hay diálogo abierto, SIEMPRE prioriza avanzar el diálogo
-  if (dialogOpen) {
-    advanceDialog();
-    return;
+  // 0) Si estamos en el banner de inicio, la primera acción lo quita y arranca música
+  if (gameState === 'intro'){
+    startGameFromBanner();
+    return; // IMPORTANTE: no procesar el resto en la misma pulsación
   }
-try { bgMusic.play(); } catch(e) {}
+
+  // 1) Si hay diálogo abierto, prioriza avanzar
+  if (dialogOpen) { advanceDialog(); return; }
 
   // 2) Si aún estamos en el lock previo al primer diálogo, no hagas nada más
   if (preDialogLock) return;
-
-
-
 
   // 3) A partir de aquí, lógica normal de acción (puerta, tv, lámpara, etc.)
   const atDoor = aabb(getPlayerRect(), doorInteractPos);
@@ -354,19 +422,20 @@ try { bgMusic.play(); } catch(e) {}
 
   // TV
   const insideTV = aabb(getPlayerRect(), tvInteractPos);
-if (insideTV) {
-  if (tvOn && !tvAlreadyOff) {
-    tvOn = false;
-    tvAlreadyOff = true;
-    bgMusic.pause();
-    bgMusic.currentTime = 0; // opcional, para que empiece desde el inicio si se vuelve a encender
-  } else if (!tvOn) {
-    showToast('No más Tekken por hoy.');
+  if (insideTV) {
+    if (tvOn && !tvAlreadyOff) {
+      tvOn = false;
+      tvAlreadyOff = true;
+      // Apaga BGM si la usabas como “sonido de tele”
+      bgMusic.pause();
+      bgMusic.currentTime = 0;
+    } else if (!tvOn) {
+      showToast('No más Tekken por hoy.');
+    }
+    return;
   }
-  return;
-}
 
-  // Lámpara
+  // Lámpara (NO toca la BGM)
   const reducedLamp= { x: lampPos.x, y: lampPos.y + lampPos.h - 20, w: lampPos.w - 5, h: 3 };
   const insideLamp = aabb(getPlayerRect(), reducedLamp);
   if (insideLamp) { lampOn = !lampOn; return; }
@@ -381,6 +450,7 @@ if (insideTV) {
   const insideBed = aabb(getPlayerRect(), reducedBed);
   if (insideBed) { showToast('No es hora de cerrar el kiosko.'); return; }
 }
+
 /* ===== EQUIPO ===== */
 let hasShoes = false;
 function equipShoes(){
@@ -399,7 +469,7 @@ function update(dt){
   const base = BASE_SPEED + (hasShoes ? SHOES_BONUS : 0);
   player.speed = lightOk ? base : base * DARK_MULTIPLIER;
 
-  if (dialogOpen || exiting || preDialogLock){ player.moving = false; player.frame = 0; return; }
+  if (dialogOpen || exiting || preDialogLock || gameState==='intro'){ player.moving = false; player.frame = 0; return; }
 
   if (!lightOk){ if (!darkWarnShown){ showToast('Despacio, está oscuro.'); darkWarnShown = true; } }
   else { darkWarnShown = false; }
@@ -453,16 +523,16 @@ function draw(){
 
   const list=[];
   list.push({ y: tvPos.y, draw: ()=>{ const timg = tvOn ? tvOnImg : tvOffImg; if (timg && timg.width) ctx.drawImage(timg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);} });
-  // Puerta abierta: dibujar con z-order por “y”
-if (showDoorRect) {
-  list.push({
-    y: doorPos.y + doorPos.h/2,   // profundidad aproximada para ordenar
-    draw: () => {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h);
-    }
-  });
-}
+
+  if (showDoorRect) {
+    list.push({
+      y: doorPos.y + doorPos.h/2,
+      draw: () => {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h);
+      }
+    });
+  }
   if (lampImg && lampImg.width) list.push({ y: lampPos.y + lampPos.h/2, draw: ()=>ctx.drawImage(lampImg, lampPos.x, lampPos.y, lampPos.w, lampPos.h) });
   if (plant1Img && plant1Img.width) list.push({ y: plant1Pos.y, draw: ()=>ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
   if (sofaImg && sofaImg.width)     list.push({ y: sofaPos.y + sofaPos.h/2, draw: ()=>ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
@@ -532,40 +602,44 @@ async function init(){
   resizeCanvas();
   requestAnimationFrame(loop);
 
-  // Primer diálogo a los 2s (bloqueando input mientras)
-  setTimeout(()=>{ dialogIndex = 0; openDialog(); startTyping(dialogQueue[dialogIndex]); }, 2000);
+  // OJO: el primer diálogo se lanza al quitar el banner (startGameFromBanner),
+  // no aquí. Así nos aseguramos de que “PRESS TO START” controla también la narrativa.
 }
 init();
 
 function setupAudioUnlock() {
-  // Por si iOS/WebKit quiere inline
+  // Evitar autoplay: solo “desbloquear” contexto si hace falta
   try { bgMusic.setAttribute?.('playsinline', ''); } catch (e) {}
   bgMusic.preload = 'auto';
 
-  const tryPlay = () => {
-    bgMusic.play()
-      .then(() => {
-        // Ya está sonando: quitamos los listeners
-        window.removeEventListener('pointerdown', tryPlay);
-        window.removeEventListener('keydown', tryPlay);
-        window.removeEventListener('touchstart', tryPlay);
-      })
-      .catch(() => {
-        // Si aún no nos deja, mostramos pista
-        showToast('Pulsa Acción para activar sonido', 1500);
-      });
+  const unlock = () => {
+    try {
+      if (typeof AudioContext !== 'undefined') {
+        if (!window.__ctx) window.__ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (window.__ctx.state === 'suspended') window.__ctx.resume();
+      }
+    } catch(e){}
+    // Quitamos handlers tras primer gesto
+    window.removeEventListener('pointerdown', unlock);
+    window.removeEventListener('keydown', unlock);
+    window.removeEventListener('touchstart', unlock);
   };
 
-  // Cualquier gesto sirve (móvil o teclado)
-  window.addEventListener('pointerdown', tryPlay, { once: true });
-  window.addEventListener('keydown',     tryPlay, { once: true });
-  window.addEventListener('touchstart',  tryPlay, { once: true, passive: false });
+  // Cualquier gesto sirve (móvil o teclado). NO reproducimos aquí.
+  window.addEventListener('pointerdown', unlock, { once: true });
+  window.addEventListener('keydown',     unlock, { once: true });
+  window.addEventListener('touchstart',  unlock, { once: true, passive: false });
 }
 
 /* ===== BIND ACCIÓN ===== */
 document.getElementById('btn-act').addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
 document.getElementById('btn-act').addEventListener('touchstart', (e)=>{ e.preventDefault(); handleAction(); }, {passive:false});
-window.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); handleAction(); }}, { passive:false });
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'Enter'){
+    e.preventDefault();
+    handleAction();
+  }
+}, { passive:false });
 </script>
 </body>
 </html>
