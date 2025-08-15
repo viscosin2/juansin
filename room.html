@@ -122,7 +122,7 @@ const LAMP_IMG   = "assets/objects/lamp.PNG";
 let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null, lampImg=null;
 let tvOn = true, tvAlreadyOff = false, lampOn = false;
 let darkness = 0.60, targetDarkness = 0.60, darkWarnShown = false;
-let preDialogLock = true;  // 🔒 bloqueo movimiento/acción hasta que acabe primer diálogo
+let preDialogLock = true;  // bloqueo movimiento/acción hasta que acabe primer diálogo
 
 /* ===== CANVAS & ESCALA ===== */
 const roomOriginal = { w: 512, h: 350 };
@@ -146,7 +146,7 @@ const sandalsBase = { x:55,  y:270, w:50,  h:50  };
 const lampBase    = { x:100, y:18,  w:90,  h:100 };
 
 /* ===== PUERTA ===== */
-const doorBase = { x: 394, y: 28, w: 51, h: 56 };
+const doorBase = { x: 393, y: 30, w: 48, h: 57 };
 const doorInteractDepth = 14;
 const doorInteractBase = { x: doorBase.x - 8, y: doorBase.y + doorBase.h - doorInteractDepth, w: doorBase.w + 16, h: doorInteractDepth };
 
