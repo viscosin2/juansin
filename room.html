@@ -532,7 +532,7 @@ function update(dt){
   }
 
   // Si quieres bloquear movimiento mientras hay diálogo:
-  // if (dialogOpen) return;
+  if (dialogOpen) return;
 
   // Movimiento
   const vx = (keys.left?-1:0) + (keys.right?1:0);
