@@ -87,6 +87,14 @@
     opacity: .0; transition: opacity .18s ease;
   }
   .dialog.ready .dialog-hint { opacity: .9; }
+
+  /* ===== FADE DE ESCENA (NEGRO) ===== */
+  .scene-fade{
+    position:absolute; inset:0; background:#000;   /* negro */
+    opacity:0; pointer-events:none; z-index:999;
+    transition: opacity .45s ease;
+  }
+  .scene-fade.show{ opacity:1; }
 </style>
 </head>
 <body>
@@ -96,6 +104,9 @@
     <div class="screen">
       <canvas id="game"></canvas>
       <div id="toast" class="toast"></div>
+
+      <!-- Overlay para fade a negro -->
+      <div id="sceneFade" class="scene-fade"></div>
 
       <!-- D I Á L O G O -->
       <div id="dialog" class="dialog">
@@ -153,6 +164,7 @@ const SPRITES_SHOES = {
    =========================== */
 let bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.4;
 const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
+const doorSnd   = new Audio("assets/sounds/door_clack.mp3"); doorSnd.volume = 0.9;  // <- CLACK
 
 /* ===========================
    IMÁGENES (RUTAS)
@@ -202,30 +214,20 @@ const plant1Base  = { x:3,   y:230, w:60,  h:90  };
 const sandalsBase = { x:55,  y:270, w:50,  h:50  };
 const lampBase    = { x:100, y:18,  w:90,  h:100 };
 
-/* Zonas invisibles de interacción (delante de objetos) */
-const TV_INTERACT_DEPTH  = 2;
-const tvInteractBase = {
-  x: tvOnBase.x,
-  y: tvOnBase.y + tvOnBase.h - 40,
-  w: tvOnBase.w,
-  h: TV_INTERACT_DEPTH
+/* ===== PUERTA (salida) ===== */
+const doorBase = { x: 470, y: 150, w: 18, h: 80 }; // AJUSTA si tu puerta está en otro sitio
+const doorInteractDepth = 14;
+const doorInteractBase = {
+  x: doorBase.x - 8,
+  y: doorBase.y + doorBase.h - doorInteractDepth,
+  w: doorBase.w + 16,
+  h: doorInteractDepth
 };
-
-const LAMP_INTERACT_MARGIN = 0;
-const LAMP_INTERACT_DEPTH  = 16;
-const lampInteractBase = {
-  x: lampBase.x - LAMP_INTERACT_MARGIN,
-  y: Math.max(boundsBase.y, lampBase.y + lampBase.h - 18),
-  w: lampBase.w + LAMP_INTERACT_MARGIN*2,
-  h: LAMP_INTERACT_DEPTH
-};
-
-const playerStartBase = { x: 260, y: 150 };
 
 /* ===========================
    POS ESCALADAS (DERIVADAS)
    =========================== */
-let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={};
+let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={}, doorPos={}, doorInteractPos={};
 
 /* ===========================
    HELPERS / UTILIDADES
@@ -272,6 +274,20 @@ function updateScaledBounds(){
   lampPos = { x:bgRect.dx+Math.round(lampBase.x*scaleFactor), y:bgRect.dy+Math.round(lampBase.y*scaleFactor), w:Math.round(lampBase.w*scaleFactor), h:Math.round(lampBase.h*scaleFactor) };
   lampInteractPos = { x:bgRect.dx+Math.round(lampInteractBase.x*scaleFactor), y:bgRect.dy+Math.round(lampInteractBase.y*scaleFactor), w:Math.round(lampInteractBase.w*scaleFactor), h:Math.round(lampInteractBase.h*scaleFactor) };
   sandalsPos = { x:bgRect.dx+Math.round(sandalsBase.x*scaleFactor), y:bgRect.dy+Math.round(sandalsBase.y*scaleFactor), w:Math.round(sandalsBase.w*scaleFactor), h:Math.round(sandalsBase.h*scaleFactor) };
+
+  /* Puerta */
+  doorPos = {
+    x: bgRect.dx + Math.round(doorBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(doorBase.y * scaleFactor),
+    w: Math.round(doorBase.w * scaleFactor),
+    h: Math.round(doorBase.h * scaleFactor),
+  };
+  doorInteractPos = {
+    x: bgRect.dx + Math.round(doorInteractBase.x * scaleFactor),
+    y: bgRect.dy + Math.round(doorInteractBase.y * scaleFactor),
+    w: Math.round(doorInteractBase.w * scaleFactor),
+    h: Math.round(doorInteractBase.h * scaleFactor),
+  };
 }
 
 /* ===========================
@@ -336,7 +352,6 @@ function bindPressVisual(el){
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
-
 /* ===========================
    SPRITES CARGADOS / META
    =========================== */
@@ -452,12 +467,49 @@ function advanceDialog() {
 }
 
 /* ===========================
+   SALIDA DE ESCENA (puerta + fade)
+   =========================== */
+let exiting = false;           // estamos saliendo (bloquea todo)
+let showDoorRect = false;      // pintar el “cuadrado negro” de puerta abierta
+let exitStartedAt = 0;         // timestamp para temporizar fases
+const DOOR_HOLD_MS = 250;      // tiempo mostrando puerta abierta antes del fade
+const EXIT_FADE_MS = 450;      // duración del fade a negro
+const NEXT_SCENE_URL = "outside.html"; // la página nueva (fondo blanco)
+
+function startExitSequence(){
+  if (exiting) return;
+  exiting = true;
+  showDoorRect = true;
+  exitStartedAt = performance.now();
+  try { doorSnd.currentTime = 0; doorSnd.play(); } catch(e) {}
+
+  // Tras un pequeño delay mostrando la puerta abierta, hacemos fade a negro
+  setTimeout(()=>{
+    document.getElementById('sceneFade')?.classList.add('show');
+    // cuando termina el fade, navegamos
+    setTimeout(()=>{ window.location.href = NEXT_SCENE_URL; }, EXIT_FADE_MS);
+  }, DOOR_HOLD_MS);
+}
+
+/* ===========================
    ACCIONES (botón acción)
    =========================== */
 function handleAction() {
   // Si el diálogo está abierto, prioriza el diálogo
   if (dialogOpen) {
     advanceDialog();
+    return;
+  }
+
+  // PUERTA: si estoy delante, intentar salir (prioridad sobre el resto)
+  const atDoor = aabb(getPlayerRect(), doorInteractPos);
+  if (atDoor) {
+    // Prioridades de requisitos: chanclas -> TV -> luz
+    if (!hasShoes) { showToast('Ponte las chanclas.'); return; }
+    if (tvOn)      { showToast('Apaga la tele.'); return; }
+    if (lampOn)    { showToast('Apaga la luz.'); return; }
+    // Todo ok: abrir puerta y salir
+    startExitSequence();
     return;
   }
 
@@ -535,8 +587,12 @@ function update(dt){
     darkWarnShown = false;
   }
 
-  // Si quieres bloquear movimiento mientras hay diálogo:
-  if (dialogOpen) return;
+  /* 🚫 Bloqueo de juego si hay diálogo o si estamos saliendo */
+  if (dialogOpen || exiting) {
+    player.moving = false;
+    player.frame = 0;
+    return;
+  }
 
   // Movimiento
   const vx = (keys.left?-1:0) + (keys.right?1:0);
@@ -625,6 +681,14 @@ function draw(){
     drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 110, flicker);
   }
 
+  // “Puerta abierta”: rectángulo negro en la zona de la puerta
+  if (showDoorRect) {
+    ctx.save();
+    ctx.fillStyle = '#000';
+    ctx.fillRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h);
+    ctx.restore();
+  }
+
   // DEBUG zonas
   if (DEBUG){
     ctx.save();
@@ -636,6 +700,11 @@ function draw(){
     ctx.fillStyle='rgba(255,200,0,0.12)';
     ctx.fillRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
     ctx.strokeRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
+
+    ctx.strokeStyle='rgba(0,255,100,.7)';
+    ctx.strokeRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h);
+    ctx.strokeStyle='rgba(255,200,0,.7)';
+    ctx.strokeRect(doorInteractPos.x, doorInteractPos.y, doorInteractPos.w, doorInteractPos.h);
     ctx.restore();
   }
 }
@@ -671,6 +740,8 @@ function loop(now){
 /* ===========================
    INIT (carga de assets)
    =========================== */
+const playerStartBase = { x: 260, y: 150 }; // (recolocado aquí por comodidad)
+
 async function init(){
   const [bg, sofa, tvOnI, tvOffI, bed, plant, sandals, lamp, normalSet, shoesSet] = await Promise.all([
     loadImage(BACKGROUND), loadImage(SOFA_IMG), loadImage(TVON_IMG), loadImage(TVOFF_IMG),
@@ -683,7 +754,7 @@ async function init(){
   resizeCanvas();
   requestAnimationFrame(loop);
 
-  /* ===== Lanzar diálogo inicial ===== */
+  /* ===== Lanzar diálogo inicial a los 2s ===== */
   setTimeout(()=>{
     dialogIndex = 0;
     openDialog();
