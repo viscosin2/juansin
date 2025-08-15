@@ -18,10 +18,10 @@
   .dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 0; justify-content: center; margin-left: 12px; align-content: center; overflow: visible; }
   .img-btn, .img-act { border: none; outline: none; padding: 0; background: transparent; cursor: pointer; transition: transform 0.06s ease, filter 0.06s ease; -webkit-tap-highlight-color: transparent; }
   .img-btn { width: 64px; height: 64px; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.85)); }
-  .img-btn.arrow::before { content: ""; display: block; width: 100%; height: 100%; background: url("assets/ui/arrow.png") center/contain no-repeat; image-rendering: pixelated; transform: rotate(var(--rot, 0deg)) scale(1.28); transform-origin: center center; }
+  .img-btn.arrow::before { content: ""; display: block; width: 100%; height: 100%; background: url("assets/ui/arrow.PNG") center/contain no-repeat; image-rendering: pixelated; transform: rotate(var(--rot, 0deg)) scale(1.28); transform-origin: center center; }
   .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
   .img-act{ width: 120px; height: 120px; filter: drop-shadow(0 5px 6px rgba(0,0,0,0.85)); margin-top: 45px; justify-self: center; }
-  .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.png") center/contain no-repeat; image-rendering: pixelated; transform: scale(1.02); }
+  .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering: pixelated; transform: scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform: scale(0.95); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9); }
 
   .toast{ position:absolute; top:19px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
@@ -109,14 +109,14 @@ const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
 const doorSnd   = new Audio("assets/sounds/door_clack.wav"); doorSnd.volume = 0.9;
 
 /* ===== IMÁGENES (¡OJO A MAYÚS/MINÚS!) ===== */
-const BACKGROUND = "assets/locations/room.png";   // <-- ajusta a .PNG si tu archivo es .PNG
-const PLANT1_IMG = "assets/objects/plant1.png";
+const BACKGROUND = "assets/locations/room.PNG";   // <-- ajusta a .PNG si tu archivo es .PNG
+const PLANT1_IMG = "assets/objects/plant1.PNG";
 const SOFA_IMG   = "assets/objects/sofa.png";
 const TVON_IMG   = "assets/objects/tv_on.png";
 const TVOFF_IMG  = "assets/objects/tv_off.png";
-const BED_IMG    = "assets/objects/bed.png";
-const SANDALS_IMG= "assets/objects/shoes.png";
-const LAMP_IMG   = "assets/objects/lamp.png";
+const BED_IMG    = "assets/objects/bed.PNG";
+const SANDALS_IMG= "assets/objects/shoes.PNG";
+const LAMP_IMG   = "assets/objects/lamp.PNG";
 
 /* ===== ESTADO GLOBAL ===== */
 let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null, lampImg=null;
