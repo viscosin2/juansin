@@ -385,9 +385,13 @@ const dialogText = document.getElementById('dialogText');
 const dialogHint = document.getElementById('dialogHint');
 
 let dialogQueue = [
-  "¡Feliz cumple, Juansin! 🎉",
-  "Explora la habitación y prueba el botón de Acción junto a los objetos.",
-  "Consejito: si está muy oscuro, enciende la lámpara. 😉"
+  "...",
+  "¡Toma combo!",
+  "...",
+  "...",
+  "Qué hambre tengo...",
+  "Me apetecen unos Tresor.",
+  "Voy al super."
 ];
 let dialogIndex = 0;
 let typingTimer = null;
@@ -680,9 +684,11 @@ async function init(){
   requestAnimationFrame(loop);
 
   /* ===== Lanzar diálogo inicial ===== */
-  openDialog();
-  dialogIndex = 0;
-  startTyping(dialogQueue[dialogIndex]);
+  setTimeout(()=>{
+    dialogIndex = 0;
+    openDialog();
+    startTyping(dialogQueue[dialogIndex]);
+  }, 2000);
 }
 init();
 
