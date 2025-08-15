@@ -188,6 +188,7 @@ let lampOn = false;       // lámpara empieza apagada
 let darkness = 0.60;      // opacidad actual de la oscuridad
 let targetDarkness = 0.60;// objetivo hacia el que interpolamos (fade)
 let darkWarnShown = false;// para no spamear el toast de “no veo bien”
+let preDialogLock = true;  // bloquea movimiento/acción antes del primer diálogo
 
 /* ===========================
    CANVAS Y ESCALADO
@@ -427,6 +428,7 @@ function openDialog() {
 function closeDialog() {
   dialogEl.classList.remove('show','ready');
   dialogOpen = false;
+  preDialogLock = false;
 }
 
 /* Empieza a escribir la frase actual */
@@ -495,6 +497,8 @@ function startExitSequence(){
    ACCIONES (botón acción)
    =========================== */
 function handleAction() {
+  
+  if (preDialogLock) return;
   // Si el diálogo está abierto, prioriza el diálogo
   if (dialogOpen) {
     advanceDialog();
@@ -581,13 +585,19 @@ function update(dt){
   const base = BASE_SPEED + (hasShoes ? SHOES_BONUS : 0);
   player.speed = lightOk ? base : base * DARK_MULTIPLIER;
 
+/* Bloqueo de juego si hay diálogo, si estamos saliendo o antes del primer diálogo */
+if (dialogOpen || exiting || preDialogLock) {
+  player.moving = false;
+  player.frame = 0;
+  return;
+}
   if (!lightOk) {
     if (!darkWarnShown) { showToast('Despacio, está oscuro.'); darkWarnShown = true; }
   } else {
     darkWarnShown = false;
   }
 
-  /* 🚫 Bloqueo de juego si hay diálogo o si estamos saliendo */
+  /* Bloqueo de juego si hay diálogo o si estamos saliendo */
   if (dialogOpen || exiting) {
     player.moving = false;
     player.frame = 0;
