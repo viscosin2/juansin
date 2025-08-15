@@ -37,24 +37,6 @@
     position: absolute; inset: 0; width: 100%; height: 100%;
     z-index: 2; pointer-events: none; image-rendering: pixelated; background: transparent;
   }
-  /* Start (neón azul) */
-  .start-icon{
-    position: absolute; left: 50%; bottom: 0%;
-    transform: translateX(-50%) scale(1);
-    width: 45%; image-rendering: pixelated;
-    z-index: 3;
-    animation: startPulse 1.4s ease-in-out infinite, bluePulse 1.4s ease-in-out infinite;
-    transition: transform .12s ease, opacity .18s ease, filter .18s ease;
-  }
-  @keyframes startPulse{
-    0%{transform:translateX(-50%) scale(1)} 50%{transform:translateX(-50%) scale(1.07)} 100%{transform:translateX(-50%) scale(1)}
-  }
-  @keyframes bluePulse{
-    0%,100%{ filter: drop-shadow(0 0 6px rgba(0,200,255,.75)) drop-shadow(0 0 14px rgba(0,200,255,.6)) drop-shadow(0 0 22px rgba(0,200,255,.4)); }
-    50%{ filter: drop-shadow(0 0 10px rgba(0,240,255,1)) drop-shadow(0 0 20px rgba(0,240,255,.85)) drop-shadow(0 0 28px rgba(0,240,255,.65)); }
-  }
-  .start-icon.pressed{ transform: translateX(-50%) scale(0.92); opacity: 0; filter: none; }
-
   /* Cortinilla fade */
   .curtain { position: absolute; inset: 0; background:#000; opacity:0; transition: opacity .6s ease; z-index: 10; pointer-events:none; }
   .opaque { opacity: 1; }
@@ -129,7 +111,6 @@
       <div class="screen">
         <div class="start-bg"></div>
         <canvas id="confettiCanvas"></canvas>
-        <img id="startIcon" class="start-icon" src="assets/ui/start_btn.PNG" alt="Start">
         <div id="curtain" class="curtain"></div>
       </div>
     </div>
