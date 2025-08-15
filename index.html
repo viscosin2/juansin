@@ -157,14 +157,29 @@ function update(dt){
 function draw(){ ctx.clearRect(0,0,cvs.width,cvs.height); for(const p of pieces){ ctx.globalAlpha=p.alpha; ctx.fillStyle=p.color; ctx.fillRect(p.x|0,p.y|0,p.w,p.h);} ctx.globalAlpha=1; }
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/30,(t-loop.last)/1000); loop.last=t; update(dt); draw(); raf=requestAnimationFrame(loop); }
 function startConfetti(){ cancelAnimationFrame(raf); loop.last=0; raf=requestAnimationFrame(loop); }
-function burstFromIcon(){
-  const icon=document.getElementById('startIcon');
-  const r1=icon.getBoundingClientRect(), r2=cvs.getBoundingClientRect();
-  const cx=(r1.left+r1.width/2)-r2.left, cy=(r1.top+r1.height/2)-r2.top;
-  for(let i=0;i<140;i++){ const a=Math.random()*Math.PI*2, s=1.2+Math.random()*2.4;
-    const p=makePiece(cx,cy,false); p.vx=Math.cos(a)*s; p.vy=Math.sin(a)*s*0.8; p.mode='burst'; p.life=600+(Math.random()*500|0); pieces.push(p);
+
+/* ---- NUEVO: explosión desde el botón de acción (fallback al centro) ---- */
+function burstFromAction(){
+  let cx = cvs.width/2, cy = cvs.height/2; // centro por defecto
+  try{
+    const btn = document.getElementById('btn-act');
+    if (btn){
+      const rBtn = btn.getBoundingClientRect();
+      const rCvs = cvs.getBoundingClientRect();
+      cx = (rBtn.left + rBtn.width/2) - rCvs.left;
+      cy = (rBtn.top  + rBtn.height/2) - rCvs.top;
+    }
+  }catch(e){ /* nos quedamos con el centro si falla algo */ }
+
+  for(let i=0;i<140;i++){
+    const a=Math.random()*Math.PI*2, s=1.2+Math.random()*2.4;
+    const p=makePiece(cx,cy,false);
+    p.vx=Math.cos(a)*s; p.vy=Math.sin(a)*s*0.8;
+    p.mode='burst'; p.life=600+(Math.random()*500|0);
+    pieces.push(p);
   }
 }
+
 window.addEventListener('load', ()=>{ resize(); seed(90); startConfetti(); });
 window.addEventListener('resize', ()=>{ resize(); });
 
@@ -201,11 +216,9 @@ function goToRoom(){
   if (goToRoom.lock) return;
   goToRoom.lock = true;
 
-  const icon=document.getElementById('startIcon');
-  if (icon) icon.classList.add('pressed');
-
-  burstFromIcon();
-  curtain.classList.add('opaque');
+  if (actBtn) actBtn.classList.add('pressed');
+  burstFromAction();                // 💥 desde el botón (o centro)
+  curtain.classList.add('opaque');  // fade
   setTimeout(()=>{ window.location.href = 'room.html'; }, 650);
 }
 
