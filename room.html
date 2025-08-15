@@ -58,6 +58,35 @@
     padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5;
   }
   .toast.show{ opacity:1; }
+
+  /* ===== D I Á L O G O ===== */
+  .dialog {
+    position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%) scaleX(0);
+    transform-origin: center bottom;
+    width: calc(100% - 24px); max-width: 460px;
+    min-height: 70px; box-sizing: border-box;
+    padding: 12px 16px 16px;
+    display: flex; align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.75);
+    border-radius: 10px;
+    image-rendering: pixelated;
+    z-index: 6;
+    transition: transform .22s ease;
+  }
+  .dialog.has-sprite {
+    background: url("assets/ui/dialog_bubble.png") center/100% 100% no-repeat, rgba(0,0,0,0);
+  }
+  .dialog.show { transform: translateX(-50%) scaleX(1); }
+  .dialog-text {
+    color: #fff; font: 600 13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    letter-spacing: .2px; user-select: none;
+  }
+  .dialog-hint {
+    margin-left: auto; color: #bbb; font: 600 10px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    opacity: .0; transition: opacity .18s ease;
+  }
+  .dialog.ready .dialog-hint { opacity: .9; }
 </style>
 </head>
 <body>
@@ -67,6 +96,12 @@
     <div class="screen">
       <canvas id="game"></canvas>
       <div id="toast" class="toast"></div>
+
+      <!-- D I Á L O G O -->
+      <div id="dialog" class="dialog">
+        <div id="dialogText" class="dialog-text"></div>
+        <div id="dialogHint" class="dialog-hint">[Acción]</div>
+      </div>
     </div>
   </div>
 
@@ -157,8 +192,8 @@ const obstaclesBase= [
   { x: 0,   y: 190, w: 95,  h: 38 }, // Cama
   { x: 0,   y: 260, w: 40,  h: 21 }, // Planta
   { x: 450, y: 250, w: 15,  h: 0.5}, // Pelota
-  { x: 5,   y: 25,  w: 140, h: 50 }, // Estanteria
-  { x: 195, y: 170, w: 170, h: 0.5}  // Sofa
+  { x: 5,   y: 25,  w: 140, h: 50 }, // Estantería
+  { x: 195, y: 170, w: 170, h: 0.5}  // Sofá
 ];
 const sofaBase    = { x:170, y:75,  w:220, h:180 };
 const tvOnBase    = { x:205, y:35,  w:125, h:90  };
@@ -178,7 +213,6 @@ const tvInteractBase = {
 
 const LAMP_INTERACT_MARGIN = 0;
 const LAMP_INTERACT_DEPTH  = 16;
-/* Bandeja delante de la lámpara (asegurada dentro del área jugable) */
 const lampInteractBase = {
   x: lampBase.x - LAMP_INTERACT_MARGIN,
   y: Math.max(boundsBase.y, lampBase.y + lampBase.h - 18),
@@ -307,7 +341,6 @@ window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]
    SPRITES CARGADOS / META
    =========================== */
 let assets=null, assetsNormal=null, assetsShoes=null;
-/* Safe: si assets aún no está listo, usa SPRITES_NORMAL para medir colisiones */
 function currentMeta(){
   const base = assets ?? SPRITES_NORMAL;
   return { size: base.size, scale: base.scale ?? SPRITES_NORMAL.scale, ...base };
@@ -320,9 +353,7 @@ function collides(x, y){
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
   const halfH = currentMeta().size.h * currentMeta().scale / 2;
   const px = x - halfW, py = y - halfH, pw = halfW*2, ph = halfH*2;
-  // bordes
   if (x < bounds.x || x > bounds.x + bounds.w || y < bounds.y || y > bounds.y + bounds.h) return true;
-  // objetos
   for (const o of obstacles){
     if (px < o.x + o.w && px + pw > o.x && py < o.y + o.h && py + ph > o.y) return true;
   }
@@ -347,9 +378,85 @@ function showToast(msg, ms=2000){
 }
 
 /* ===========================
+   D I Á L O G O  (typewriter + flujo)
+   =========================== */
+const dialogEl   = document.getElementById('dialog');
+const dialogText = document.getElementById('dialogText');
+const dialogHint = document.getElementById('dialogHint');
+
+let dialogQueue = [
+  "¡Feliz cumple, Juansin! 🎉",
+  "Explora la habitación y prueba el botón de Acción junto a los objetos.",
+  "Consejito: si está muy oscuro, enciende la lámpara. 😉"
+];
+let dialogIndex = 0;
+let typingTimer = null;
+let typingSpeed = 22;             // ms por carácter
+let isTyping = false;
+let dialogOpen = false;
+
+/* Abre el bocadillo animando desde el centro */
+function openDialog() {
+  dialogEl.classList.add('show');
+  dialogEl.classList.remove('ready');
+  dialogText.textContent = "";
+  dialogHint.style.opacity = 0;
+  dialogOpen = true;
+}
+
+/* Cierra el bocadillo */
+function closeDialog() {
+  dialogEl.classList.remove('show','ready');
+  dialogOpen = false;
+}
+
+/* Empieza a escribir la frase actual */
+function startTyping(text) {
+  clearInterval(typingTimer);
+  dialogText.textContent = "";
+  isTyping = true;
+  let i = 0;
+  typingTimer = setInterval(()=>{
+    if (i < text.length) {
+      dialogText.textContent += text[i++];
+    } else {
+      clearInterval(typingTimer);
+      isTyping = false;
+      dialogEl.classList.add('ready'); // muestra la pista [Acción]
+    }
+  }, typingSpeed);
+}
+
+/* Avanza diálogo según estado */
+function advanceDialog() {
+  if (!dialogOpen) return;
+  const full = dialogQueue[dialogIndex] ?? "";
+  if (isTyping) {
+    clearInterval(typingTimer);
+    dialogText.textContent = full; // completar al instante
+    isTyping = false;
+    dialogEl.classList.add('ready');
+    return;
+  }
+  dialogIndex++;
+  if (dialogIndex < dialogQueue.length) {
+    dialogEl.classList.remove('ready');
+    startTyping(dialogQueue[dialogIndex]);
+  } else {
+    closeDialog();
+  }
+}
+
+/* ===========================
    ACCIONES (botón acción)
    =========================== */
 function handleAction() {
+  // Si el diálogo está abierto, prioriza el diálogo
+  if (dialogOpen) {
+    advanceDialog();
+    return;
+  }
+
   // TV (solo apagar una vez)
   const insideTV = aabb(getPlayerRect(), tvInteractPos);
   if (insideTV) {
@@ -361,44 +468,35 @@ function handleAction() {
     return;
   }
 
-  // Lámpara (toggle)
-const reducedLamp= {
-  x: lampPos.x,  // margen izquierda
-  y: lampPos.y + lampPos.h - 20, // solo la parte baja
-  w: lampPos.w - 5,  // margen derecha
-  h: 3              // altura pequeña
-};
-
+  // Lámpara (toggle) con hitbox reducida
+  const reducedLamp= {
+    x: lampPos.x,
+    y: lampPos.y + lampPos.h - 20,
+    w: lampPos.w - 5,
+    h: 3
+  };
   const insideLamp = aabb(getPlayerRect(), reducedLamp);
-  if (insideLamp) {
-    lampOn = !lampOn;
-    return;
-  }
+  if (insideLamp) { lampOn = !lampOn; return; }
 
-  // Planta
-const reducedPlant= {
-  x: plant1Pos.x - 5,  // margen izquierda
-  y: plant1Pos.y + 40, // solo la parte baja
-  w: plant1Pos.w - 5,  // margen derecha
-  h: 0.2             // altura pequeña
-};
-
+  // Planta (hitbox reducida)
+  const reducedPlant= {
+    x: plant1Pos.x - 5,
+    y: plant1Pos.y + 40,
+    w: plant1Pos.w - 5,
+    h: 0.2
+  };
   const insidePlant = aabb(getPlayerRect(), reducedPlant);
   if (insidePlant) { showToast('10 años regándola y ni un solo aguacate...'); return; }
 
-// CAMA
-const reducedBed = {
-  x: bedPos.x,  // margen izquierda
-  y: bedPos.y + 20, // solo la parte baja
-  w: bedPos.w - 15,  // margen derecha
-  h: 35           // altura pequeña
-};
-
-const insideBed = aabb(getPlayerRect(), reducedBed);
-if (insideBed) {
-  showToast('No es hora de recoger el kiosko.');
-  return;
-}
+  // CAMA (hitbox reducida)
+  const reducedBed = {
+    x: bedPos.x,
+    y: bedPos.y + 20,
+    w: bedPos.w - 15,
+    h: 35
+  };
+  const insideBed = aabb(getPlayerRect(), reducedBed);
+  if (insideBed) { showToast('No es hora de recoger el kiosko.'); return; }
 }
 
 /* ===========================
@@ -416,8 +514,6 @@ function equipShoes(){
 /* ===========================
    LOOP: UPDATE + DRAW
    =========================== */
-let forwardToastShown = false; // demo: primer avance arriba muestra un toast
-
 function update(dt){
   /* Oscuridad: SOLO se quita si la lámpara está encendida */
   targetDarkness = lampOn ? DARK_NONE : DARK_OFF;
@@ -435,12 +531,14 @@ function update(dt){
     darkWarnShown = false;
   }
 
+  // Si quieres bloquear movimiento mientras hay diálogo:
+  // if (dialogOpen) return;
+
   // Movimiento
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
   player.moving = (vx!==0 || vy!==0);
 
-  let movedUpThisFrame = false;
   if (player.moving){
     player.dir = Math.abs(vx) > Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
     const len = Math.hypot(vx,vy) || 1;
@@ -448,7 +546,6 @@ function update(dt){
     const ny = (vy/len) * player.speed * dt;
     const newX = player.x + nx, newY = player.y + ny;
     if (!collides(newX,newY)){
-      if (vy < 0) movedUpThisFrame = true;
       player.x=newX; player.y=newY;
     }
     player.frameTime += dt;
@@ -490,26 +587,19 @@ function draw(){
     stretchPx=Math.round((Math.sin(t*Math.PI*2*Hz)*0.5+0.5)*1);
   }
 
-  // Orden de dibujo por “y” (pobrecito pseudo-z)
+  // Orden de dibujo por “y”
   const list=[];
-  // TV (on/off)
   list.push({ y: tvPos.y, draw: ()=>{ const timg = tvOn ? tvOnImg : tvOffImg; if (timg && timg.width) ctx.drawImage(timg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);} });
-  // Lámpara
   if (lampImg && lampImg.width) list.push({ y: lampPos.y + lampPos.h/2, draw: ()=>ctx.drawImage(lampImg, lampPos.x, lampPos.y, lampPos.w, lampPos.h) });
-  // Planta, sofá, cama
   if (plant1Img && plant1Img.width) list.push({ y: plant1Pos.y, draw: ()=>ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
   if (sofaImg && sofaImg.width)     list.push({ y: sofaPos.y + sofaPos.h/2, draw: ()=>ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
   if (bedImg && bedImg.width)       list.push({ y: bedPos.y + bedPos.h/2, draw: ()=>ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
-  // Chanclas si no equipadas
   if (!hasShoes && sandalsImg && sandalsImg.width){
     list.push({ y: sandalsPos.y + sandalsPos.h/2, draw: ()=>ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h) });
   }
-  // Player
   list.push({ y: player.y, draw: ()=>{
-    // Sombra
     ctx.fillStyle='rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
-    // Sprite
     ctx.drawImage(img, 0,0, sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2)-stretchPx, dw, dh+stretchPx);
   }});
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
@@ -520,18 +610,18 @@ function draw(){
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
-  // Luz TV (glow) si está ON
+  // Luz TV (glow)
   if (tvOn){
     const flicker = 0.35 + Math.random()*0.05;
     drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker);
   }
-  // Luz lámpara (glow) si está ON
+  // Luz lámpara (glow)
   if (lampOn){
     const flicker = 0.30 + Math.random()*0.04;
     drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 110, flicker);
   }
 
-  // DEBUG: mostrar zonas de interacción
+  // DEBUG zonas
   if (DEBUG){
     ctx.save();
     ctx.fillStyle='rgba(0,200,255,0.12)';
@@ -541,13 +631,12 @@ function draw(){
 
     ctx.fillStyle='rgba(255,200,0,0.12)';
     ctx.fillRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
-    ctx.strokeStyle='rgba(255,200,0,0.35)';
     ctx.strokeRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
     ctx.restore();
   }
 }
 
-/* Luz radial recortada al área del fondo (para que no “sangre” fuera) */
+/* Luz radial recortada al área del fondo */
 function drawLightClipped(x,y,radius,intensity){
   if (!bgRect || !bgRect.dw || !bgRect.dh) return;
   const radiusScaled = radius * (bgRect.dw / roomOriginal.w);
@@ -589,12 +678,16 @@ async function init(){
   try{ bgMusic.play(); }catch(e){}
   resizeCanvas();
   requestAnimationFrame(loop);
+
+  /* ===== Lanzar diálogo inicial ===== */
+  openDialog();
+  dialogIndex = 0;
+  startTyping(dialogQueue[dialogIndex]);
 }
 init();
 
 /* ===========================
    BIND DEL BOTÓN ACCIÓN
-   (solo aquí, para evitar duplicados)
    =========================== */
 document.getElementById('btn-act').addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
 document.getElementById('btn-act').addEventListener('touchstart', (e)=>{ e.preventDefault(); handleAction(); }, {passive:false});
