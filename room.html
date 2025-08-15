@@ -6,94 +6,38 @@
 <title>Juansin 30th birthday - room</title>
 
 <style>
-  /* ===== ESTILOS BASE ===== */
-  html, body {
-    height: 100%; margin: 0; background: #111;
-    display: flex; justify-content: center; align-items: center;
-  }
-  .gameboy {
-    width: 100%; max-width: 500px; height: 100%;
-    background: #000; display: flex; flex-direction: column;
-    padding: 12px; box-sizing: border-box; border-radius: 20px;
-    box-shadow: 0 0 40px rgba(0,0,0,0.6);
-  }
-  .screen-container {
-    flex: 1; display: flex; justify-content: center; align-items: center;
-    background: #0B0A21; border-radius: 12px; padding: 10px;
-  }
-  .screen {
-    aspect-ratio: 1/1; width: 100%; background: #0B0A21;
-    display: flex; justify-content: center; align-items: center;
-    border-radius: 8px; overflow: hidden; position: relative;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
-  }
+  html, body { height: 100%; margin: 0; background: #111; display: flex; justify-content: center; align-items: center; }
+  .gameboy { width: 100%; max-width: 500px; height: 100%; background: #000; display: flex; flex-direction: column;
+    padding: 12px; box-sizing: border-box; border-radius: 20px; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+  .screen-container { flex: 1; display: flex; justify-content: center; align-items: center; background: #0B0A21; border-radius: 12px; padding: 10px; }
+  .screen { aspect-ratio: 1/1; width: 100%; background: #0B0A21; display: flex; justify-content: center; align-items: center;
+    border-radius: 8px; overflow: hidden; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.6); }
   canvas { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; background: black; }
 
-  /* ===== CONTROLES ===== */
-  .controls {
-    height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr;
-    gap: 14px; padding: 14px; box-sizing: border-box;
-  }
-  .dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px);
-    gap: 0; justify-content: center; margin-left: 12px; align-content: center; overflow: visible; }
-  .img-btn, .img-act {
-    border: none; outline: none; padding: 0; background: transparent; cursor: pointer;
-    transition: transform 0.06s ease, filter 0.06s ease; -webkit-tap-highlight-color: transparent;
-  }
+  .controls { height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px; box-sizing: border-box; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 0; justify-content: center; margin-left: 12px; align-content: center; overflow: visible; }
+  .img-btn, .img-act { border: none; outline: none; padding: 0; background: transparent; cursor: pointer; transition: transform 0.06s ease, filter 0.06s ease; -webkit-tap-highlight-color: transparent; }
   .img-btn { width: 64px; height: 64px; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.85)); }
-  .img-btn.arrow::before {
-    content: ""; display: block; width: 100%; height: 100%;
-    background: url("assets/ui/arrow.PNG") center/contain no-repeat; image-rendering: pixelated;
-    transform: rotate(var(--rot, 0deg)) scale(1.28); transform-origin: center center;
-  }
+  .img-btn.arrow::before { content: ""; display: block; width: 100%; height: 100%; background: url("assets/ui/arrow.png") center/contain no-repeat; image-rendering: pixelated; transform: rotate(var(--rot, 0deg)) scale(1.28); transform-origin: center center; }
   .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
   .img-act{ width: 120px; height: 120px; filter: drop-shadow(0 5px 6px rgba(0,0,0,0.85)); margin-top: 45px; justify-self: center; }
-  .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering: pixelated; transform: scale(1.02); }
+  .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.png") center/contain no-repeat; image-rendering: pixelated; transform: scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform: scale(0.95); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9); }
 
-  /* ===== TOAST (mensajes) ===== */
-  .toast{
-    position:absolute; top:19px; left:50%; transform:translateX(-50%);
-    background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5;
-  }
+  .toast{ position:absolute; top:19px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5; }
   .toast.show{ opacity:1; }
 
-  /* ===== D I Á L O G O ===== */
-  .dialog {
-    position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%) scaleX(0);
-    transform-origin: center bottom;
-    width: calc(100% - 24px); max-width: 460px;
-    min-height: 70px; box-sizing: border-box;
-    padding: 12px 16px 16px;
-    display: flex; align-items: center;
-    gap: 10px;
-    background: rgba(0,0,0,0.75);
-    border-radius: 10px;
-    image-rendering: pixelated;
-    z-index: 6;
-    transition: transform .22s ease;
-  }
-  .dialog.has-sprite {
-    background: url("assets/ui/bocadillo.png") center/100% 100% no-repeat, rgba(0,0,0,0);
-  }
+  .dialog { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%) scaleX(0); transform-origin: center bottom;
+    width: calc(100% - 24px); max-width: 460px; min-height: 70px; box-sizing: border-box; padding: 12px 16px 16px;
+    display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.75); border-radius: 10px; image-rendering: pixelated; z-index: 6; transition: transform .22s ease; }
+  .dialog.has-sprite { background: url("assets/ui/bocadillo.png") center/100% 100% no-repeat, rgba(0,0,0,0); }
   .dialog.show { transform: translateX(-50%) scaleX(1); }
-  .dialog-text {
-    color: #fff; font: 600 13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    letter-spacing: .2px; user-select: none;
-  }
-  .dialog-hint {
-    margin-left: auto; color: #bbb; font: 600 10px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    opacity: .0; transition: opacity .18s ease;
-  }
+  .dialog-text { color: #fff; font: 600 13px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; letter-spacing: .2px; user-select: none; }
+  .dialog-hint { margin-left: auto; color: #bbb; font: 600 10px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; opacity: .0; transition: opacity .18s ease; }
   .dialog.ready .dialog-hint { opacity: .9; }
 
-  /* ===== FADE DE ESCENA (NEGRO) ===== */
-  .scene-fade{
-    position:absolute; inset:0; background:#000;
-    opacity:0; pointer-events:none; z-index:999;
-    transition: opacity .45s ease;
-  }
+  .scene-fade{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; z-index:999; transition: opacity .45s ease; }
   .scene-fade.show{ opacity:1; }
 </style>
 </head>
@@ -104,11 +48,8 @@
     <div class="screen">
       <canvas id="game"></canvas>
       <div id="toast" class="toast"></div>
-
-      <!-- Overlay para fade a negro -->
       <div id="sceneFade" class="scene-fade"></div>
 
-      <!-- D I Á L O G O -->
       <div id="dialog" class="dialog">
         <div id="dialogText" class="dialog-text"></div>
         <div id="dialogHint" class="dialog-hint">[Acción]</div>
@@ -119,13 +60,13 @@
   <div class="controls">
     <div class="dpad">
       <div></div>
-      <button id="btn-up"    class="img-btn arrow btn-up"    aria-label="Arriba"></button>
+      <button id="btn-up" class="img-btn arrow btn-up" aria-label="Arriba"></button>
       <div></div>
-      <button id="btn-left"  class="img-btn arrow btn-left"  aria-label="Izquierda"></button>
+      <button id="btn-left" class="img-btn arrow btn-left" aria-label="Izquierda"></button>
       <div></div>
       <button id="btn-right" class="img-btn arrow btn-right" aria-label="Derecha"></button>
       <div></div>
-      <button id="btn-down"  class="img-btn arrow btn-down"  aria-label="Abajo"></button>
+      <button id="btn-down" class="img-btn arrow btn-down" aria-label="Abajo"></button>
       <div></div>
     </div>
     <button id="btn-act" class="img-act" aria-label="Acción"></button>
@@ -133,21 +74,24 @@
 </div>
 
 <script>
-/* ===========================
-   CONFIGURACIÓN Y CONSTANTES
-   =========================== */
+/* ===== DEBUG Y GUARDIAS ===== */
 const DEBUG = false;
+window.onerror = (msg, src, line, col) => {
+  const t = document.getElementById('toast');
+  t.textContent = 'Error: ' + msg;
+  t.classList.add('show');
+  console.error(msg, src, line+':'+col);
+  return false;
+};
 
-/* Velocidad y oscuridad */
+/* ===== CONFIG VELOCIDAD / LUZ ===== */
 const BASE_SPEED = 200;
 const SHOES_BONUS = 30;
 const DARK_MULTIPLIER = 0.2;
 const DARK_OFF = 0.60;
 const DARK_NONE = 0.00;
 
-/* ===========================
-   SPRITES DEL PERSONAJE
-   =========================== */
+/* ===== SPRITES PERSONAJE ===== */
 const SPRITES_NORMAL = {
   size: { w: 36, h: 40 }, scale: 0.9,
   idle: { down:["assets/juan_character/idle_down.png"], up:["assets/juan_character/idle_up.png"], left:["assets/juan_character/idle_left.png"], right:["assets/juan_character/idle_right.png"] },
@@ -159,54 +103,40 @@ const SPRITES_SHOES = {
   walk: { down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
 
-/* ===========================
-   AUDIO
-   =========================== */
+/* ===== AUDIO ===== */
 let bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.4;
 const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
 const doorSnd   = new Audio("assets/sounds/door_clack.wav"); doorSnd.volume = 0.9;
 
-/* ===========================
-   IMÁGENES (RUTAS)
-   =========================== */
-const BACKGROUND = "assets/locations/room.PNG";
-const PLANT1_IMG = "assets/objects/plant1.PNG";
+/* ===== IMÁGENES (¡OJO A MAYÚS/MINÚS!) ===== */
+const BACKGROUND = "assets/locations/room.png";   // <-- ajusta a .PNG si tu archivo es .PNG
+const PLANT1_IMG = "assets/objects/plant1.png";
 const SOFA_IMG   = "assets/objects/sofa.png";
 const TVON_IMG   = "assets/objects/tv_on.png";
 const TVOFF_IMG  = "assets/objects/tv_off.png";
-const BED_IMG    = "assets/objects/bed.PNG";
-const SANDALS_IMG= "assets/objects/shoes.PNG";
-const LAMP_IMG   = "assets/objects/lamp.PNG";
+const BED_IMG    = "assets/objects/bed.png";
+const SANDALS_IMG= "assets/objects/shoes.png";
+const LAMP_IMG   = "assets/objects/lamp.png";
 
-/* ===========================
-   ESTADO GLOBAL
-   =========================== */
+/* ===== ESTADO GLOBAL ===== */
 let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null, lampImg=null;
-let tvOn = true;
-let tvAlreadyOff = false;
-let lampOn = false;
-let darkness = 0.60;
-let targetDarkness = 0.60;
-let darkWarnShown = false;
-let preDialogLock = true;  // 🔒 bloquear antes del primer diálogo
+let tvOn = true, tvAlreadyOff = false, lampOn = false;
+let darkness = 0.60, targetDarkness = 0.60, darkWarnShown = false;
+let preDialogLock = true;  // 🔒 bloqueo movimiento/acción hasta que acabe primer diálogo
 
-/* ===========================
-   CANVAS Y ESCALADO
-   =========================== */
+/* ===== CANVAS & ESCALA ===== */
 const roomOriginal = { w: 512, h: 350 };
 let bgRect = { dx:0, dy:0, dw:0, dh:0 }, scaleFactor = 1;
 
-/* ===========================
-   BOUNDS Y OBJETOS (BASE)
-   =========================== */
+/* ===== BOUNDS/OBJETOS BASE ===== */
 const boundsBase   = { x: 20, y: 85, w: 465, h: 235 };
 const obstaclesBase= [
-  { x: 230, y: 25,  w: 70,  h: 50 }, // TV
-  { x: 0,   y: 190, w: 95,  h: 38 }, // Cama
-  { x: 0,   y: 260, w: 40,  h: 21 }, // Planta
-  { x: 450, y: 250, w: 15,  h: 0.5}, // Pelota
-  { x: 5,   y: 25,  w: 140, h: 50 }, // Estantería
-  { x: 195, y: 170, w: 170, h: 0.5}  // Sofá
+  { x: 230, y: 25,  w: 70,  h: 50 },
+  { x: 0,   y: 190, w: 95,  h: 38 },
+  { x: 0,   y: 260, w: 40,  h: 21 },
+  { x: 450, y: 250, w: 15,  h: 0.5},
+  { x: 5,   y: 25,  w: 140, h: 50 },
+  { x: 195, y: 170, w: 170, h: 0.5}
 ];
 const sofaBase    = { x:170, y:75,  w:220, h:180 };
 const tvOnBase    = { x:205, y:35,  w:125, h:90  };
@@ -215,24 +145,15 @@ const plant1Base  = { x:3,   y:230, w:60,  h:90  };
 const sandalsBase = { x:55,  y:270, w:50,  h:50  };
 const lampBase    = { x:100, y:18,  w:90,  h:100 };
 
-/* ===== PUERTA (salida) ===== */
-const doorBase = { x: 470, y: 150, w: 18, h: 80 }; // AJUSTA si tu puerta está en otro sitio
+/* ===== PUERTA ===== */
+const doorBase = { x: 470, y: 150, w: 18, h: 80 };
 const doorInteractDepth = 14;
-const doorInteractBase = {
-  x: doorBase.x - 8,
-  y: doorBase.y + doorBase.h - doorInteractDepth,
-  w: doorBase.w + 16,
-  h: doorInteractDepth
-};
+const doorInteractBase = { x: doorBase.x - 8, y: doorBase.y + doorBase.h - doorInteractDepth, w: doorBase.w + 16, h: doorInteractDepth };
 
-/* ===========================
-   POS ESCALADAS (DERIVADAS)
-   =========================== */
+/* ===== POS ESCALADAS ===== */
 let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={}, doorPos={}, doorInteractPos={};
 
-/* ===========================
-   HELPERS / UTILIDADES
-   =========================== */
+/* ===== HELPERS ===== */
 const loadImage = (src) => new Promise(res=>{
   const img = new Image();
   img.onload = ()=>res(img);
@@ -242,7 +163,6 @@ const loadImage = (src) => new Promise(res=>{
   };
   img.src = src;
 });
-
 async function preloadSprites(map){
   const result = { idle:{}, walk:{}, size: map.size, scale: map.scale };
   for (const state of ["idle","walk"]){
@@ -253,49 +173,40 @@ async function preloadSprites(map){
   return result;
 }
 
-/* Recalcula posiciones escaladas cada vez que cambia el tamaño del canvas */
+/* ===== playerStartBase ARRIBA (para no usarlo antes) ===== */
+const playerStartBase = { x: 260, y: 150 };
+
+/* ===== ESCALA ===== */
 function updateScaledBounds(){
-  bounds = {
-    x: bgRect.dx + Math.round(boundsBase.x * scaleFactor),
-    y: bgRect.dy + Math.round(boundsBase.y * scaleFactor),
-    w: Math.round(boundsBase.w * scaleFactor),
-    h: Math.round(boundsBase.h * scaleFactor),
-  };
-  obstacles = obstaclesBase.map(o=>({
-    x: bgRect.dx + Math.round(o.x * scaleFactor),
-    y: bgRect.dy + Math.round(o.y * scaleFactor),
-    w: Math.round(o.w * scaleFactor),
-    h: Math.round(o.h * scaleFactor),
-  }));
+  bounds = { x: bgRect.dx + Math.round(boundsBase.x * scaleFactor), y: bgRect.dy + Math.round(boundsBase.y * scaleFactor),
+             w: Math.round(boundsBase.w * scaleFactor), h: Math.round(boundsBase.h * scaleFactor) };
+  obstacles = obstaclesBase.map(o=>({ x: bgRect.dx + Math.round(o.x * scaleFactor), y: bgRect.dy + Math.round(o.y * scaleFactor),
+                                      w: Math.round(o.w * scaleFactor), h: Math.round(o.h * scaleFactor) }));
   sofaPos = { x:bgRect.dx+Math.round(sofaBase.x*scaleFactor), y:bgRect.dy+Math.round(sofaBase.y*scaleFactor), w:Math.round(sofaBase.w*scaleFactor), h:Math.round(sofaBase.h*scaleFactor) };
   tvPos   = { x:bgRect.dx+Math.round(tvOnBase.x*scaleFactor), y:bgRect.dy+Math.round(tvOnBase.y*scaleFactor), w:Math.round(tvOnBase.w*scaleFactor), h:Math.round(tvOnBase.h*scaleFactor) };
-  tvInteractPos = { x:bgRect.dx+Math.round(tvInteractBase.x*scaleFactor), y:bgRect.dy+Math.round(tvInteractBase.y*scaleFactor), w:Math.round(tvInteractBase.w*scaleFactor), h:Math.round(tvInteractBase.h*scaleFactor) };
+  tvInteractPos = { x:bgRect.dx+Math.round(tvOnBase.x*scaleFactor), y:bgRect.dy+Math.round((tvOnBase.y + tvOnBase.h - 40)*scaleFactor), w:Math.round(tvOnBase.w*scaleFactor), h:Math.round(2*scaleFactor) };
   bedPos  = { x:bgRect.dx+Math.round(bedBase.x*scaleFactor), y:bgRect.dy+Math.round(bedBase.y*scaleFactor), w:Math.round(bedBase.w*scaleFactor), h:Math.round(bedBase.h*scaleFactor) };
   plant1Pos = { x:bgRect.dx+Math.round(plant1Base.x*scaleFactor), y:bgRect.dy+Math.round(plant1Base.y*scaleFactor), w:Math.round(plant1Base.w*scaleFactor), h:Math.round(plant1Base.h*scaleFactor) };
   lampPos = { x:bgRect.dx+Math.round(lampBase.x*scaleFactor), y:bgRect.dy+Math.round(lampBase.y*scaleFactor), w:Math.round(lampBase.w*scaleFactor), h:Math.round(lampBase.h*scaleFactor) };
-  lampInteractPos = { x:bgRect.dx+Math.round(lampInteractBase.x*scaleFactor), y:bgRect.dy+Math.round(lampInteractBase.y*scaleFactor), w:Math.round(lampInteractBase.w*scaleFactor), h:Math.round(lampInteractBase.h*scaleFactor) };
+  lampInteractPos = { x:bgRect.dx+Math.round(lampBase.x*scaleFactor), y:bgRect.dy+Math.round((lampBase.y + lampBase.h - 18)*scaleFactor), w:Math.round(lampBase.w*scaleFactor), h:Math.round(16*scaleFactor) };
   sandalsPos = { x:bgRect.dx+Math.round(sandalsBase.x*scaleFactor), y:bgRect.dy+Math.round(sandalsBase.y*scaleFactor), w:Math.round(sandalsBase.w*scaleFactor), h:Math.round(sandalsBase.h*scaleFactor) };
-
-  /* Puerta */
-  doorPos = {
-    x: bgRect.dx + Math.round(doorBase.x * scaleFactor),
-    y: bgRect.dy + Math.round(doorBase.y * scaleFactor),
-    w: Math.round(doorBase.w * scaleFactor),
-    h: Math.round(doorBase.h * scaleFactor),
-  };
-  doorInteractPos = {
-    x: bgRect.dx + Math.round(doorInteractBase.x * scaleFactor),
-    y: bgRect.dy + Math.round(doorInteractBase.y * scaleFactor),
-    w: Math.round(doorInteractBase.w * scaleFactor),
-    h: Math.round(doorInteractBase.h * scaleFactor),
-  };
+  doorPos = { x: bgRect.dx + Math.round(doorBase.x * scaleFactor), y: bgRect.dy + Math.round(doorBase.y * scaleFactor),
+              w: Math.round(doorBase.w * scaleFactor), h: Math.round(doorBase.h * scaleFactor) };
+  doorInteractPos = { x: bgRect.dx + Math.round(doorInteractBase.x * scaleFactor), y: bgRect.dy + Math.round(doorInteractBase.y * scaleFactor),
+                      w: Math.round(doorInteractBase.w * scaleFactor), h: Math.round(doorInteractBase.h * scaleFactor) };
 }
 
-/* ===========================
-   CANVAS / RESIZE
-   =========================== */
+/* ===== CANVAS ===== */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+
+/* Mensaje de “Cargando…” si aún no hay fondo */
+function drawLoading(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#9aa'; ctx.font = '600 14px system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.fillText('Cargando…', canvas.width/2, canvas.height/2);
+}
 
 function resizeCanvas(){
   const screen = document.querySelector('.screen');
@@ -312,13 +223,13 @@ function resizeCanvas(){
     // Coloca al jugador según la escala
     player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
     player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
+  } else {
+    drawLoading();
   }
 }
 window.addEventListener('resize', resizeCanvas);
 
-/* ===========================
-   INPUT / CONTROLES
-   =========================== */
+/* ===== INPUT ===== */
 const player = { x:0, y:0, speed:BASE_SPEED, dir:'up', moving:false, frame:0, frameTime:0 };
 const keys = { up:false, down:false, left:false, right:false };
 
@@ -354,26 +265,17 @@ const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLe
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
 
-/* ===========================
-   SPRITES CARGADOS / META
-   =========================== */
+/* ===== META SPRITES ===== */
 let assets=null, assetsNormal=null, assetsShoes=null;
-function currentMeta(){
-  const base = assets ?? SPRITES_NORMAL;
-  return { size: base.size, scale: base.scale ?? SPRITES_NORMAL.scale, ...base };
-}
+function currentMeta(){ const base = assets ?? SPRITES_NORMAL; return { size: base.size, scale: base.scale ?? SPRITES_NORMAL.scale, ...base }; }
 
-/* ===========================
-   COLISIONES
-   =========================== */
+/* ===== COLISIONES ===== */
 function collides(x, y){
   const halfW = currentMeta().size.w * currentMeta().scale / 2;
   const halfH = currentMeta().size.h * currentMeta().scale / 2;
   const px = x - halfW, py = y - halfH, pw = halfW*2, ph = halfH*2;
   if (x < bounds.x || x > bounds.x + bounds.w || y < bounds.y || y > bounds.y + bounds.h) return true;
-  for (const o of obstacles){
-    if (px < o.x + o.w && px + pw > o.x && py < o.y + o.h && py + ph > o.y) return true;
-  }
+  for (const o of obstacles){ if (px < o.x + o.w && px + pw > o.x && py < o.y + o.h && py + ph > o.y) return true; }
   return false;
 }
 function getPlayerRect(x=player.x,y=player.y){
@@ -383,9 +285,7 @@ function getPlayerRect(x=player.x,y=player.y){
 }
 function aabb(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
 
-/* ===========================
-   TOASTS
-   =========================== */
+/* ===== TOAST ===== */
 function showToast(msg, ms=2000){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -393,182 +293,100 @@ function showToast(msg, ms=2000){
   clearTimeout(showToast._to);
   showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
 }
-/* ===========================
-   D I Á L O G O
-   =========================== */
+
+/* ===== DIÁLOGO ===== */
 const dialogEl   = document.getElementById('dialog');
 const dialogText = document.getElementById('dialogText');
 const dialogHint = document.getElementById('dialogHint');
 
-let dialogQueue = [
-  "...",
-  "¡Toma combo!",
-  "...",
-  "...",
-  "Qué hambre tengo...",
-  "Me apetecen unos Tresor.",
-  "Voy al super."
-];
-let dialogIndex = 0;
-let typingTimer = null;
-let typingSpeed = 22;
-let isTyping = false;
-let dialogOpen = false;
+let dialogQueue = ["...","¡Toma combo!","...","...","Qué hambre tengo...","Me apetecen unos Tresor.","Voy al super."];
+let dialogIndex = 0, typingTimer = null, typingSpeed = 22, isTyping = false, dialogOpen = false;
 
-function openDialog() {
-  dialogEl.classList.add('show');
-  dialogEl.classList.remove('ready');
-  dialogText.textContent = "";
-  dialogHint.style.opacity = 0;
-  dialogOpen = true;
+function openDialog(){ dialogEl.classList.add('show'); dialogEl.classList.remove('ready'); dialogText.textContent = ""; dialogHint.style.opacity = 0; dialogOpen = true; }
+function closeDialog(){ dialogEl.classList.remove('show','ready'); dialogOpen = false; preDialogLock = false; }
+function startTyping(text){
+  clearInterval(typingTimer); dialogText.textContent = ""; isTyping = true; let i = 0;
+  typingTimer = setInterval(()=>{ if (i < text.length) dialogText.textContent += text[i++]; else { clearInterval(typingTimer); isTyping=false; dialogEl.classList.add('ready'); }}, typingSpeed);
 }
-function closeDialog() {
-  dialogEl.classList.remove('show','ready');
-  dialogOpen = false;
-  preDialogLock = false; // ✅ desbloquear al cerrar
-}
-function startTyping(text) {
-  clearInterval(typingTimer);
-  dialogText.textContent = "";
-  isTyping = true;
-  let i = 0;
-  typingTimer = setInterval(()=>{
-    if (i < text.length) {
-      dialogText.textContent += text[i++];
-    } else {
-      clearInterval(typingTimer);
-      isTyping = false;
-      dialogEl.classList.add('ready');
-    }
-  }, typingSpeed);
-}
-function advanceDialog() {
+function advanceDialog(){
   if (!dialogOpen) return;
   const full = dialogQueue[dialogIndex] ?? "";
-  if (isTyping) {
-    clearInterval(typingTimer);
-    dialogText.textContent = full;
-    isTyping = false;
-    dialogEl.classList.add('ready');
-    return;
-  }
+  if (isTyping){ clearInterval(typingTimer); dialogText.textContent = full; isTyping=false; dialogEl.classList.add('ready'); return; }
   dialogIndex++;
-  if (dialogIndex < dialogQueue.length) {
-    dialogEl.classList.remove('ready');
-    startTyping(dialogQueue[dialogIndex]);
-  } else {
-    closeDialog();
-  }
+  if (dialogIndex < dialogQueue.length){ dialogEl.classList.remove('ready'); startTyping(dialogQueue[dialogIndex]); }
+  else { closeDialog(); }
 }
 
-/* ===========================
-   SALIDA DE ESCENA (puerta + fade)
-   =========================== */
-let exiting = false;
-let showDoorRect = false;
-let exitStartedAt = 0;
-const DOOR_HOLD_MS = 250;
-const EXIT_FADE_MS = 450;
-const NEXT_SCENE_URL = "outside.html";
-
+/* ===== SALIDA/PUERTA + FADE ===== */
+let exiting = false, showDoorRect = false;
+const DOOR_HOLD_MS = 250, EXIT_FADE_MS = 450, NEXT_SCENE_URL = "outside.html";
 function startExitSequence(){
   if (exiting) return;
-  exiting = true;
-  showDoorRect = true;
-  exitStartedAt = performance.now();
+  exiting = true; showDoorRect = true;
   try { doorSnd.currentTime = 0; doorSnd.play(); } catch(e) {}
-
-  setTimeout(()=>{
-    document.getElementById('sceneFade')?.classList.add('show');
-    setTimeout(()=>{ window.location.href = NEXT_SCENE_URL; }, EXIT_FADE_MS);
-  }, DOOR_HOLD_MS);
+  setTimeout(()=>{ document.getElementById('sceneFade')?.classList.add('show'); setTimeout(()=>{ window.location.href = NEXT_SCENE_URL; }, EXIT_FADE_MS); }, DOOR_HOLD_MS);
 }
 
-/* ===========================
-   ACCIONES (botón acción)
-   =========================== */
-function handleAction() {
-  // Bloqueo previo al primer diálogo
+/* ===== ACCIÓN ===== */
+function handleAction(){
   if (preDialogLock) return;
+  if (dialogOpen){ advanceDialog(); return; }
 
-  // Priorizar diálogo
-  if (dialogOpen) { advanceDialog(); return; }
-
-  // PUERTA primero
   const atDoor = aabb(getPlayerRect(), doorInteractPos);
-  if (atDoor) {
+  if (atDoor){
     if (!hasShoes) { showToast('Ponte las chanclas.'); return; }
     if (tvOn)      { showToast('Apaga la tele.'); return; }
     if (lampOn)    { showToast('Apaga la luz.'); return; }
-    startExitSequence();
-    return;
+    startExitSequence(); return;
   }
 
   // TV
   const insideTV = aabb(getPlayerRect(), tvInteractPos);
-  if (insideTV) {
+  if (insideTV){
     if (tvOn && !tvAlreadyOff) { tvOn = false; tvAlreadyOff = true; }
-    else if (!tvOn) { showToast('No más Tekken por hoy.'); }
+    else if (!tvOn) showToast('No más Tekken por hoy.');
     return;
   }
 
-  // Lámpara (toggle) con hitbox reducida
+  // Lámpara
   const reducedLamp= { x: lampPos.x, y: lampPos.y + lampPos.h - 20, w: lampPos.w - 5, h: 3 };
   const insideLamp = aabb(getPlayerRect(), reducedLamp);
-  if (insideLamp) { lampOn = !lampOn; return; }
+  if (insideLamp){ lampOn = !lampOn; return; }
 
   // Planta
   const reducedPlant= { x: plant1Pos.x - 5, y: plant1Pos.y + 40, w: plant1Pos.w - 5, h: 0.2 };
   const insidePlant = aabb(getPlayerRect(), reducedPlant);
-  if (insidePlant) { showToast('10 años regándola y ni un solo aguacate...'); return; }
+  if (insidePlant){ showToast('10 años regándola y ni un solo aguacate...'); return; }
 
   // Cama
   const reducedBed = { x: bedPos.x, y: bedPos.y + 20, w: bedPos.w - 15, h: 35 };
   const insideBed = aabb(getPlayerRect(), reducedBed);
-  if (insideBed) { showToast('No es hora de cerrar el kiosko.'); return; }
+  if (insideBed){ showToast('No es hora de cerrar el kiosko.'); return; }
 }
 
-/* ===========================
-   EQUIPO (chanclas)
-   =========================== */
+/* ===== EQUIPO ===== */
 let hasShoes = false;
 function equipShoes(){
   if (hasShoes) return;
-  hasShoes = true;
-  try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){}
-  assets = assetsShoes || assets;
-  sandalsImg = null;
+  hasShoes = true; try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){}
+  assets = assetsShoes || assets; sandalsImg = null;
 }
 
-/* ===========================
-   LOOP: UPDATE + DRAW
-   =========================== */
+/* ===== UPDATE & DRAW ===== */
 function update(dt){
-  // Luz / oscuridad
   targetDarkness = lampOn ? DARK_NONE : DARK_OFF;
   const fadeSpeed = 8;
   darkness += (targetDarkness - darkness) * Math.min(1, dt * fadeSpeed);
 
-  // Velocidad
   const lightOk = tvOn || lampOn;
   const base = BASE_SPEED + (hasShoes ? SHOES_BONUS : 0);
   player.speed = lightOk ? base : base * DARK_MULTIPLIER;
 
-  // 🚫 bloqueo si diálogo / salida / pre-dialogo
-  if (dialogOpen || exiting || preDialogLock) {
-    player.moving = false;
-    player.frame = 0;
-    return;
-  }
+  if (dialogOpen || exiting || preDialogLock){ player.moving = false; player.frame = 0; return; }
 
-  // Aviso oscuridad sólo si se puede mover
-  if (!lightOk) {
-    if (!darkWarnShown) { showToast('Despacio, está oscuro.'); darkWarnShown = true; }
-  } else {
-    darkWarnShown = false;
-  }
+  if (!lightOk){ if (!darkWarnShown){ showToast('Despacio, está oscuro.'); darkWarnShown = true; } }
+  else { darkWarnShown = false; }
 
-  // Movimiento
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
   player.moving = (vx!==0 || vy!==0);
@@ -579,16 +397,11 @@ function update(dt){
     const nx = (vx/len) * player.speed * dt;
     const ny = (vy/len) * player.speed * dt;
     const newX = player.x + nx, newY = player.y + ny;
-    if (!collides(newX,newY)){
-      player.x=newX; player.y=newY;
-    }
+    if (!collides(newX,newY)){ player.x=newX; player.y=newY; }
     player.frameTime += dt;
     if(player.frameTime >= 0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
-  } else {
-    player.frame = 0;
-  }
+  } else { player.frame = 0; }
 
-  // Pickup chanclas
   if (!hasShoes && sandalsImg){
     const reduce=0.5, p=getPlayerRect();
     const r={ x:p.x+p.w*(1-reduce)/2, y:p.y+p.h*(1-reduce)/2, w:p.w*reduce, h:p.h*reduce };
@@ -600,28 +413,27 @@ function update(dt){
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Fondo
   if (bgImg){
     const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
     bgRect.dw = roomOriginal.w*s; bgRect.dh = roomOriginal.h*s;
     bgRect.dx = (canvas.width-bgRect.dw)/2; bgRect.dy = (canvas.height-bgRect.dh)/2;
     ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
+  } else {
+    drawLoading(); return;
   }
+
   if (!assets) return;
 
-  // Sprite jugador
   const sw=currentMeta().size.w, sh=currentMeta().size.h;
   const dw=Math.round(sw*SPRITES_NORMAL.scale), dh=Math.round(sh*SPRITES_NORMAL.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
-  // Idle stretch
   let stretchPx=0;
   if (!player.moving){
     const Hz=0.6, t=performance.now()/1000;
     stretchPx=Math.round((Math.sin(t*Math.PI*2*Hz)*0.5+0.5)*1);
   }
 
-  // Orden de dibujo
   const list=[];
   list.push({ y: tvPos.y, draw: ()=>{ const timg = tvOn ? tvOnImg : tvOffImg; if (timg && timg.width) ctx.drawImage(timg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);} });
   if (lampImg && lampImg.width) list.push({ y: lampPos.y + lampPos.h/2, draw: ()=>ctx.drawImage(lampImg, lampPos.x, lampPos.y, lampPos.w, lampPos.h) });
@@ -638,46 +450,20 @@ function draw(){
   }});
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
-  // Oscurecido
-  if (darkness > 0) {
-    ctx.fillStyle = `rgba(0,0,0,${darkness.toFixed(3)})`;
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-  }
+  if (darkness > 0) { ctx.fillStyle = `rgba(0,0,0,${darkness.toFixed(3)})`; ctx.fillRect(0,0,canvas.width,canvas.height); }
+  if (tvOn){ const flicker = 0.35 + Math.random()*0.05; drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker); }
+  if (lampOn){ const flicker = 0.30 + Math.random()*0.04; drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 110, flicker); }
 
-  // Luces
-  if (tvOn){
-    const flicker = 0.35 + Math.random()*0.05;
-    drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker);
-  }
-  if (lampOn){
-    const flicker = 0.30 + Math.random()*0.04;
-    drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 110, flicker);
-  }
+  if (showDoorRect) { ctx.fillStyle = '#000'; ctx.fillRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h); }
 
-  // Puerta abierta (rectángulo negro)
-  if (showDoorRect) {
-    ctx.save();
-    ctx.fillStyle = '#000';
-    ctx.fillRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h);
-    ctx.restore();
-  }
-
-  // DEBUG
   if (DEBUG){
     ctx.save();
-    ctx.fillStyle='rgba(0,200,255,0.12)';
-    ctx.fillRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
-    ctx.strokeStyle='rgba(0,200,255,0.35)';
-    ctx.strokeRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
-
-    ctx.fillStyle='rgba(255,200,0,0.12)';
-    ctx.fillRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
+    ctx.fillStyle='rgba(0,200,255,0.12)'; ctx.fillRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
+    ctx.strokeStyle='rgba(0,200,255,0.35)'; ctx.strokeRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
+    ctx.fillStyle='rgba(255,200,0,0.12)'; ctx.fillRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
     ctx.strokeRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
-
-    ctx.strokeStyle='rgba(0,255,100,.7)';
-    ctx.strokeRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h);
-    ctx.strokeStyle='rgba(255,200,0,.7)';
-    ctx.strokeRect(doorInteractPos.x, doorInteractPos.y, doorInteractPos.w, doorInteractPos.h);
+    ctx.strokeStyle='rgba(0,255,100,.7)'; ctx.strokeRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h);
+    ctx.strokeStyle='rgba(255,200,0,.7)'; ctx.strokeRect(doorInteractPos.x, doorInteractPos.y, doorInteractPos.w, doorInteractPos.h);
     ctx.restore();
   }
 }
@@ -698,9 +484,7 @@ function drawLightClipped(x,y,radius,intensity){
   ctx.globalCompositeOperation="source-over";
 }
 
-/* ===========================
-   LOOP PRINCIPAL
-   =========================== */
+/* ===== LOOP ===== */
 function loop(now){
   if(!loop.last) loop.last=now;
   const dt = Math.min(1/30,(now-loop.last)/1000);
@@ -710,11 +494,7 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
-/* ===========================
-   INIT (carga de assets)
-   =========================== */
-const playerStartBase = { x: 260, y: 150 };
-
+/* ===== INIT ===== */
 async function init(){
   const [bg, sofa, tvOnI, tvOffI, bed, plant, sandals, lamp, normalSet, shoesSet] = await Promise.all([
     loadImage(BACKGROUND), loadImage(SOFA_IMG), loadImage(TVON_IMG), loadImage(TVOFF_IMG),
@@ -727,23 +507,15 @@ async function init(){
   resizeCanvas();
   requestAnimationFrame(loop);
 
-  // Primer diálogo a los 2s (manteniendo el preDialogLock)
-  setTimeout(()=>{
-    dialogIndex = 0;
-    openDialog();
-    startTyping(dialogQueue[dialogIndex]);
-  }, 2000);
+  // Primer diálogo a los 2s (bloqueando input mientras)
+  setTimeout(()=>{ dialogIndex = 0; openDialog(); startTyping(dialogQueue[dialogIndex]); }, 2000);
 }
 init();
 
-/* ===========================
-   BIND DEL BOTÓN ACCIÓN
-   =========================== */
+/* ===== BIND ACCIÓN ===== */
 document.getElementById('btn-act').addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
 document.getElementById('btn-act').addEventListener('touchstart', (e)=>{ e.preventDefault(); handleAction(); }, {passive:false});
-window.addEventListener('keydown', e => {
-  if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); handleAction(); }
-}, { passive:false });
+window.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); handleAction(); }}, { passive:false });
 </script>
 </body>
 </html>
