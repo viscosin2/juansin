@@ -90,7 +90,7 @@
 
   /* ===== FADE DE ESCENA (NEGRO) ===== */
   .scene-fade{
-    position:absolute; inset:0; background:#000;   /* negro */
+    position:absolute; inset:0; background:#000;
     opacity:0; pointer-events:none; z-index:999;
     transition: opacity .45s ease;
   }
@@ -141,9 +141,9 @@ const DEBUG = false;
 /* Velocidad y oscuridad */
 const BASE_SPEED = 200;
 const SHOES_BONUS = 30;
-const DARK_MULTIPLIER = 0.2; // 50% más lento a oscuras (TV off + lámpara off)
-const DARK_OFF = 0.60;  // nivel de oscuridad por defecto
-const DARK_NONE = 0.00; // sin oscuridad (cuando la lámpara está encendida)
+const DARK_MULTIPLIER = 0.2;
+const DARK_OFF = 0.60;
+const DARK_NONE = 0.00;
 
 /* ===========================
    SPRITES DEL PERSONAJE
@@ -164,7 +164,7 @@ const SPRITES_SHOES = {
    =========================== */
 let bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.4;
 const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
-const doorSnd   = new Audio("assets/sounds/door_clack.mp3"); doorSnd.volume = 0.9;  // <- CLACK
+const doorSnd   = new Audio("assets/sounds/door_clack.mp3"); doorSnd.volume = 0.9;
 
 /* ===========================
    IMÁGENES (RUTAS)
@@ -182,13 +182,13 @@ const LAMP_IMG   = "assets/objects/lamp.PNG";
    ESTADO GLOBAL
    =========================== */
 let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null, lampImg=null;
-let tvOn = true;          // la tele empieza encendida
-let tvAlreadyOff = false; // solo la puedes apagar una vez con acción
-let lampOn = false;       // lámpara empieza apagada
-let darkness = 0.60;      // opacidad actual de la oscuridad
-let targetDarkness = 0.60;// objetivo hacia el que interpolamos (fade)
-let darkWarnShown = false;// para no spamear el toast de “no veo bien”
-let preDialogLock = true;  // bloquea movimiento/acción antes del primer diálogo
+let tvOn = true;
+let tvAlreadyOff = false;
+let lampOn = false;
+let darkness = 0.60;
+let targetDarkness = 0.60;
+let darkWarnShown = false;
+let preDialogLock = true;  // 🔒 bloquear antes del primer diálogo
 
 /* ===========================
    CANVAS Y ESCALADO
@@ -353,6 +353,7 @@ function bindPressVisual(el){
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
+
 /* ===========================
    SPRITES CARGADOS / META
    =========================== */
@@ -392,9 +393,8 @@ function showToast(msg, ms=2000){
   clearTimeout(showToast._to);
   showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
 }
-
 /* ===========================
-   D I Á L O G O  (typewriter + flujo)
+   D I Á L O G O
    =========================== */
 const dialogEl   = document.getElementById('dialog');
 const dialogText = document.getElementById('dialogText');
@@ -411,11 +411,10 @@ let dialogQueue = [
 ];
 let dialogIndex = 0;
 let typingTimer = null;
-let typingSpeed = 22;             // ms por carácter
+let typingSpeed = 22;
 let isTyping = false;
 let dialogOpen = false;
 
-/* Abre el bocadillo animando desde el centro */
 function openDialog() {
   dialogEl.classList.add('show');
   dialogEl.classList.remove('ready');
@@ -423,15 +422,11 @@ function openDialog() {
   dialogHint.style.opacity = 0;
   dialogOpen = true;
 }
-
-/* Cierra el bocadillo */
 function closeDialog() {
   dialogEl.classList.remove('show','ready');
   dialogOpen = false;
-  preDialogLock = false;
+  preDialogLock = false; // ✅ desbloquear al cerrar
 }
-
-/* Empieza a escribir la frase actual */
 function startTyping(text) {
   clearInterval(typingTimer);
   dialogText.textContent = "";
@@ -443,18 +438,16 @@ function startTyping(text) {
     } else {
       clearInterval(typingTimer);
       isTyping = false;
-      dialogEl.classList.add('ready'); // muestra la pista [Acción]
+      dialogEl.classList.add('ready');
     }
   }, typingSpeed);
 }
-
-/* Avanza diálogo según estado */
 function advanceDialog() {
   if (!dialogOpen) return;
   const full = dialogQueue[dialogIndex] ?? "";
   if (isTyping) {
     clearInterval(typingTimer);
-    dialogText.textContent = full; // completar al instante
+    dialogText.textContent = full;
     isTyping = false;
     dialogEl.classList.add('ready');
     return;
@@ -471,12 +464,12 @@ function advanceDialog() {
 /* ===========================
    SALIDA DE ESCENA (puerta + fade)
    =========================== */
-let exiting = false;           // estamos saliendo (bloquea todo)
-let showDoorRect = false;      // pintar el “cuadrado negro” de puerta abierta
-let exitStartedAt = 0;         // timestamp para temporizar fases
-const DOOR_HOLD_MS = 250;      // tiempo mostrando puerta abierta antes del fade
-const EXIT_FADE_MS = 450;      // duración del fade a negro
-const NEXT_SCENE_URL = "outside.html"; // la página nueva (fondo blanco)
+let exiting = false;
+let showDoorRect = false;
+let exitStartedAt = 0;
+const DOOR_HOLD_MS = 250;
+const EXIT_FADE_MS = 450;
+const NEXT_SCENE_URL = "outside.html";
 
 function startExitSequence(){
   if (exiting) return;
@@ -485,10 +478,8 @@ function startExitSequence(){
   exitStartedAt = performance.now();
   try { doorSnd.currentTime = 0; doorSnd.play(); } catch(e) {}
 
-  // Tras un pequeño delay mostrando la puerta abierta, hacemos fade a negro
   setTimeout(()=>{
     document.getElementById('sceneFade')?.classList.add('show');
-    // cuando termina el fade, navegamos
     setTimeout(()=>{ window.location.href = NEXT_SCENE_URL; }, EXIT_FADE_MS);
   }, DOOR_HOLD_MS);
 }
@@ -497,64 +488,42 @@ function startExitSequence(){
    ACCIONES (botón acción)
    =========================== */
 function handleAction() {
-  
+  // Bloqueo previo al primer diálogo
   if (preDialogLock) return;
-  // Si el diálogo está abierto, prioriza el diálogo
-  if (dialogOpen) {
-    advanceDialog();
-    return;
-  }
 
-  // PUERTA: si estoy delante, intentar salir (prioridad sobre el resto)
+  // Priorizar diálogo
+  if (dialogOpen) { advanceDialog(); return; }
+
+  // PUERTA primero
   const atDoor = aabb(getPlayerRect(), doorInteractPos);
   if (atDoor) {
-    // Prioridades de requisitos: chanclas -> TV -> luz
     if (!hasShoes) { showToast('Ponte las chanclas.'); return; }
     if (tvOn)      { showToast('Apaga la tele.'); return; }
     if (lampOn)    { showToast('Apaga la luz.'); return; }
-    // Todo ok: abrir puerta y salir
     startExitSequence();
     return;
   }
 
-  // TV (solo apagar una vez)
+  // TV
   const insideTV = aabb(getPlayerRect(), tvInteractPos);
   if (insideTV) {
-    if (tvOn && !tvAlreadyOff) {
-      tvOn = false; tvAlreadyOff = true;
-    } else if (!tvOn) {
-      showToast('No más Tekken por hoy.');
-    }
+    if (tvOn && !tvAlreadyOff) { tvOn = false; tvAlreadyOff = true; }
+    else if (!tvOn) { showToast('No más Tekken por hoy.'); }
     return;
   }
 
   // Lámpara (toggle) con hitbox reducida
-  const reducedLamp= {
-    x: lampPos.x,
-    y: lampPos.y + lampPos.h - 20,
-    w: lampPos.w - 5,
-    h: 3
-  };
+  const reducedLamp= { x: lampPos.x, y: lampPos.y + lampPos.h - 20, w: lampPos.w - 5, h: 3 };
   const insideLamp = aabb(getPlayerRect(), reducedLamp);
   if (insideLamp) { lampOn = !lampOn; return; }
 
-  // Planta (hitbox reducida)
-  const reducedPlant= {
-    x: plant1Pos.x - 5,
-    y: plant1Pos.y + 40,
-    w: plant1Pos.w - 5,
-    h: 0.2
-  };
+  // Planta
+  const reducedPlant= { x: plant1Pos.x - 5, y: plant1Pos.y + 40, w: plant1Pos.w - 5, h: 0.2 };
   const insidePlant = aabb(getPlayerRect(), reducedPlant);
   if (insidePlant) { showToast('10 años regándola y ni un solo aguacate...'); return; }
 
-  // CAMA (hitbox reducida)
-  const reducedBed = {
-    x: bedPos.x,
-    y: bedPos.y + 20,
-    w: bedPos.w - 15,
-    h: 35
-  };
+  // Cama
+  const reducedBed = { x: bedPos.x, y: bedPos.y + 20, w: bedPos.w - 15, h: 35 };
   const insideBed = aabb(getPlayerRect(), reducedBed);
   if (insideBed) { showToast('No es hora de cerrar el kiosko.'); return; }
 }
@@ -568,40 +537,35 @@ function equipShoes(){
   hasShoes = true;
   try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){}
   assets = assetsShoes || assets;
-  sandalsImg = null; // las ocultamos del escenario
+  sandalsImg = null;
 }
 
 /* ===========================
    LOOP: UPDATE + DRAW
    =========================== */
 function update(dt){
-  /* Oscuridad: SOLO se quita si la lámpara está encendida */
+  // Luz / oscuridad
   targetDarkness = lampOn ? DARK_NONE : DARK_OFF;
   const fadeSpeed = 8;
   darkness += (targetDarkness - darkness) * Math.min(1, dt * fadeSpeed);
 
-  /* Velocidad: si TV off y lámpara off -> lento + toast */
+  // Velocidad
   const lightOk = tvOn || lampOn;
   const base = BASE_SPEED + (hasShoes ? SHOES_BONUS : 0);
   player.speed = lightOk ? base : base * DARK_MULTIPLIER;
 
-/* Bloqueo de juego si hay diálogo, si estamos saliendo o antes del primer diálogo */
-if (dialogOpen || exiting || preDialogLock) {
-  player.moving = false;
-  player.frame = 0;
-  return;
-}
+  // 🚫 bloqueo si diálogo / salida / pre-dialogo
+  if (dialogOpen || exiting || preDialogLock) {
+    player.moving = false;
+    player.frame = 0;
+    return;
+  }
+
+  // Aviso oscuridad sólo si se puede mover
   if (!lightOk) {
     if (!darkWarnShown) { showToast('Despacio, está oscuro.'); darkWarnShown = true; }
   } else {
     darkWarnShown = false;
-  }
-
-  /* Bloqueo de juego si hay diálogo o si estamos saliendo */
-  if (dialogOpen || exiting) {
-    player.moving = false;
-    player.frame = 0;
-    return;
   }
 
   // Movimiento
@@ -624,7 +588,7 @@ if (dialogOpen || exiting || preDialogLock) {
     player.frame = 0;
   }
 
-  // Pickup chanclas (hitbox reducida)
+  // Pickup chanclas
   if (!hasShoes && sandalsImg){
     const reduce=0.5, p=getPlayerRect();
     const r={ x:p.x+p.w*(1-reduce)/2, y:p.y+p.h*(1-reduce)/2, w:p.w*reduce, h:p.h*reduce };
@@ -645,19 +609,19 @@ function draw(){
   }
   if (!assets) return;
 
-  // Sprite del jugador
+  // Sprite jugador
   const sw=currentMeta().size.w, sh=currentMeta().size.h;
   const dw=Math.round(sw*SPRITES_NORMAL.scale), dh=Math.round(sh*SPRITES_NORMAL.scale);
   const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
 
-  // Micro “idle stretch”
+  // Idle stretch
   let stretchPx=0;
   if (!player.moving){
     const Hz=0.6, t=performance.now()/1000;
     stretchPx=Math.round((Math.sin(t*Math.PI*2*Hz)*0.5+0.5)*1);
   }
 
-  // Orden de dibujo por “y”
+  // Orden de dibujo
   const list=[];
   list.push({ y: tvPos.y, draw: ()=>{ const timg = tvOn ? tvOnImg : tvOffImg; if (timg && timg.width) ctx.drawImage(timg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);} });
   if (lampImg && lampImg.width) list.push({ y: lampPos.y + lampPos.h/2, draw: ()=>ctx.drawImage(lampImg, lampPos.x, lampPos.y, lampPos.w, lampPos.h) });
@@ -674,24 +638,23 @@ function draw(){
   }});
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
-  // Oscurecido (solo desaparece con lámpara)
+  // Oscurecido
   if (darkness > 0) {
     ctx.fillStyle = `rgba(0,0,0,${darkness.toFixed(3)})`;
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
-  // Luz TV (glow)
+  // Luces
   if (tvOn){
     const flicker = 0.35 + Math.random()*0.05;
     drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker);
   }
-  // Luz lámpara (glow)
   if (lampOn){
     const flicker = 0.30 + Math.random()*0.04;
     drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 110, flicker);
   }
 
-  // “Puerta abierta”: rectángulo negro en la zona de la puerta
+  // Puerta abierta (rectángulo negro)
   if (showDoorRect) {
     ctx.save();
     ctx.fillStyle = '#000';
@@ -699,7 +662,7 @@ function draw(){
     ctx.restore();
   }
 
-  // DEBUG zonas
+  // DEBUG
   if (DEBUG){
     ctx.save();
     ctx.fillStyle='rgba(0,200,255,0.12)';
@@ -750,7 +713,7 @@ function loop(now){
 /* ===========================
    INIT (carga de assets)
    =========================== */
-const playerStartBase = { x: 260, y: 150 }; // (recolocado aquí por comodidad)
+const playerStartBase = { x: 260, y: 150 };
 
 async function init(){
   const [bg, sofa, tvOnI, tvOffI, bed, plant, sandals, lamp, normalSet, shoesSet] = await Promise.all([
@@ -764,7 +727,7 @@ async function init(){
   resizeCanvas();
   requestAnimationFrame(loop);
 
-  /* ===== Lanzar diálogo inicial a los 2s ===== */
+  // Primer diálogo a los 2s (manteniendo el preDialogLock)
   setTimeout(()=>{
     dialogIndex = 0;
     openDialog();
