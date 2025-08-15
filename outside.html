@@ -1,15 +1,302 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Outside</title>
-  <style>
-    html,body{height:100%;margin:0}
-    body{background:#fff;display:flex;align-items:center;justify-content:center;font:600 16px system-ui,-apple-system,Segoe UI,Roboto}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Outside</title>
+
+<style>
+  /* ====== AJUSTES RÁPIDOS ======
+     Si tu room.png NO es cuadrada, cambia las dos variables de abajo
+     por el ancho/alto de tu room en píxeles. Así el outside tendrá
+     EXACTAMENTE la misma proporción.  Ej: 1024x683 -> 1024 / 683    */
+  :root{
+    --room-w: 1;      /* ancho relativo (1 mantiene 1:1) */
+    --room-h: 1;      /* alto relativo  (1 mantiene 1:1) */
+
+    /* Tamaño del héroe: usa el mismo que en la room */
+    --tile: 16;       /* tamaño base del frame en px en el spritesheet */
+    --scale: 4;       /* multiplicador de escala (16*4 = 64px en pantalla) */
+
+    /* Velocidad y animación */
+    --speed: 120;     /* px/segundo a escala de pantalla */
+    --walk-fps: 8;    /* frames por segundo de la animación de caminar */
+  }
+
+  /* ====== LAYOUT CONTENEDOR (misma proporción que la room) ====== */
+  html, body {
+    height: 100%; margin: 0; background: #111;
+    display: flex; justify-content: center; align-items: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .gameboy {
+    width: 100%; max-width: 500px; height: 100%;
+    background: #000; display: flex; flex-direction: column;
+    padding: 12px; box-sizing: border-box; border-radius: 20px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.6);
+  }
+  .screen-container {
+    flex: 1; display: flex; justify-content: center; align-items: center;
+    background: #0B0A21; border-radius: 12px; padding: 10px;
+  }
+
+  /* La pantalla del juego respeta la misma proporción que room.png */
+  .screen {
+    width: 100%;
+    aspect-ratio: calc(var(--room-w) / var(--room-h));
+    background: #1a1a1a;
+    overflow: hidden;           /* aquí hacemos el "recorte" de cámara */
+    position: relative;
+    image-rendering: pixelated; /* importante para tu estética */
+  }
+
+  /* ====== MUNDO / MAPA LARGO ======
+     Usamos una <img> alta que se escala al ancho de la screen.
+     El wrapper .world nos deja desplazarla con transform. */
+  .world {
+    position: absolute; inset: 0;
+    display: flex; justify-content: center; align-items: flex-start;
+    will-change: transform;
+  }
+  #map {
+    width: 100%; height: auto; display: block; /* ancho lleno, alto proporcional */
+    image-rendering: pixelated;
+    user-select: none; pointer-events: none;
+  }
+
+  /* ====== HÉROE (idle/walk con zapatos) ====== */
+  .hero {
+    position: absolute;
+    width: calc(var(--tile) * var(--scale) * 1px);
+    height: calc(var(--tile) * var(--scale) * 1px);
+    transform: translate(-50%, -100%);  /* ancla en los pies */
+    image-rendering: pixelated;
+    background-image: url('hero_shoes.png'); /* <- tu spritesheet */
+    background-repeat: no-repeat;
+    background-size: auto; /* trabajamos por offsets */
+    will-change: transform, background-position;
+  }
+  /* Sombra opcional bajo los pies */
+  .shadow {
+    position: absolute;
+    width: calc(var(--tile) * var(--scale) * 0.7px);
+    height: calc(var(--tile) * var(--scale) * 0.25px);
+    background: rgba(0,0,0,0.35);
+    border-radius: 50%;
+    transform: translate(-50%, -40%);
+    filter: blur(1px);
+    pointer-events: none;
+  }
+
+  /* HUD opcional para depurar */
+  .hud{
+    position:absolute; left:8px; top:8px; color:#9ee7e7; font: 12px/1 monospace;
+    text-shadow: 0 1px 0 #000;
+    opacity:.75;
+    user-select:none;
+  }
+</style>
 </head>
 <body>
-  Escena 2
+  <div class="gameboy">
+    <div class="screen-container">
+      <div class="screen" id="screen">
+        <!-- Cámara: recorta; Mundo: se mueve; Mapa: imagen larga -->
+        <div class="world" id="world">
+          <img id="map" src="outside_long.png" alt="outside-long" />
+          <!-- Personaje -->
+          <div class="hero" id="hero"></div>
+          <div class="shadow"></div>
+        </div>
+        <div class="hud" id="hud"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(()=>{
+
+  /* ================== CONFIG SPRITESHEET ==================
+     Asumimos un spritesheet de 4 direcciones (Down, Left, Right, Up),
+     con N frames horizontales por dirección. Si solo usas Down/Up
+     avísame y lo simplifico, pero esto te deja crecer.
+     Cambia estos números si tu hoja es distinta. */
+  const FRAME_W = parseInt(getComputedStyle(document.documentElement)
+                    .getPropertyValue('--tile')) || 16;     // ancho frame en px reales de la hoja
+  const FRAME_H = FRAME_W;                                   // cuadrado
+  const FRAMES_PER_DIR = 4;                                  // idle=columna 0, walk=1..3
+  const DIRS = { DOWN:0, LEFT:1, RIGHT:2, UP:3 };
+
+  const screen   = document.getElementById('screen');
+  const world    = document.getElementById('world');
+  const mapImg   = document.getElementById('map');
+  const hero     = document.getElementById('hero');
+  const hud      = document.getElementById('hud');
+
+  const SCALE = parseFloat(getComputedStyle(document.documentElement)
+                  .getPropertyValue('--scale')) || 4;
+  const SPEED = parseFloat(getComputedStyle(document.documentElement)
+                  .getPropertyValue('--speed')) || 120;
+  const WALK_FPS = parseFloat(getComputedStyle(document.documentElement)
+                  .getPropertyValue('--walk-fps')) || 8;
+
+  /* Estado del jugador */
+  const player = {
+    x: 0,             // en px relativos a la screen
+    y: 0,
+    dir: DIRS.DOWN,
+    moving: false,
+    animTime: 0,
+    frame: 0
+  };
+
+  /* Input */
+  const keys = new Set();
+  const keyDown = e => { keys.add(e.key.toLowerCase()); };
+  const keyUp   = e => { keys.delete(e.key.toLowerCase()); };
+  window.addEventListener('keydown', keyDown);
+  window.addEventListener('keyup', keyUp);
+
+  /* Cuando el mapa cargue, inicializamos medidas y spawn */
+  let mapW=0, mapH=0, camY=0, camMax=0, camMin=0;
+
+  mapImg.addEventListener('load', ()=>{
+    // El <img> ocupa 100% del ancho de .screen, así que su alto
+    // es proporcional al naturalWidth:naturalHeight.
+    const screenRect = screen.getBoundingClientRect();
+    mapW = screenRect.width;
+    mapH = mapW * (mapImg.naturalHeight / mapImg.naturalWidth);
+
+    mapImg.style.height = mapH + 'px';
+
+    // Spawn: centrado horizontal y cerca de la parte baja del mapa
+    player.x = mapW * 0.5;
+    player.y = mapH * 0.85;
+
+    // Cámara: límites para no mostrar fuera del mapa
+    const viewH = screenRect.height;
+    camMin = 0;
+    camMax = Math.max(0, mapH - viewH);
+    camY = clamp(player.y - viewH*0.65, camMin, camMax); // deja al pj más abajo
+
+    // Coloca héroe y cámara
+    placeHero();
+    placeCamera();
+    requestAnimationFrame(loop);
+  });
+
+  /* Coloca el héroe (con ancla en pies) */
+  function placeHero(){
+    hero.style.left = player.x + 'px';
+    hero.style.top  = (player.y - camY) + 'px';
+    // Actualiza frame del spritesheet
+    const col = player.moving ? (1 + player.frame) : 0; // 0 idle, 1..3 walk
+    const row = player.dir;
+    hero.style.backgroundPosition =
+      `${-col*FRAME_W}px ${-row*FRAME_H}px`;
+    hero.style.backgroundSize = 'auto';
+  }
+
+  /* Mueve la cámara verticalmente (el mapa y todo el mundo se desplazan) */
+  function placeCamera(){
+    world.style.transform = `translateY(${-camY}px)`;
+  }
+
+  /* Bucle principal */
+  let last = performance.now();
+  function loop(now){
+    const dt = (now - last) / 1000;
+    last = now;
+
+    update(dt);
+    render();
+
+    requestAnimationFrame(loop);
+  }
+
+  function update(dt){
+    const screenRect = screen.getBoundingClientRect();
+    const viewH = screenRect.height;
+
+    // Movimiento
+    let vx=0, vy=0;
+    if (isDown('arrowleft','a'))  vx -= 1;
+    if (isDown('arrowright','d')) vx += 1;
+    if (isDown('arrowup','w'))    vy -= 1;
+    if (isDown('arrowdown','s'))  vy += 1;
+
+    player.moving = (vx!==0 || vy!==0);
+
+    if (player.moving){
+      // Dirección cardinal para elegir fila del spritesheet
+      if (Math.abs(vx) > Math.abs(vy)) {
+        player.dir = (vx>0) ? DIRS.RIGHT : DIRS.LEFT;
+      } else {
+        player.dir = (vy>0) ? DIRS.DOWN : DIRS.UP;
+      }
+
+      // Normaliza y aplica velocidad
+      const len = Math.hypot(vx,vy) || 1;
+      vx/=len; vy/=len;
+      player.x += vx * SPEED * dt;
+      player.y += vy * SPEED * dt;
+
+      // Mantén dentro del ancho del mapa
+      player.x = clamp(player.x, (FRAME_W*SCALE)*0.5, mapW-(FRAME_W*SCALE)*0.5);
+      player.y = clamp(player.y, 0, mapH);
+
+      // Avanza animación de caminar
+      player.animTime += dt;
+      const frameDur = 1 / WALK_FPS;
+      if (player.animTime >= frameDur){
+        player.animTime -= frameDur;
+        player.frame = (player.frame + 1) % (FRAMES_PER_DIR-1); // 0..2
+      }
+    } else {
+      player.frame = 0;
+      player.animTime = 0;
+    }
+
+    // Cámara: sigue al jugador (solo vertical), con banda muerta
+    const topBand    = viewH * 0.35;
+    const bottomBand = viewH * 0.65;
+    const yInView = player.y - camY;
+
+    if (yInView < topBand){
+      camY = clamp(player.y - topBand, camMin, camMax);
+    } else if (yInView > bottomBand){
+      camY = clamp(player.y - bottomBand, camMin, camMax);
+    }
+
+    // HUD opcional
+    hud.textContent = `y:${player.y.toFixed(1)}  camY:${camY.toFixed(1)}  moving:${player.moving}`;
+  }
+
+  function render(){
+    placeCamera();
+    placeHero();
+  }
+
+  function isDown(...names){
+    return names.some(n => keys.has(n));
+  }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+  /* ===== Ajuste de tamaño al rotar o cambiar viewport ===== */
+  const ro = new ResizeObserver(()=>{
+    // Recalcula altura escalada del mapa y límites de cámara
+    if (!mapImg.naturalWidth) return;
+    const screenRect = screen.getBoundingClientRect();
+    mapW = screenRect.width;
+    mapH = mapW * (mapImg.naturalHeight / mapImg.naturalWidth);
+    mapImg.style.height = mapH + 'px';
+    const viewH = screenRect.height;
+    camMax = Math.max(0, mapH - viewH);
+    camY = clamp(camY, camMin, camMax);
+  });
+  ro.observe(screen);
+
+})();
+</script>
 </body>
 </html>
