@@ -447,6 +447,16 @@ function draw(){
 
   const list=[];
   list.push({ y: tvPos.y, draw: ()=>{ const timg = tvOn ? tvOnImg : tvOffImg; if (timg && timg.width) ctx.drawImage(timg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);} });
+  // Puerta abierta: dibujar con z-order por “y”
+if (showDoorRect) {
+  list.push({
+    y: doorPos.y + doorPos.h/2,   // profundidad aproximada para ordenar
+    draw: () => {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h);
+    }
+  });
+}
   if (lampImg && lampImg.width) list.push({ y: lampPos.y + lampPos.h/2, draw: ()=>ctx.drawImage(lampImg, lampPos.x, lampPos.y, lampPos.w, lampPos.h) });
   if (plant1Img && plant1Img.width) list.push({ y: plant1Pos.y, draw: ()=>ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
   if (sofaImg && sofaImg.width)     list.push({ y: sofaPos.y + sofaPos.h/2, draw: ()=>ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
@@ -464,8 +474,6 @@ function draw(){
   if (darkness > 0) { ctx.fillStyle = `rgba(0,0,0,${darkness.toFixed(3)})`; ctx.fillRect(0,0,canvas.width,canvas.height); }
   if (tvOn){ const flicker = 0.35 + Math.random()*0.05; drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker); }
   if (lampOn){ const flicker = 0.30 + Math.random()*0.04; drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 110, flicker); }
-
-  if (showDoorRect) { ctx.fillStyle = '#000'; ctx.fillRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h); }
 
   if (DEBUG){
     ctx.save();
