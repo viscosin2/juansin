@@ -354,11 +354,17 @@ try { bgMusic.play(); } catch(e) {}
 
   // TV
   const insideTV = aabb(getPlayerRect(), tvInteractPos);
-  if (insideTV) {
-    if (tvOn && !tvAlreadyOff) { tvOn = false; tvAlreadyOff = true; }
-    else if (!tvOn) { showToast('No más Tekken por hoy.'); }
-    return;
+if (insideTV) {
+  if (tvOn && !tvAlreadyOff) {
+    tvOn = false;
+    tvAlreadyOff = true;
+    bgMusic.pause();
+    bgMusic.currentTime = 0; // opcional, para que empiece desde el inicio si se vuelve a encender
+  } else if (!tvOn) {
+    showToast('No más Tekken por hoy.');
   }
+  return;
+}
 
   // Lámpara
   const reducedLamp= { x: lampPos.x, y: lampPos.y + lampPos.h - 20, w: lampPos.w - 5, h: 3 };
