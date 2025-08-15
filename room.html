@@ -334,9 +334,13 @@ function handleAction() {
     advanceDialog();
     return;
   }
+try { bgMusic.play(); } catch(e) {}
 
   // 2) Si aún estamos en el lock previo al primer diálogo, no hagas nada más
   if (preDialogLock) return;
+
+
+
 
   // 3) A partir de aquí, lógica normal de acción (puerta, tv, lámpara, etc.)
   const atDoor = aabb(getPlayerRect(), doorInteractPos);
@@ -510,7 +514,7 @@ async function init(){
   ]);
   bgImg=bg; sofaImg=sofa; tvOnImg=tvOnI; tvOffImg=tvOffI; bedImg=bed; plant1Img=plant; sandalsImg=sandals; lampImg=lamp;
   assetsNormal=normalSet; assetsShoes=shoesSet; assets=assetsNormal;
-  try{ bgMusic.play(); }catch(e){}
+  try{ setupAudioUnlock(); }catch(e){}
   resizeCanvas();
   requestAnimationFrame(loop);
 
@@ -518,6 +522,31 @@ async function init(){
   setTimeout(()=>{ dialogIndex = 0; openDialog(); startTyping(dialogQueue[dialogIndex]); }, 2000);
 }
 init();
+
+function setupAudioUnlock() {
+  // Por si iOS/WebKit quiere inline
+  try { bgMusic.setAttribute?.('playsinline', ''); } catch (e) {}
+  bgMusic.preload = 'auto';
+
+  const tryPlay = () => {
+    bgMusic.play()
+      .then(() => {
+        // Ya está sonando: quitamos los listeners
+        window.removeEventListener('pointerdown', tryPlay);
+        window.removeEventListener('keydown', tryPlay);
+        window.removeEventListener('touchstart', tryPlay);
+      })
+      .catch(() => {
+        // Si aún no nos deja, mostramos pista
+        showToast('Pulsa Acción para activar sonido', 1500);
+      });
+  };
+
+  // Cualquier gesto sirve (móvil o teclado)
+  window.addEventListener('pointerdown', tryPlay, { once: true });
+  window.addEventListener('keydown',     tryPlay, { once: true });
+  window.addEventListener('touchstart',  tryPlay, { once: true, passive: false });
+}
 
 /* ===== BIND ACCIÓN ===== */
 document.getElementById('btn-act').addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
