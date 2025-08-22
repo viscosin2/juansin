@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Juansin 30th birthday - room</title>
+<title>Juansin 30th birthday - room (cinemática)</title>
 
-<!-- Pixel font -->
+<!-- Fuentes pixel -->
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
 <style>
   html, body { height: 100%; margin: 0; background: #111; display: flex; justify-content: center; align-items: center; }
   .gameboy { width: 100%; max-width: 500px; height: 100%; background: #000; display: flex; flex-direction: column;
@@ -31,91 +32,65 @@
     padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5; }
   .toast.show{ opacity:1; }
 
-/* ===== Estilo "pixel" con nombre ===== */
+  /* ===== Cuadro de diálogo estilo pixel ===== */
+  .dialog {
+    position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%) scaleX(0);
+    transform-origin: center bottom; width: calc(100% - 24px); max-width: 460px; min-height: 60px;
+    box-sizing: border-box; padding: 10px 12px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+    border-radius: 10px; image-rendering: pixelated; z-index: 12; transition: transform .22s ease;
+    background: rgba(12,12,24,0.9); border: none; border-top: 2px solid #3cf; text-align: left;
+  }
+  .dialog.show { transform: translateX(-50%) scaleX(1); }
+  .dialog-name{ font-family: 'Press Start 2P', system-ui; font-size: 10px; color:#8df; text-shadow: 0 1px 0 #000; }
+  .dialog-text{ font-family:'VT323', monospace; font-size: 18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
+  .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
+  .dialog.ready .dialog-hint{ opacity:.9; }
 
-/* ===== Layout base del cuadro de diálogo ===== */
-.dialog {
-  position: absolute;
-  left: 50%;
-  bottom: 10px;
-  transform: translateX(-50%) scaleX(0);
-  transform-origin: center bottom;
-  width: calc(100% - 24px);
-  max-width: 460px;
-  min-height: 60px;
-  box-sizing: border-box;
-  padding: 12px 16px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: 10px;
-  image-rendering: pixelated;
-  z-index: 6;
-  transition: transform .22s ease;
-}
+  /* ===== Cinemática: blur + retratos grandes ===== */
+  .cine {
+    position:absolute; inset:0; z-index: 20; display:none; /* se muestra en cinemática */
+    background: rgba(0,0,0,0.2); backdrop-filter: blur(6px); /* blur del juego de fondo */
+  }
+  .cine.show { display:block; animation: fadeIn .18s ease both; }
+  @keyframes fadeIn{ from{ opacity:0 } to{ opacity:1 } }
 
-/* Animación de entrada/salida */
-.dialog.show { transform: translateX(-50%) scaleX(1); }
-.dialog {
-  background: rgba(12,12,24,0.9);
-  border: none;
-  border-top: 2px solid #3cf;
-  display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-  padding: 10px;
-  text-align: left;
-}
+  .cine-portraits { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; pointer-events:none; }
+  .portrait {
+    width: 50%; max-width: 500px; position: relative; display:flex; justify-content:center; align-items:flex-end; padding: 8px;
+  }
+  .portrait img {
+    width: 86%; max-width: 440px; image-rendering: pixelated; opacity: 0; transform: translateX(var(--tx,0));
+    transition: transform .26s ease, opacity .26s ease; filter: drop-shadow(0 0 18px rgba(0,0,0,.9));
+  }
+  /* entradas laterales */
+  .portrait.left  img{ --tx:-12%; }
+  .portrait.right img{ --tx: 12%; }
+  .portrait.show img{ opacity:1; transform: translateX(0); }
+  /* mini estela “fantasma” */
+  .portrait img::after{ content:""; position:absolute; inset:0; filter: blur(6px); opacity:0; }
+  .portrait.show img::after{ opacity:.25; transition: opacity .26s ease; }
 
-.dialog-name {
-  font-family: 'Press Start 2P', system-ui;
-  font-size: 10px;
-  color:#8df;
-  margin-bottom: 6px;   /* separa el nombre del texto */
-  text-shadow: 0 1px 0 #000;
-}
+  /* Panel de opciones (derecha) */
+  .choice-panel{
+    position:absolute; right:10px; top:10px; background: rgba(12,12,24,0.95);
+    border-left: 2px solid #3cf; padding: 8px; border-radius: 8px; z-index: 22; display:none; min-width: 130px;
+  }
+  .choice-panel.show{ display:block; }
+  .choice-title{ font-family:'Press Start 2P', system-ui; font-size:9px; color:#8df; margin-bottom:6px; }
+  .choices{ display:flex; flex-direction:column; gap:6px; }
+  .choice{
+    font-family:'VT323', monospace; font-size:18px; color:#E6F6FF; padding: 4px 6px;
+    border:1px solid transparent; background:transparent;
+  }
+  .choice.selected{ border-color:#8df; background: rgba(60, 120, 255, 0.12); }
 
-.dialog-text {
-  font-family: 'VT323', monospace;
-  font-size: 18px;
-  letter-spacing: 1px;
-  line-height: 1.15;
-  color: #E6F6FF;
-  min-height: 2.2em;
-}
-.dialog-hint{
-  margin-left: auto;
-  border: none !important;
-  color:#B8D7FF;
-  font: 600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  opacity: .0; transition: opacity .18s ease;
-}
-.dialog.ready .dialog-hint { opacity: .9; }
+  /* Fade de escena (por si lo quieres usar luego) */
   .scene-fade{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; z-index:999; transition: opacity .45s ease; }
   .scene-fade.show{ opacity:1; }
 
-  /* ===== PRESS TO START (pixel) ===== */
-  .banner{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    font-family: "Press Start 2P", monospace; font-size: 12px; letter-spacing:1px;
-    background: rgba(0,0,0,.0); color:#E6D0A3; user-select:none; z-index: 998;
-    text-shadow: 2px 2px 0 #0b2346;
-    opacity: 0; pointer-events: none; /* se mostrará al estar listo */
-    animation: blink 1.1s steps(2, jump-none) infinite;
-  }
-  .banner.show{ opacity: 1; pointer-events: auto; }
-  .banner.hide{ display:none; }
-  @keyframes blink { 0%{opacity:0} 50%{opacity:1} 100%{opacity:0} }
-
-  /* ===== BOOT MASK: pantalla negra hasta que cargue todo ===== */
-  .boot-mask{
-    position:absolute; inset:0; background:#000; z-index: 1000;
-    opacity: 1; transition: opacity .25s ease;
-  }
+  /* Boot mask */
+  .boot-mask{ position:absolute; inset:0; background:#000; z-index:1000; opacity:1; transition: opacity .25s ease;}
   .boot-mask.hidden{ opacity:0; pointer-events:none; }
-
-
-
 </style>
 </head>
 <body>
@@ -123,25 +98,42 @@
 <div class="gameboy">
   <div class="screen-container">
     <div class="screen">
-      <!-- Pantalla negra que tapa todo hasta que assets listo -->
       <div id="bootMask" class="boot-mask"></div>
-
       <canvas id="game"></canvas>
 
-      <!-- PRESS TO START (pixel) -->
-      <div id="pressStart" class="banner">PRESS&nbsp;TO&nbsp;START</div>
-
+      <!-- TOAST (para otras cosas, el diálogo no usa toast) -->
       <div id="toast" class="toast"></div>
       <div id="sceneFade" class="scene-fade"></div>
 
-<div id="dialog" class="dialog">
-  <div id="dialogName" class="dialog-name"></div>   <!-- nombre SIEMPRE arriba -->
-  <div id="dialogText" class="dialog-text"></div>   <!-- debajo va el texto -->
-  <div id="dialogHint" class="dialog-hint">→</div>
-</div>
+      <!-- Cuadro de diálogo en juego (nombre + texto + hint) -->
+      <div id="dialog" class="dialog" aria-live="polite">
+        <div id="dialogName" class="dialog-name"></div>
+        <div id="dialogText" class="dialog-text"></div>
+        <div id="dialogHint" class="dialog-hint">[Acción]</div>
+      </div>
+
+      <!-- Capa de CINEMÁTICA -->
+      <div id="cine" class="cine">
+        <div class="cine-portraits">
+          <div id="pOld"  class="portrait left"><img id="imgOld"  alt="Viejo"></div>
+          <div id="pJuan" class="portrait right"><img id="imgJuan" alt="Juan"></div>
+        </div>
+        <!-- Reutilizamos el mismo cuadro de diálogo sobre la capa cine: -->
+        <div id="cineDialog" class="dialog" style="z-index:25; bottom: 12px;">
+          <div id="cineName" class="dialog-name"></div>
+          <div id="cineText" class="dialog-text"></div>
+          <div id="cineHint" class="dialog-hint">[Acción]</div>
+        </div>
+        <div id="choicePanel" class="choice-panel">
+          <div class="choice-title">Opciones</div>
+          <div id="choices" class="choices"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 
+  <!-- Controles táctiles (solo Acción dispara diálogos) -->
   <div class="controls">
     <div class="dpad">
       <div></div>
@@ -159,173 +151,44 @@
 </div>
 
 <script>
-/* ===== DEBUG Y GUARDIAS ===== */
+/* ===== CONFIG BÁSICA ===== */
 const DEBUG = false;
-window.onerror = (msg, src, line, col) => {
-  const t = document.getElementById('toast');
-  t.textContent = 'Error: ' + msg;
-  t.classList.add('show');
-  console.error(msg, src, line+':'+col);
-  return false;
-};
 
-/* ===== CONFIG VELOCIDAD / LUZ ===== */
-const BASE_SPEED = 200;
-const SHOES_BONUS = 30;
-const DARK_MULTIPLIER = 0.2;
-const DARK_OFF = 0.60;
-const DARK_NONE = 0.00;
+/* ===== MAPA/ESCENA (tu habitación) ===== */
+const BACKGROUND = "assets/locations/room.PNG";
 
-/* ===== ESTADO DEL JUEGO / AUDIO ===== */
-let gameState = 'intro';         // 'intro' | 'playing' | 'transition'
-let hasStarted = false;
-let bgmHasEverPlayed = false;
-
-/* ===== SPRITES PERSONAJE ===== */
-const SPRITES_NORMAL = {
+/* ===== SPRITES ===== */
+const SPRITES_JUAN = {
   size: { w: 36, h: 40 }, scale: 0.9,
-  idle: { down:["assets/juan_character/idle_down.png"], up:["assets/juan_character/idle_up.png"], left:["assets/juan_character/idle_left.png"], right:["assets/juan_character/idle_right.png"] },
-  walk: { down:["assets/juan_character/walk_down_0.png","assets/juan_character/walk_down_1.png"], up:["assets/juan_character/walk_up_0.png","assets/juan_character/walk_up_1.png"], left:["assets/juan_character/walk_left_0.png","assets/juan_character/walk_left_1.png"], right:["assets/juan_character/walk_right_0.png","assets/juan_character/walk_right_1.png"] }
+  idle: { down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
+  walk: { down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
-const SPRITES_SHOES = {
-  size: { w: 36, h: 40 }, scale: 0.9,
-  idle: {
-    down:["assets/juan_character/idle_down_shoes.png"],
-    up:["assets/juan_character/idle_up_shoes.png"],
-    left:["assets/juan_character/idle_left_shoes.png"],
-    right:["assets/juan_character/idle_right_shoes.png"]
-  },
-  walk: {
-    down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"],
-    up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"],
-    left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"],   // <-- añade este segundo frame
-    right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] // <-- y este
-  }
-};
+/* NPC: PNG frontal único */
+const NPC_IMG = "assets/npcs/oldman_front.png"; /* TODO: tu PNG del viejo de frente */
+
+/* ===== RETRATOS GRANDES (cinemática) ===== */
+const PORTRAIT_OLD  = "assets/portraits/oldman.png"; /* TODO */
+const PORTRAIT_JUAN = "assets/portraits/juan.png";   /* TODO */
 
 /* ===== AUDIO ===== */
-let bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.4;
-const pickupSnd = new Audio("assets/sounds/pickup.mp3"); pickupSnd.volume = 0.7;
-const doorSnd   = new Audio("assets/sounds/door_clack.wav"); doorSnd.volume = 0.9;
-
-/* ===== IMÁGENES (¡OJO A MAYÚS/MINÚS!) ===== */
-const BACKGROUND = "assets/locations/room.PNG";
-const PLANT1_IMG = "assets/objects/plant1.PNG";
-const SOFA_IMG   = "assets/objects/sofa.png";
-const TVON_IMG   = "assets/objects/tv_on.png";
-const TVOFF_IMG  = "assets/objects/tv_off.png";
-const BED_IMG    = "assets/objects/bed.PNG";
-const SANDALS_IMG= "assets/objects/shoes.PNG";
-const LAMP_IMG   = "assets/objects/lamp.PNG";
-
-/* ===== ESTADO GLOBAL ===== */
-let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null, lampImg=null;
-let tvOn = true, tvAlreadyOff = false, lampOn = false;
-let darkness = 0.60, targetDarkness = 0.60, darkWarnShown = false;
-let preDialogLock = true;  // bloqueo movimiento/acción hasta que acabe primer diálogo
-
-/* ===== CANVAS & ESCALA ===== */
-const roomOriginal = { w: 512, h: 350 };
-let bgRect = { dx:0, dy:0, dw:0, dh:0 }, scaleFactor = 1;
-
-/* ===== BOUNDS/OBJETOS BASE ===== */
-const boundsBase   = { x: 20, y: 85, w: 465, h: 235 };
-const obstaclesBase= [
-  { x: 230, y: 25,  w: 70,  h: 50 },
-  { x: 0,   y: 190, w: 95,  h: 38 },
-  { x: 0,   y: 260, w: 40,  h: 21 },
-  { x: 450, y: 250, w: 15,  h: 0.5},
-  { x: 5,   y: 25,  w: 140, h: 50 },
-  { x: 195, y: 170, w: 170, h: 0.5}
-];
-const sofaBase    = { x:170, y:75,  w:220, h:180 };
-const tvOnBase    = { x:205, y:35,  w:125, h:90  };
-const bedBase     = { x:3,   y:155, w:120, h:130 };
-const plant1Base  = { x:3,   y:230, w:60,  h:90  };
-const sandalsBase = { x:55,  y:270, w:50,  h:50  };
-const lampBase    = { x:100, y:18,  w:90,  h:100 };
-
-/* ===== PUERTA ===== */
-const doorBase = { x: 392, y: 31, w: 48, h: 63 };
-const doorInteractDepth = 14;
-const doorInteractBase = { x: doorBase.x - 8, y: doorBase.y + doorBase.h - doorInteractDepth, w: doorBase.w + 16, h: doorInteractDepth };
-
-/* ===== POS ESCALADAS ===== */
-let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plant1Pos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={}, doorPos={}, doorInteractPos={};
-
-/* ===== HELPERS ===== */
-const loadImage = (src) => new Promise(res=>{
-  const img = new Image();
-  img.onload = ()=>res(img);
-  img.onerror = ()=>{ console.warn('No se pudo cargar:', src); const ph = document.createElement('canvas'); ph.width=ph.height=1; res(ph); };
-  img.src = src;
-});
-async function preloadSprites(map){
-  const result = { idle:{}, walk:{}, size: map.size, scale: map.scale };
-  for (const state of ["idle","walk"]){
-    for (const dir of Object.keys(map[state])){
-      result[state][dir] = await Promise.all(map[state][dir].map(loadImage));
-    }
-  }
-  return result;
-}
-
-/* ===== playerStartBase ARRIBA ===== */
-const playerStartBase = { x: 260, y: 150 };
-
-/* ===== ESCALA ===== */
-function updateScaledBounds(){
-  bounds = { x: bgRect.dx + Math.round(boundsBase.x * scaleFactor), y: bgRect.dy + Math.round(boundsBase.y * scaleFactor),
-             w: Math.round(boundsBase.w * scaleFactor), h: Math.round(boundsBase.h * scaleFactor) };
-  obstacles = obstaclesBase.map(o=>({ x: bgRect.dx + Math.round(o.x * scaleFactor), y: bgRect.dy + Math.round(o.y * scaleFactor),
-                                      w: Math.round(o.w * scaleFactor), h: Math.round(o.h * scaleFactor) }));
-  sofaPos = { x:bgRect.dx+Math.round(sofaBase.x*scaleFactor), y:bgRect.dy+Math.round(sofaBase.y*scaleFactor), w:Math.round(sofaBase.w*scaleFactor), h:Math.round(sofaBase.h*scaleFactor) };
-  tvPos   = { x:bgRect.dx+Math.round(tvOnBase.x*scaleFactor), y:bgRect.dy+Math.round(tvOnBase.y*scaleFactor), w:Math.round(tvOnBase.w*scaleFactor), h:Math.round(tvOnBase.h*scaleFactor) };
-  tvInteractPos = { x:bgRect.dx+Math.round(tvOnBase.x*scaleFactor), y:bgRect.dy+Math.round((tvOnBase.y + tvOnBase.h - 40)*scaleFactor), w:Math.round(tvOnBase.w*scaleFactor), h:Math.round(2*scaleFactor) };
-  bedPos  = { x:bgRect.dx+Math.round(bedBase.x*scaleFactor), y:bgRect.dy+Math.round(bedBase.y*scaleFactor), w:Math.round(bedBase.w*scaleFactor), h:Math.round(bedBase.h*scaleFactor) };
-  plant1Pos = { x:bgRect.dx+Math.round(plant1Base.x*scaleFactor), y:bgRect.dy+Math.round(plant1Base.y*scaleFactor), w:Math.round(plant1Base.w*scaleFactor), h:Math.round(plant1Base.h*scaleFactor) };
-  lampPos = { x:bgRect.dx+Math.round(lampBase.x*scaleFactor), y:bgRect.dy+Math.round(lampBase.y*scaleFactor), w:Math.round(lampBase.w*scaleFactor), h:Math.round(lampBase.h*scaleFactor) };
-  lampInteractPos = { x:bgRect.dx+Math.round(lampBase.x*scaleFactor), y:bgRect.dy+Math.round((lampBase.y + lampBase.h - 18)*scaleFactor), w:Math.round(lampBase.w*scaleFactor), h:Math.round(16*scaleFactor) };
-  sandalsPos = { x:bgRect.dx+Math.round(sandalsBase.x*scaleFactor), y:bgRect.dy+Math.round(sandalsBase.y*scaleFactor), w:Math.round(sandalsBase.w*scaleFactor), h:Math.round(sandalsBase.h*scaleFactor) };
-  doorPos = { x: bgRect.dx + Math.round(doorBase.x * scaleFactor), y: bgRect.dy + Math.round(doorBase.y * scaleFactor),
-              w: Math.round(doorBase.w * scaleFactor), h: Math.round(doorBase.h * scaleFactor) };
-  doorInteractPos = { x: bgRect.dx + Math.round(doorInteractBase.x * scaleFactor), y: bgRect.dy + Math.round(doorInteractBase.y * scaleFactor),
-                      w: Math.round(doorInteractBase.w * scaleFactor), h: Math.round(doorInteractBase.h * scaleFactor) };
-}
+const bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.35;
 
 /* ===== CANVAS ===== */
+const roomOriginal = { w: 512, h: 350 };
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
 
-function drawLoading(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
-}
+let bgRect = { dx:0, dy:0, dw:0, dh:0 }, scaleFactor=1;
+let bgImg=null, npcImg=null, sprites=null;
 
-function resizeCanvas(){
-  const screen = document.querySelector('.screen');
-  canvas.width = screen.clientWidth;
-  canvas.height = screen.clientHeight;
+const player = { x:0, y:0, speed:230, dir:'down', moving:false, frame:0, frameTime:0 };
+const npc    = { x:0, y:0 };
 
-  if (bgImg){
-    scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
-    bgRect.dw = roomOriginal.w * scaleFactor;
-    bgRect.dh = roomOriginal.h * scaleFactor;
-    bgRect.dx = (canvas.width - bgRect.dw) / 2;
-    bgRect.dy = (canvas.height - bgRect.dh) / 2;
-    updateScaledBounds();
-    player.x = bgRect.dx + Math.round(playerStartBase.x * scaleFactor);
-    player.y = bgRect.dy + Math.round(playerStartBase.y * scaleFactor);
-  } else {
-    drawLoading();
-  }
-}
-window.addEventListener('resize', resizeCanvas);
-
-/* ===== INPUT ===== */
-const player = { x:0, y:0, speed:BASE_SPEED, dir:'up', moving:false, frame:0, frameTime:0 };
+/* ===== INPUT (mover con dpad y teclado; Acción SOLO botón) ===== */
 const keys = { up:false, down:false, left:false, right:false };
-
+const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
+window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
+window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
 function bindHold(btn, on, off){
   const start = e => { e.preventDefault(); on(); };
   const end   = e => { e.preventDefault(); off(); };
@@ -340,463 +203,309 @@ bindHold(document.getElementById('btn-down'),  ()=>keys.down=true,  ()=>keys.dow
 bindHold(document.getElementById('btn-left'),  ()=>keys.left=true,  ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.right=false);
 
-function bindPressVisual(el){
-  const on = ()=>el.classList.add('pressed');
-  const off= ()=>el.classList.remove('pressed');
-  el.addEventListener('mousedown', on);
-  el.addEventListener('mouseup', off);
-  el.addEventListener('mouseleave', off);
-  el.addEventListener('touchstart', (e)=>{ e.preventDefault(); on(); }, {passive:false});
-  el.addEventListener('touchend', off, {passive:false});
-  el.addEventListener('touchcancel', off, {passive:false});
-}
-['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>{
-  const el=document.getElementById(id); if(el) bindPressVisual(el);
-});
+/* Acción: SOLO botón/touch (no Space/Enter) */
+const btnAct = document.getElementById('btn-act');
+btnAct.addEventListener('click', e=>{ e.preventDefault(); onAction(); });
+btnAct.addEventListener('touchstart', e=>{ e.preventDefault(); onAction(); }, {passive:false});
 
-const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
-window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
-window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
-
-/* ===== META SPRITES ===== */
-let assets=null, assetsNormal=null, assetsShoes=null;
-function currentMeta(){ const base = assets ?? SPRITES_NORMAL; return { size: base.size, scale: base.scale ?? SPRITES_NORMAL.scale, ...base }; }
-
-/* ===== COLISIONES ===== */
-function collides(x, y){
-  const halfW = currentMeta().size.w * currentMeta().scale / 2;
-  const halfH = currentMeta().size.h * currentMeta().scale / 2;
-  const px = x - halfW, py = y - halfH, pw = halfW*2, ph = halfH*2;
-  if (x < bounds.x || x > bounds.x + bounds.w || y < bounds.y || y > bounds.y + bounds.h) return true;
-  for (const o of obstacles){ if (px < o.x + o.w && px + pw > o.x && py < o.y + o.h && py + ph > o.y) return true; }
-  return false;
-}
-function getPlayerRect(x=player.x,y=player.y){
-  const halfW = currentMeta().size.w * currentMeta().scale / 2;
-  const halfH = currentMeta().size.h * currentMeta().scale / 2;
-  return { x:x-halfW, y:y-halfH, w:halfW*2, h:halfH*2 };
-}
-function aabb(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
-
-/* ===== TOAST ===== */
-function showToast(msg, ms=2000){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(showToast._to);
-  showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
+/* ===== UTIL ===== */
+const loadImage = (src) => new Promise(res=>{ const img=new Image(); img.onload=()=>res(img); img.src=src; });
+async function preloadSprites(map){
+  const out={ idle:{}, walk:{}, size:map.size, scale:map.scale };
+  for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage));
+  return out;
 }
 
+/* ===== DIBUJO ===== */
+function resizeCanvas(){
+  const screen = document.querySelector('.screen');
+  canvas.width = screen.clientWidth; canvas.height = screen.clientHeight;
 
-/* ===== DIÁLOGO ===== */
-const dialogEl    = document.getElementById('dialog');
-const dialogName  = document.getElementById('dialogName');
-const dialogText  = document.getElementById('dialogText');
-const dialogHint  = document.getElementById('dialogHint');
+  if (bgImg){
+    scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
+    bgRect.dw = roomOriginal.w * scaleFactor; bgRect.dh = roomOriginal.h * scaleFactor;
+    bgRect.dx = (canvas.width - bgRect.dw)/2; bgRect.dy = (canvas.height - bgRect.dh)/2;
 
-let isTyping = false, typingTimer = null, typingSpeed = 22;
-let dialogOpen = false;
-let dialogIndex = 0;
+    player.x = bgRect.dx + bgRect.dw*0.5;
+    player.y = bgRect.dy + bgRect.dh*0.80;
 
-/* Guion con nombre + texto (edítalo a tu gusto) */
-const dialogScript = [
-  { speaker: 'Juan',  text: '...' },
-  { speaker: 'Juan',  text: '¡Toma combo!' },
-  { speaker: 'Juan',  text: '...' },
-  { speaker: 'Juan',  text: '...' },
-  { speaker: 'Juan',  text: 'Qué hambre tengo...' },
-  { speaker: 'Juan',  text: 'Me apetecen unos Tresor.' },
-  { speaker: 'Juan',  text: 'Voy al super.' }
-];
-
-/* ====== BEEP RETRO (Web Audio API) ====== */
-function playBip() {
-  try{
-    if (!window.__ctx) window.__ctx = new (window.AudioContext||window.webkitAudioContext)();
-    const ctx = window.__ctx;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    // Timbre y pitch con un pelín de variación
-    osc.type = 'square';
-    osc.frequency.value = 760 + Math.random()*120;
-
-    // Envolvente corta para evitar clics
-    const now = ctx.currentTime;
-    const dur = 0.075;          // 75 ms
-    const v0  = 0.05;           // volumen base
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(v0, now + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0005, now + dur);
-
-    osc.connect(gain).connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + dur);
-  }catch(e){}
-}
-
-/* Beep por carácter, con filtro para que no suene en cada espacio/puntuación */
-function playBipForChar(ch, i){
-  // bips en letras/dígitos y a inicio de palabra; menos ruido en espacios/puntos
-  const isAlphaNum = /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9]/.test(ch);
-  if (isAlphaNum || (ch === ' ' && (i % 6 === 0))) playBip();
-}
-
-function openDialog(){
-  dialogEl.classList.add('show');
-  dialogEl.classList.remove('ready');
-  dialogOpen = true;
-  dialogIndex = 0;
-  renderCurrentLine(true);
-}
-
-function closeDialog(){
-  dialogEl.classList.remove('show','ready');
-  dialogOpen = false;
-  preDialogLock = false; // tu flag original
-}
-
-function renderCurrentLine(startTyping = false){
-  const line = dialogScript[dialogIndex] || { speaker:'', text:'' };
-  dialogName.textContent = line.speaker || '';
-  dialogText.textContent = '';
-  dialogHint.style.opacity = 0;
-
-  if (startTyping){
-    startTypingEffect(line.text);
-  } else {
-    dialogText.textContent = line.text;
-    dialogEl.classList.add('ready');
+    /* Sitúa al viejo hacia la parte alta-centrada */
+    npc.x = bgRect.dx + bgRect.dw*0.52;
+    npc.y = bgRect.dy + bgRect.dh*0.35;
   }
 }
+window.addEventListener('resize', resizeCanvas);
 
-function startTypingEffect(text){
-  clearInterval(typingTimer);
-  isTyping = true;
-  let i = 0;
-
-  typingTimer = setInterval(()=>{
-    if (i < text.length){
-      const ch = text[i++];
-      dialogText.textContent += ch;
-      playBipForChar(ch, i);   // <<< bip aquí
-    } else {
-      clearInterval(typingTimer);
-      isTyping = false;
-      dialogEl.classList.add('ready');
-      dialogHint.style.opacity = 1;
-    }
-  }, typingSpeed);
-}
-
-function advanceDialog(){
-  if (!dialogOpen) return;
-
-  const full = dialogScript[dialogIndex]?.text ?? '';
-  if (isTyping){
-    clearInterval(typingTimer);
-    isTyping = false;
-    dialogText.textContent = full;     // completar instantáneo sin bips extra
-    dialogEl.classList.add('ready');
-    dialogHint.style.opacity = 1;
-    return;
-  }
-
-  dialogIndex++;
-  if (dialogIndex < dialogScript.length){
-    dialogEl.classList.remove('ready');
-    dialogHint.style.opacity = 0;
-    renderCurrentLine(true);
-  } else {
-    closeDialog();
-  }
-}
-
-/* ===== FADE AUDIO ===== */
-function fadeOutAudio(audio, ms=300){
-  return new Promise(res=>{
-    const startVol = audio.volume;
-    const steps = Math.max(1, Math.floor(ms/16));
-    let i = 0;
-    const int = setInterval(()=>{
-      i++;
-      audio.volume = Math.max(0, startVol*(1 - i/steps));
-      if (i>=steps){
-        clearInterval(int);
-        audio.volume = 0;
-        res();
-      }
-    },16);
-  });
-}
-
-/* ===== SALIDA/PUERTA + FADE ===== */
-let exiting = false, showDoorRect = false;
-const DOOR_HOLD_MS = 250, EXIT_FADE_MS = 450, NEXT_SCENE_URL = "outside.html";
-async function startExitSequence(){
-  if (exiting) return;
-  exiting = true; showDoorRect = true;
-  try { doorSnd.currentTime = 0; doorSnd.play(); } catch(e) {}
-
-  try { await fadeOutAudio(bgMusic, 250); bgMusic.pause(); bgMusic.currentTime = 0; } catch(e){}
-
-  const sf = document.getElementById('sceneFade');
-  sf?.classList.add('show');
-  setTimeout(()=>{ window.location.href = NEXT_SCENE_URL; }, EXIT_FADE_MS);
-}
-
-/* ===== ARRANQUE CONTROLADO POR BANNER ===== */
-const bootMask     = document.getElementById('bootMask');
-const pressStartEl = document.getElementById('pressStart');
-let audioCtx;
-
-function ensureAudioCtxUnlocked(){
-  try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-  } catch(e){}
-}
-function startBGM(){
-  if (bgmHasEverPlayed) return;
-  bgMusic.volume = 0.4;
-  bgMusic.currentTime = 0;
-  bgMusic.play().then(()=>{ bgmHasEverPlayed = true; }).catch(()=>{});
-}
-
-function startGameFromBanner(){
-  if (hasStarted) return;
-  hasStarted = true;
-  gameState = 'playing';
-  pressStartEl.classList.add('hide');   // ocultar banner
-  ensureAudioCtxUnlocked();
-  startBGM();
-  setTimeout(()=>{ openDialog(); }, 400); // << sin dialogQueue, ni startTyping manual
-}
-
-/* ===== ACCIÓN ===== */
-function handleAction() {
-  // Si estamos en la intro, la primera acción arranca y no sigue procesando
-  if (gameState === 'intro'){
-    startGameFromBanner();
-    return;
-  }
-
-  if (dialogOpen) { advanceDialog(); return; }
-  if (preDialogLock) return;
-
-  const atDoor = aabb(getPlayerRect(), doorInteractPos);
-  if (atDoor) {
-    if (!hasShoes) { showToast('Ponte las chanclas.'); return; }
-    if (tvOn)      { showToast('Apaga la tele.'); return; }
-    if (lampOn)    { showToast('Apaga la luz.'); return; }
-    startExitSequence();
-    return;
-  }
-
-  const insideTV = aabb(getPlayerRect(), tvInteractPos);
-  if (insideTV) {
-    if (tvOn && !tvAlreadyOff) {
-      tvOn = false; tvAlreadyOff = true;
-      bgMusic.pause(); bgMusic.currentTime = 0;
-    } else if (!tvOn) {
-      showToast('No más Tekken por hoy.');
-    }
-    return;
-  }
-
-  const reducedLamp= { x: lampPos.x, y: lampPos.y + lampPos.h - 20, w: lampPos.w - 5, h: 3 };
-  const insideLamp = aabb(getPlayerRect(), reducedLamp);
-  if (insideLamp) { lampOn = !lampOn; return; }
-
-  const reducedPlant= { x: plant1Pos.x - 5, y: plant1Pos.y + 40, w: plant1Pos.w - 5, h: 0.2 };
-  const insidePlant = aabb(getPlayerRect(), reducedPlant);
-  if (insidePlant) { showToast('10 años regándola y ni un solo aguacate...'); return; }
-
-  const reducedBed = { x: bedPos.x, y: bedPos.y + 20, w: bedPos.w - 15, h: 35 };
-  const insideBed = aabb(getPlayerRect(), reducedBed);
-  if (insideBed) { showToast('No es hora de cerrar el kiosko.'); return; }
-}
-
-/* ===== EQUIPO ===== */
-let hasShoes = false;
-function equipShoes(){
-  if (hasShoes) return;
-  hasShoes = true; try { pickupSnd.currentTime = 0; pickupSnd.play(); } catch(e){}
-  assets = assetsShoes || assets; sandalsImg = null;
-}
-
-/* ===== UPDATE & DRAW ===== */
 function update(dt){
-  const DARK_TARGET = lampOn ? DARK_NONE : DARK_OFF;
-  const fadeSpeed = 8;
-  darkness += (DARK_TARGET - darkness) * Math.min(1, dt * fadeSpeed);
+  if (state.mode!=='play') return;
 
-  const lightOk = tvOn || lampOn;
-  const base = BASE_SPEED + (hasShoes ? SHOES_BONUS : 0);
-  player.speed = lightOk ? base : base * DARK_MULTIPLIER;
-
-  if (dialogOpen || exiting || preDialogLock || gameState==='intro'){ player.moving = false; player.frame = 0; return; }
-
-  if (!lightOk){ if (!darkWarnShown){ showToast('Despacio, está oscuro.'); darkWarnShown = true; } }
-  else { darkWarnShown = false; }
-
-  const vx = (keys.left?-1:0) + (keys.right?1:0);
-  const vy = (keys.up?-1:0) + (keys.down?1:0);
+  const vx=(keys.left?-1:0)+(keys.right?1:0);
+  const vy=(keys.up?-1:0)+(keys.down?1:0);
   player.moving = (vx!==0 || vy!==0);
 
   if (player.moving){
     player.dir = Math.abs(vx) > Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
-    const len = Math.hypot(vx,vy) || 1;
-    const nx = (vx/len) * player.speed * dt;
-    const ny = (vy/len) * player.speed * dt;
-    const newX = player.x + nx, newY = player.y + ny;
-    if (!collides(newX,newY)){ player.x=newX; player.y=newY; }
-    player.frameTime += dt;
-    if(player.frameTime >= 0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
-  } else { player.frame = 0; }
+    const len = Math.hypot(vx,vy)||1;
+    player.x += (vx/len)*player.speed*dt;
+    player.y += (vy/len)*player.speed*dt;
 
-  if (!hasShoes && sandalsImg){
-    const reduce=0.5, p=getPlayerRect();
-    const r={ x:p.x+p.w*(1-reduce)/2, y:p.y+p.h*(1-reduce)/2, w:p.w*reduce, h:p.h*reduce };
-    const s=sandalsPos;
-    if (r.x < s.x + s.w && r.x + r.w > s.x && r.y < s.y + s.h && r.y + r.h > s.y) equipShoes();
-  }
+    /* límites dentro del bgRect */
+    const halfW = Math.round(sprites.size.w*sprites.scale)/2;
+    const halfH = Math.round(sprites.size.h*sprites.scale)/2;
+    const minX=bgRect.dx+halfW, maxX=bgRect.dx+bgRect.dw-halfW;
+    const minY=bgRect.dy+halfH, maxY=bgRect.dy+bgRect.dh-halfH;
+    player.x=Math.max(minX,Math.min(maxX,player.x));
+    player.y=Math.max(minY,Math.min(maxY,player.y));
+
+    player.frameTime+=dt;
+    if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
+  } else player.frame=0;
 }
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (!bgImg) return;
 
-  if (bgImg){
-    const s = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
-    bgRect.dw = roomOriginal.w*s; bgRect.dh = roomOriginal.h*s;
-    bgRect.dx = (canvas.width-bgRect.dw)/2; bgRect.dy = (canvas.height-bgRect.dh)/2;
-    ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
-  } else {
-    drawLoading(); return;
-  }
+  ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
 
-  if (!assets) return;
-
-  const sw=currentMeta().size.w, sh=currentMeta().size.h;
-  const dw=Math.round(sw*SPRITES_NORMAL.scale), dh=Math.round(sh*SPRITES_NORMAL.scale);
-  const img = player.moving ? assets.walk[player.dir][player.frame] : assets.idle[player.dir][0];
-
-  let stretchPx=0;
-  if (!player.moving){
-    const Hz=0.6, t=performance.now()/1000;
-    stretchPx=Math.round((Math.sin(t*Math.PI*2*Hz)*0.5+0.5)*1);
-  }
-
-  const list=[];
-  list.push({ y: tvPos.y, draw: ()=>{ const timg = tvOn ? tvOnImg : tvOffImg; if (timg && timg.width) ctx.drawImage(timg, tvPos.x, tvPos.y, tvPos.w, tvPos.h);} });
-
-  if (showDoorRect) {
-    list.push({ y: doorPos.y + doorPos.h/2, draw: () => { ctx.fillStyle = '#000'; ctx.fillRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h); } });
-  }
-  if (lampImg && lampImg.width) list.push({ y: lampPos.y + lampPos.h/2, draw: ()=>ctx.drawImage(lampImg, lampPos.x, lampPos.y, lampPos.w, lampPos.h) });
-  if (plant1Img && plant1Img.width) list.push({ y: plant1Pos.y, draw: ()=>ctx.drawImage(plant1Img, plant1Pos.x, plant1Pos.y, plant1Pos.w, plant1Pos.h) });
-  if (sofaImg && sofaImg.width)     list.push({ y: sofaPos.y + sofaPos.h/2, draw: ()=>ctx.drawImage(sofaImg, sofaPos.x, sofaPos.y, sofaPos.w, sofaPos.h) });
-  if (bedImg && bedImg.width)       list.push({ y: bedPos.y + bedPos.h/2, draw: ()=>ctx.drawImage(bedImg, bedPos.x, bedPos.y, bedPos.w, bedPos.h) });
-  if (!hasShoes && sandalsImg && sandalsImg.width){
-    list.push({ y: sandalsPos.y + sandalsPos.h/2, draw: ()=>ctx.drawImage(sandalsImg, sandalsPos.x, sandalsPos.y, sandalsPos.w, sandalsPos.h) });
-  }
-  list.push({ y: player.y, draw: ()=>{
-    ctx.fillStyle='rgba(0,0,0,0.3)';
-    ctx.beginPath(); ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
-    ctx.drawImage(img, 0,0, sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2)-stretchPx, dw, dh+stretchPx);
+  /* NPC frontal + jugador con z-order simple por y */
+  const things = [];
+  /* NPC */
+  things.push({ y:npc.y, draw: ()=>{
+    const w=36, h=40, s=0.9;
+    const dw=Math.round(w*s), dh=Math.round(h*s);
+    ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath();
+    ctx.ellipse(Math.round(npc.x), Math.round(npc.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.drawImage(npcImg, Math.round(npc.x-dw/2), Math.round(npc.y-dh/2), dw, dh);
   }});
-  list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
-
-  if (darkness > 0) { ctx.fillStyle = `rgba(0,0,0,${darkness.toFixed(3)})`; ctx.fillRect(0,0,canvas.width,canvas.height); }
-  if (tvOn){ const flicker = 0.35 + Math.random()*0.05; drawLightClipped(tvPos.x + tvPos.w/2, tvPos.y + tvPos.h/2, 100, flicker); }
-  if (lampOn){ const flicker = 0.30 + Math.random()*0.04; drawLightClipped(lampPos.x + lampPos.w/2, lampPos.y + lampPos.h/3, 110, flicker); }
+  /* Player */
+  things.push({ y:player.y, draw: ()=>{
+    const sw=sprites.size.w, sh=sprites.size.h;
+    const dw=Math.round(sw*sprites.scale), dh=Math.round(sh*sprites.scale);
+    const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath();
+    ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.drawImage(img, 0,0,sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2), dw, dh);
+  }});
+  things.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
   if (DEBUG){
-    ctx.save();
-    ctx.fillStyle='rgba(0,200,255,0.12)'; ctx.fillRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
-    ctx.strokeStyle='rgba(0,200,255,0.35)'; ctx.strokeRect(tvInteractPos.x, tvInteractPos.y, tvInteractPos.w, tvInteractPos.h);
-    ctx.fillStyle='rgba(255,200,0,0.12)'; ctx.fillRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
-    ctx.strokeRect(lampInteractPos.x, lampInteractPos.y, lampInteractPos.w, lampInteractPos.h);
-    ctx.strokeStyle='rgba(0,255,100,.7)'; ctx.strokeRect(doorPos.x, doorPos.y, doorPos.w, doorPos.h);
-    ctx.strokeStyle='rgba(255,200,0,.7)'; ctx.strokeRect(doorInteractPos.x, doorInteractPos.y, doorInteractPos.w, doorInteractPos.h);
-    ctx.restore();
+    ctx.strokeStyle='rgba(0,200,255,.5)';
+    const r=playerRect(); ctx.strokeRect(r.x,r.y,r.w,r.h);
   }
 }
 
-/* Luz radial recortada al área del fondo */
-function drawLightClipped(x,y,radius,intensity){
-  if (!bgRect || !bgRect.dw || !bgRect.dh) return;
-  const radiusScaled = radius * (bgRect.dw / roomOriginal.w);
-  ctx.save();
-  ctx.beginPath(); ctx.rect(bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh); ctx.clip();
-  const g = ctx.createRadialGradient(x,y,0,x,y,radiusScaled);
-  g.addColorStop(0, `rgba(255,255,200,${intensity})`);
-  g.addColorStop(1, 'rgba(255,255,200,0)');
-  ctx.globalCompositeOperation="lighter";
-  ctx.fillStyle=g;
-  ctx.beginPath(); ctx.arc(x,y,radiusScaled,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-  ctx.globalCompositeOperation="source-over";
+/* ===== NEAR / ACTION ===== */
+function playerRect(){
+  const sw=sprites.size.w, sh=sprites.size.h, sc=sprites.scale;
+  const dw=Math.round(sw*sc), dh=Math.round(sh*sc);
+  return { x: player.x-dw/2, y: player.y-dh/2, w:dw, h:dh };
 }
+function isNearNPC(){
+  const dx=player.x-npc.x, dy=player.y-npc.y; return Math.hypot(dx,dy) < 28;
+}
+function onAction(){
+  if (state.mode==='play'){
+    if (isNearNPC()){ startIntroDialogue(); }
+    return;
+  }
+  if (state.mode==='dialog') advanceDialog();
+  if (state.mode==='cine'){
+    if (state.inChoices){
+      confirmChoice();
+    } else {
+      advanceCine();
+    }
+  }
+}
+
+/* ===== DIALOGO EN ESCENA (previo) ===== */
+const dialogEl   = document.getElementById('dialog');
+const dialogName = document.getElementById('dialogName');
+const dialogText = document.getElementById('dialogText');
+const dialogHint = document.getElementById('dialogHint');
+
+let typingTimer=null, typingSpeed=22, isTyping=false;
+
+/* Beep retro */
+function playBip(){
+  try{
+    if(!window.__ctx) window.__ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const ctx=window.__ctx; const osc=ctx.createOscillator(); const gain=ctx.createGain();
+    osc.type='square'; osc.frequency.value=760+Math.random()*120;
+    const now=ctx.currentTime, dur=.075, v0=.05;
+    gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(v0,now+.01); gain.gain.exponentialRampToValueAtTime(.0005,now+dur);
+    osc.connect(gain).connect(ctx.destination); osc.start(now); osc.stop(now+dur);
+  }catch(e){}
+}
+function bipForChar(ch,i){ const ok=/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9]/.test(ch); if(ok || (ch===' ' && i%6===0)) playBip(); }
+
+function typeInto(el, text, done){
+  clearInterval(typingTimer); el.textContent=''; isTyping=true; let i=0;
+  typingTimer=setInterval(()=>{
+    if(i<text.length){ const ch=text[i++]; el.textContent+=ch; bipForChar(ch,i); }
+    else{ clearInterval(typingTimer); isTyping=false; dialogEl.classList.add('ready'); if(done)done(); }
+  }, typingSpeed);
+}
+
+/* Intro: sin cinemática, nombre "???", texto "Hola, chico..." */
+function startIntroDialogue(){
+  state.mode='dialog';
+  dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
+  dialogName.textContent='???';
+  dialogHint.style.opacity=0;
+  typeInto(dialogText, 'Hola, chico...', ()=>{ dialogHint.style.opacity=1; });
+}
+function advanceDialog(){
+  if (isTyping){ clearInterval(typingTimer); isTyping=false; dialogText.textContent='Hola, chico...'; dialogEl.classList.add('ready'); dialogHint.style.opacity=1; return; }
+  /* cerrar y abrir cinemática */
+  dialogEl.classList.remove('show','ready');
+  startCinematic();
+}
+
+/* ===== CINEMÁTICA ===== */
+const cineEl   = document.getElementById('cine');
+const cineName = document.getElementById('cineName');
+const cineText = document.getElementById('cineText');
+const cineHint = document.getElementById('cineHint');
+const pOld = document.getElementById('pOld'), imgOld = document.getElementById('imgOld');
+const pJuan= document.getElementById('pJuan'), imgJuan= document.getElementById('imgJuan');
+const choicePanel = document.getElementById('choicePanel');
+const choicesEl   = document.getElementById('choices');
+
+const CINE = [
+  { who:'???',   talk:'Qué bueno que te he encontrado.', show:'old' },
+  { who:'Juan',  talk:'¿Quién eres??',                   show:'juan' },
+  { who:'Gandalf', talk:'Puedes llamarme Gandalf.',      show:'old', rename:true },
+  { who:'Gandalf', talk:'¿Quieres que te guíe o prefieres explorar?', show:'old',
+    choices:[
+      { label:'Guíame', next:'guide' },
+      { label:'Prefiero explorar', next:'explore' }
+    ]
+  },
+  { id:'guide', who:'Gandalf', talk:'Entonces sígueme, pero pisa donde yo pise.' },
+  { id:'explore', who:'Gandalf', talk:'Como quieras. El norte guarda respuestas.' }
+];
+let cineIndex=0;
+
+function startCinematic(){
+  state.mode='cine';
+  cineIndex=0; state.inChoices=false; choicePanel.classList.remove('show');
+  imgOld.src = PORTRAIT_OLD; imgJuan.src = PORTRAIT_JUAN;
+  cineEl.classList.add('show');
+  showCineNode(CINE[cineIndex], true);
+}
+
+function showCineNode(node, first=false){
+  /* retrato visible */
+  pOld.classList.remove('show'); pJuan.classList.remove('show');
+  if (node.show==='old')  pOld.classList.add('show'); else if (node.show==='juan') pJuan.classList.add('show');
+
+  /* nombre (si renombra, ya se queda “Gandalf”) */
+  if (node.rename) currentOldName = 'Gandalf';
+  const name = (node.who==='???') ? '???' : node.who;
+
+  cineName.textContent = name;
+  cineHint.style.opacity=0;
+  cineText.textContent='';
+  typeInto(cineText, node.talk, ()=>{ cineHint.style.opacity=1; });
+
+  /* opciones */
+  if (node.choices){
+    buildChoices(node.choices);
+    state.inChoices=true;
+  } else {
+    state.inChoices=false;
+    choicePanel.classList.remove('show');
+  }
+}
+let currentOldName='???';
+
+function advanceCine(){
+  const node = CINE[cineIndex];
+  if (isTyping){ clearInterval(typingTimer); isTyping=false; cineText.textContent=node.talk; cineHint.style.opacity=1; return; }
+  if (node && node.choices){ /* esperando confirmación con botón Acción */
+    return;
+  }
+  cineIndex++;
+  if (cineIndex < CINE.length){
+    showCineNode(CINE[cineIndex]);
+  } else {
+    endCinematic();
+  }
+}
+function endCinematic(){
+  cineEl.classList.remove('show');
+  state.mode='play';
+}
+
+/* ===== CHOICES (panel derecha) ===== */
+let choiceIndex=0, currentChoices=null;
+function buildChoices(list){
+  currentChoices = list; choiceIndex=0;
+  choicesEl.innerHTML='';
+  list.forEach((c,i)=>{
+    const div=document.createElement('div');
+    div.className='choice'+(i===0?' selected':'');
+    div.textContent=c.label;
+    choicesEl.appendChild(div);
+  });
+  choicePanel.classList.add('show');
+}
+function refreshChoiceSel(){
+  [...choicesEl.children].forEach((el,i)=> el.classList.toggle('selected', i===choiceIndex));
+}
+function moveChoice(dir){
+  if (!state.inChoices || !currentChoices) return;
+  const n=currentChoices.length;
+  if (dir==='up')   choiceIndex=(choiceIndex-1+n)%n;
+  if (dir==='down') choiceIndex=(choiceIndex+1)%n;
+  refreshChoiceSel();
+}
+function confirmChoice(){
+  if (!state.inChoices || !currentChoices) return;
+  const nextId = currentChoices[choiceIndex].next;
+  /* buscar índice por id */
+  const idx = CINE.findIndex(n=>n.id===nextId);
+  if (idx>=0){ state.inChoices=false; choicePanel.classList.remove('show'); cineIndex=idx; showCineNode(CINE[cineIndex]); }
+  else { endCinematic(); }
+}
+
+/* flechas ↑/↓ SOLO para opciones en cine */
+window.addEventListener('keydown', e=>{
+  if (state.mode==='cine' && state.inChoices){
+    if (e.code==='ArrowUp'){ e.preventDefault(); moveChoice('up'); }
+    if (e.code==='ArrowDown'){ e.preventDefault(); moveChoice('down'); }
+  }
+});
+
+/* ===== STATE ===== */
+const state = { mode:'play', inChoices:false };
 
 /* ===== LOOP ===== */
 function loop(now){
   if(!loop.last) loop.last=now;
   const dt = Math.min(1/30,(now-loop.last)/1000);
   loop.last=now;
-  update(dt);
-  draw();
+  update(dt); draw();
   requestAnimationFrame(loop);
 }
 
 /* ===== INIT ===== */
 async function init(){
-  const [bg, sofa, tvOnI, tvOffI, bed, plant, sandals, lamp, normalSet, shoesSet] = await Promise.all([
-    loadImage(BACKGROUND), loadImage(SOFA_IMG), loadImage(TVON_IMG), loadImage(TVOFF_IMG),
-    loadImage(BED_IMG), loadImage(PLANT1_IMG), loadImage(SANDALS_IMG), loadImage(LAMP_IMG),
-    preloadSprites(SPRITES_NORMAL), preloadSprites(SPRITES_SHOES)
+  const [bg, spr, npcPng] = await Promise.all([
+    loadImage(BACKGROUND),
+    preloadSprites(SPRITES_JUAN),
+    loadImage(NPC_IMG)
   ]);
-  bgImg=bg; sofaImg=sofa; tvOnImg=tvOnI; tvOffImg=tvOffI; bedImg=bed; plant1Img=plant; sandalsImg=sandals; lampImg=lamp;
-  assetsNormal=normalSet; assetsShoes=shoesSet; assets=assetsNormal;
+  bgImg=bg; sprites=spr; npcImg=npcPng;
 
-  try{ setupAudioUnlock(); }catch(e){}
   resizeCanvas();
+  try{ bgMusic.play().catch(()=>{}); }catch(e){}
+  document.getElementById('bootMask').classList.add('hidden');
   requestAnimationFrame(loop);
-
-  // >>> Aquí quitamos la pantalla negra y mostramos el PRESS TO START
-  bootMask.classList.add('hidden');
-  setTimeout(()=> pressStartEl.classList.add('show'), 80);
 }
 init();
-
-function setupAudioUnlock() {
-  try { bgMusic.setAttribute?.('playsinline', ''); } catch (e) {}
-  bgMusic.preload = 'auto';
-  const unlock = () => {
-    try {
-      if (typeof AudioContext !== 'undefined') {
-        if (!window.__ctx) window.__ctx = new (window.AudioContext || window.webkitAudioContext)();
-        if (window.__ctx.state === 'suspended') window.__ctx.resume();
-      }
-    } catch(e){}
-    window.removeEventListener('pointerdown', unlock);
-    window.removeEventListener('keydown', unlock);
-    window.removeEventListener('touchstart', unlock);
-  };
-  window.addEventListener('pointerdown', unlock, { once: true });
-  window.addEventListener('keydown',     unlock, { once: true });
-  window.addEventListener('touchstart',  unlock, { once: true, passive: false });
-}
-
-/* ===== BIND ACCIÓN ===== */
-document.getElementById('btn-act').addEventListener('click', (e)=>{ e.preventDefault(); handleAction(); });
-document.getElementById('btn-act').addEventListener('touchstart', (e)=>{ e.preventDefault(); handleAction(); }, {passive:false});
-window.addEventListener('keydown', e => {
-  if (e.code === 'Space' || e.code === 'Enter'){
-    e.preventDefault();
-    handleAction();
-  }
-}, { passive:false });
 </script>
 </body>
 </html>
