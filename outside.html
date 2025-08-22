@@ -56,10 +56,10 @@
 
   .cine-portraits { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; pointer-events:none; }
   .portrait {
-    width: 50%; max-width: 500px; position: relative; display:flex; justify-content:center; align-items:flex-end; padding: 8px;
+    width: 50%; max-width: 500px; position: relative; display:flex; justify-content:center; align-items:flex-end; padding: 8px 8px 0; /* 0 abajo para pegar pies */
   }
   .portrait img {
-    /* === retratos al 90% de la altura de la pantalla de juego === */
+    /* retratos: 90% de alto del área de juego */
     height: 90%;
     width: auto;
     max-width: none;
@@ -70,22 +70,21 @@
   .portrait.right img{ --tx: 12%; }
   .portrait.show img{ opacity:1; transform: translateX(0); }
 
-  /* Panel de opciones: centrado encima del cuadro de diálogo */
+  /* ===== Panel de opciones: SIN título, arriba del diálogo y pegado a su borde derecho ===== */
   .choice-panel{
-    position:absolute; left:50%; transform:translateX(-50%);
-    bottom: 92px;
+    position:absolute;
+    /* sin posición fija: se coloca vía JS en la esquina sup-der del diálogo */
     background: rgba(12,12,24,0.95);
-    border-left: 2px solid #3cf; padding: 8px; border-radius: 8px; z-index: 26; display:none; min-width: 160px;
-    box-shadow: 0 6px 14px rgba(0,0,0,.45);
+    border:1px solid #3cf; border-radius: 8px; z-index: 26; display:none;
+    min-width: 160px; padding: 6px; box-shadow: 0 6px 14px rgba(0,0,0,.45);
   }
   .choice-panel.show{ display:block; }
-  .choice-title{ font-family:'Press Start 2P', system-ui; font-size:9px; color:#8df; margin-bottom:6px; text-align:center; }
   .choices{ display:flex; flex-direction:column; gap:6px; }
   .choice{
-    font-family:'VT323', monospace; font-size:18px; color:#E6F6FF; padding: 4px 8px;
-    border:1px solid transparent; background:transparent; text-align:center;
+    font-family:'VT323', monospace; font-size:18px; color:#E6F6FF; padding: 4px 8px; text-align:left;
+    border:1px solid transparent; background:transparent;
   }
-  .choice.selected{ border-color:#8df; background: rgba(60, 120, 255, 0.12); }
+  .choice.selected{ border-color:#8df; background: rgba(60, 120, 255, 0.18); border-radius: 4px; }
 
   .scene-fade{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; z-index:999; transition: opacity .45s ease; }
   .scene-fade.show{ opacity:1; }
@@ -125,9 +124,8 @@
           <div id="cineHint" class="dialog-hint">→</div>
         </div>
 
-        <!-- Opciones encima del diálogo -->
+        <!-- Opciones (encima del diálogo, pegadas a la derecha) -->
         <div id="choicePanel" class="choice-panel">
-          <div class="choice-title">Opciones</div>
           <div id="choices" class="choices"></div>
         </div>
       </div>
@@ -209,7 +207,7 @@ const btnAct = document.getElementById('btn-act');
 btnAct.addEventListener('click', e=>{ e.preventDefault(); onAction(); });
 btnAct.addEventListener('touchstart', e=>{ e.preventDefault(); onAction(); }, {passive:false});
 
-/* === D-PAD controla el menú de opciones cuando está abierto === */
+/* === D-PAD controla el menú de opciones cuando está abierto (sin teclado) === */
 document.getElementById('btn-up').addEventListener('click', e=>{
   if (state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('up'); }
 });
@@ -241,6 +239,9 @@ function resizeCanvas(){
     npc.x = bgRect.dx + bgRect.dw*0.52;
     npc.y = bgRect.dy + bgRect.dh*0.35;
   }
+
+  // re-posicionar el panel si está visible
+  if (choicePanel.classList.contains('show')) positionChoices();
 }
 window.addEventListener('resize', resizeCanvas);
 
@@ -416,12 +417,41 @@ function showCineNode(node){
   if (node.choices){
     buildChoices(node.choices);
     state.inChoices=true;
+    // posicionalas justo encima y a la derecha del diálogo
+    setTimeout(positionChoices, 0); // esperar layout
   } else {
     state.inChoices=false;
     choicePanel.classList.remove('show');
   }
 }
 
+/* coloca el choicePanel pegado arriba-derecha del diálogo de cine */
+function positionChoices(){
+  const screen = document.querySelector('.screen').getBoundingClientRect();
+  const dlg = cineDialogEl.getBoundingClientRect();
+  const panel = choicePanel;
+
+  // asegurar que está visible para leer su tamaño
+  panel.style.visibility = 'hidden';
+  panel.classList.add('show');
+
+  const panelRect = panel.getBoundingClientRect();
+  const gap = 6;
+
+  // top = parte superior del diálogo menos la altura del panel - gap
+  const top = (dlg.top - screen.top) - panelRect.height - gap;
+  // left = borde derecho del diálogo menos ancho del panel
+  const left = (dlg.right - screen.left) - panelRect.width;
+
+  panel.style.top = Math.max(0, top) + 'px';
+  panel.style.left = Math.max(0, left) + 'px';
+  panel.style.right = '';
+  panel.style.bottom = '';
+
+  panel.style.visibility = '';
+}
+
+/* avanzar nodos */
 function advanceCine(){
   const node = NODES[currentId];
   if (isTyping){ clearInterval(typingTimer); isTyping=false; cineText.textContent=node.talk; cineHint.style.opacity=1; return; }
@@ -467,14 +497,6 @@ function confirmChoice(){
   currentId = nextId;
   showCineNode(NODES[currentId]);
 }
-
-/* flechas ↑/↓ de teclado SOLO para opciones en cine */
-window.addEventListener('keydown', e=>{
-  if (state.mode==='cine' && state.inChoices){
-    if (e.code==='ArrowUp'){ e.preventDefault(); moveChoice('up'); }
-    if (e.code==='ArrowDown'){ e.preventDefault(); moveChoice('down'); }
-  }
-});
 
 /* ===== STATE ===== */
 const state = { mode:'play', inChoices:false };
