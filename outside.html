@@ -37,7 +37,7 @@
     position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%) scaleX(0);
     transform-origin: center bottom; width: calc(100% - 24px); max-width: 460px; min-height: 60px;
     box-sizing: border-box; padding: 10px 12px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-    border-radius: 10px; image-rendering: pixelated; z-index: 12; transition: transform .22s ease;
+    border-radius: 10px; image-rendering: pixelated; z-index: 22; transition: transform .22s ease;
     background: rgba(12,12,24,0.9); border: none; border-top: 2px solid #3cf; text-align: left;
   }
   .dialog.show { transform: translateX(-50%) scaleX(1); }
@@ -49,26 +49,29 @@
   /* ===== Cinemática: blur + retratos grandes con transición suave ===== */
   .cine {
     position:absolute; inset:0; z-index: 20; display:none;
-    /* Transición suave controlada por variables CSS */
-    --blur: 0px;
-    --dim: 0;
+    --blur: 0px; --dim: 0;
     backdrop-filter: blur(var(--blur));
     background: rgba(0,0,0,var(--dim));
     transition: backdrop-filter .22s ease, background .22s ease;
   }
   .cine.show { display:block; }
-  @keyframes fadeIn{ from{ opacity:0 } to{ opacity:1 } }
 
-  .cine-portraits { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; pointer-events:none; }
+  .cine-portraits {
+    position:absolute; inset:0;
+    display:flex; align-items:flex-end; justify-content:space-between;
+    pointer-events:none;
+  }
   .portrait {
-    width: 50%; max-width: 500px; position: relative; display:flex; justify-content:center; align-items:flex-end;
+    width: 50%; max-width: 500px; position: relative;
+    display:flex; justify-content:center; align-items:flex-end;
     padding: 0 8px 0;
   }
   .portrait img {
     height: auto; width: auto; max-width: none; image-rendering: pixelated;
     opacity: 0; transform: translateX(var(--tx,0));
-    margin-bottom: -40px;
-    transition: transform .26s ease, opacity .26s ease; filter: drop-shadow(0 0 18px rgba(0,0,0,.9));
+    margin-bottom: -20px; /* baja un pelín los “pies” */
+    transition: transform .26s ease, opacity .26s ease;
+    filter: drop-shadow(0 0 18px rgba(0,0,0,.9));
   }
   .portrait.left  img{ --tx:-12%; }
   .portrait.right img{ --tx: 12%; }
@@ -162,6 +165,9 @@ const SPRITES_JUAN = {
 const NPC_IMG = "assets/characters/gandalf.PNG";
 const PORTRAIT_OLD  = "assets/characters/gandalf_big.PNG";
 const PORTRAIT_JUAN = "assets/characters/juansin_big.PNG";
+const PORTRAIT_OFFSET_PX = -20;   // baja un poco los retratos
+const PORTRAIT_HEIGHT_RATIO = 0.90; // 90% del alto del fondo
+
 const bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.35;
 
 /* ===== CANVAS ===== */
@@ -174,6 +180,9 @@ let bgImg=null, npcImg=null, sprites=null;
 
 const player = { x:0, y:0, speed:230, dir:'down', moving:false, frame:0, frameTime:0 };
 const npc    = { x:0, y:0 };
+
+/* ===== ESTADO PERSISTENTE: ¿ya conoces a Gandalf? ===== */
+let hasMetGandalf = localStorage.getItem('metGandalf') === '1';
 
 /* ===== INPUT mover por dpad. Acción SOLO botón/touch ===== */
 const keys = { up:false, down:false, left:false, right:false };
@@ -199,7 +208,7 @@ const btnAct = document.getElementById('btn-act');
 btnAct.addEventListener('click', e=>{ e.preventDefault(); onAction(); });
 btnAct.addEventListener('touchstart', e=>{ e.preventDefault(); onAction(); }, {passive:false});
 
-/* D-pad controla las opciones (no teclado) */
+/* D-pad controla las opciones (NO teclado) */
 const dpadUp   = document.getElementById('btn-up');
 const dpadDown = document.getElementById('btn-down');
 ['click','touchstart'].forEach(evt=>{
@@ -294,11 +303,23 @@ function isNearNPC(){
 }
 function onAction(){
   if (state.mode==='play'){
-    if (isNearNPC()){ startIntroDialogue(); }
+    if (!isNearNPC()) return;
+    if (hasMetGandalf){
+      // diálogo corto conocido (sin cine)
+      startKnownDialog();
+    } else {
+      startIntroDialogue();
+    }
     return;
   }
   if (state.mode==='dialog') advanceDialog();
   if (state.mode==='cine'){
+    // si el nodo tiene choices y aún no se mostraron, mostrarlas ahora
+    const node = NODES[currentId];
+    if (node && node.choices && !state.inChoices){
+      openChoicesFor(node);
+      return;
+    }
     if (state.inChoices){ confirmChoice(); }
     else { advanceCine(); }
   }
@@ -329,6 +350,7 @@ function typeInto(el, text, done){
     else{ clearInterval(typingTimer); isTyping=false; el.parentElement.classList.add('ready'); if(done)done(); }
   }, typingSpeed);
 }
+
 function startIntroDialogue(){
   state.mode='dialog';
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
@@ -336,10 +358,25 @@ function startIntroDialogue(){
   dialogHint.style.opacity=0;
   typeInto(dialogText, 'Hola, chico...', ()=>{ dialogHint.style.opacity=1; });
 }
+function startKnownDialog(){
+  state.mode='dialog';
+  dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
+  dialogName.textContent='Gandalf';
+  dialogHint.style.opacity=0;
+  typeInto(dialogText, 'Ya sabes lo que tienes que hacer.', ()=>{ dialogHint.style.opacity=1; });
+}
 function advanceDialog(){
-  if (isTyping){ clearInterval(typingTimer); isTyping=false; dialogText.textContent='Hola, chico...'; dialogEl.classList.add('ready'); dialogHint.style.opacity=1; return; }
+  const full = dialogText.textContent;
+  if (isTyping){
+    clearInterval(typingTimer); isTyping=false;
+    // completar la línea actual sin más
+    dialogEl.classList.add('ready'); dialogHint.style.opacity=1;
+    return;
+  }
   dialogEl.classList.remove('show','ready');
-  startCinematic(); // transición suave aquí
+
+  // si es el intro de ??? → pasamos a cinemática. Si era el “known”, volvemos a juego.
+  if (!hasMetGandalf){ startCinematic(); } else { state.mode='play'; }
 }
 
 /* ===== CINEMÁTICA ===== */
@@ -366,14 +403,14 @@ const NODES = {
 let currentId = null;
 let cineVisible = false;
 
-/* Transición suave: blur/dim animado y luego aparecen retratos+diálogo */
+/* Transición suave: blur/dim animado y luego aparecen retratos+diálogo a la vez */
 async function startCinematic(){
   // Pre-carga retratos grandes
   const [oldBig, juanBig] = await Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
   imgOld.src  = oldBig.src;
   imgJuan.src = juanBig.src;
 
-  // Preparar capa cine con blur 0 y dim 0; mostrarla para que anime
+  // Preparar capa cine
   cineEl.style.setProperty('--blur', '0px');
   cineEl.style.setProperty('--dim', '0');
   cineEl.classList.add('show');
@@ -382,19 +419,18 @@ async function startCinematic(){
   // Ajustar tamaño de retratos a la altura del fondo
   sizePortraitsToBackground();
 
-  // Lanzar la transición a valores destino (sutiles)
+  // Transición sutil
   requestAnimationFrame(()=>{
-    cineEl.style.setProperty('--blur', '4px');   // difuminado leve
-    cineEl.style.setProperty('--dim', '0.25');   // oscurecer un poco
+    cineEl.style.setProperty('--blur', '4px');
+    cineEl.style.setProperty('--dim', '0.25');
   });
 
-  // Cuando termina la transición (~220ms), mostrar todo junto
+  // Mostrar todo junto tras la transición
   setTimeout(()=>{
     state.mode='cine';
     currentId = 'start1';
     state.inChoices=false; choicePanel.classList.remove('show');
 
-    // Mostrar diálogo y primer retrato al mismo tiempo
     cineDialogEl.classList.add('show');
     pOld.classList.add('show'); pJuan.classList.remove('show');
 
@@ -403,9 +439,11 @@ async function startCinematic(){
 }
 
 function sizePortraitsToBackground(){
-  const h = Math.round(bgRect.dh * 1.2); // 90% de alto del fondo
+  const h = Math.round(bgRect.dh * PORTRAIT_HEIGHT_RATIO);
   imgOld.style.height  = h + 'px';
   imgJuan.style.height = h + 'px';
+  imgOld.style.marginBottom  = PORTRAIT_OFFSET_PX + 'px';
+  imgJuan.style.marginBottom = PORTRAIT_OFFSET_PX + 'px';
 }
 
 function showCineNode(node){
@@ -413,26 +451,35 @@ function showCineNode(node){
   pOld.classList.remove('show'); pJuan.classList.remove('show');
   if (node.show==='old')  pOld.classList.add('show'); else if (node.show==='juan') pJuan.classList.add('show');
 
+  // si aquí revela el nombre, marcamos “conocido”
+  if (node.rename && !hasMetGandalf){
+    hasMetGandalf = true;
+    try { localStorage.setItem('metGandalf','1'); } catch(e){}
+  }
+
   cineName.textContent = node.who;
   cineHint.style.opacity=0;
   cineText.textContent='';
   typeInto(cineText, node.talk, ()=>{ cineHint.style.opacity=1; });
 
-  // opciones
-  if (node.choices){
-    buildChoices(node.choices);
-    state.inChoices=true;
-    setTimeout(positionChoices, 0);
-  } else {
-    state.inChoices=false;
-    choicePanel.classList.remove('show');
-  }
+  // no abrimos las opciones aún: esperamos a que el jugador pulse Acción
+  state.choicePending = !!node.choices;
+  state.inChoices = false;
+  choicePanel.classList.remove('show');
+}
+
+function openChoicesFor(node){
+  if (!node.choices) return;
+  buildChoices(node.choices);
+  state.inChoices = true;
+  state.choicePending = false;
+  setTimeout(positionChoices, 0);
 }
 
 function advanceCine(){
   const node = NODES[currentId];
   if (isTyping){ clearInterval(typingTimer); isTyping=false; cineText.textContent=node.talk; cineHint.style.opacity=1; return; }
-  if (node.choices) return; // espera confirmación
+  if (node.choices) return; // si tiene choices, no avanzamos sin confirmar
   if (node.next){ currentId = node.next; showCineNode(NODES[currentId]); }
   else { endCinematic(); }
 }
@@ -442,7 +489,6 @@ function endCinematic(){
   cineEl.classList.remove('show');
   cineDialogEl.classList.remove('show');
   choicePanel.classList.remove('show');
-  // reset blur/dim (por si vuelves a entrar)
   cineEl.style.setProperty('--blur', '0px');
   cineEl.style.setProperty('--dim', '0');
   state.mode='play';
@@ -502,7 +548,7 @@ function confirmChoice(){
 }
 
 /* ===== STATE & LOOP ===== */
-const state = { mode:'play', inChoices:false };
+const state = { mode:'play', inChoices:false, choicePending:false };
 
 function loop(now){
   if(!loop.last) loop.last=now;
