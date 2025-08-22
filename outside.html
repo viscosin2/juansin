@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Juansin 30th birthday - room (cinemática)</title>
+<title>Juansin 30th birthday - outside (cinemática)</title>
 
-<!-- Fuentes pixel -->
+<!-- Pixel fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 
@@ -28,60 +28,99 @@
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering: pixelated; transform: scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform: scale(0.95); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9); }
 
-  .toast{ position:absolute; top:19px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui;
+  .toast{ position:absolute; top:19px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
     padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5; }
   .toast.show{ opacity:1; }
 
-  /* ===== Cuadro de diálogo estilo pixel ===== */
+  /* ===== Estilo de diálogo (igual al que pasaste) ===== */
   .dialog {
-    position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%) scaleX(0);
-    transform-origin: center bottom; width: calc(100% - 24px); max-width: 460px; min-height: 60px;
-    box-sizing: border-box; padding: 10px 12px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-    border-radius: 10px; image-rendering: pixelated; z-index: 12; transition: transform .22s ease;
-    background: rgba(12,12,24,0.9); border: none; border-top: 2px solid #3cf; text-align: left;
+    position: absolute;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%) scaleX(0);
+    transform-origin: center bottom;
+    width: calc(100% - 24px);
+    max-width: 460px;
+    min-height: 60px;
+    box-sizing: border-box;
+    padding: 12px 16px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 10px;
+    image-rendering: pixelated;
+    z-index: 6;
+    transition: transform .22s ease;
   }
   .dialog.show { transform: translateX(-50%) scaleX(1); }
-  .dialog-name{ font-family: 'Press Start 2P', system-ui; font-size: 10px; color:#8df; text-shadow: 0 1px 0 #000; }
-  .dialog-text{ font-family:'VT323', monospace; font-size: 18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
-  .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
+  .dialog {
+    background: rgba(12,12,24,0.9);
+    border: none;
+    border-top: 2px solid #3cf;
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 10px;
+    text-align: left;
+  }
+  .dialog-name{
+    font-family: 'Press Start 2P', system-ui;
+    font-size: 10px;
+    color:#8df;
+    margin-bottom: 6px;
+    text-shadow: 0 1px 0 #000;
+  }
+  .dialog-text{
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    letter-spacing: 1px;
+    line-height: 1.15;
+    color: #E6F6FF;
+    min-height: 2.2em;
+  }
+  .dialog-hint{
+    margin-left:auto; border:none !important; color:#B8D7FF;
+    font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    opacity:0; transition:opacity .18s ease;
+  }
   .dialog.ready .dialog-hint{ opacity:.9; }
 
-  /* ===== Cinemática: blur + retratos grandes con transición suave ===== */
-  .cine {
-    position:absolute; inset:0; z-index: 20; display:none;
+  /* ===== Cinemática: overlay con blur/dim (también muestra carga) ===== */
+  .cine{
+    position:absolute; inset:0; z-index:20; display:none;
     --blur: 0px; --dim: 0;
     backdrop-filter: blur(var(--blur));
     background: rgba(0,0,0,var(--dim));
     transition: backdrop-filter .22s ease, background .22s ease;
   }
-  .cine.show { display:block; }
+  .cine.show{ display:block; }
 
-  .cine-portraits { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; pointer-events:none; }
-  .portrait { width: 50%; max-width: 500px; position: relative; display:flex; justify-content:center; align-items:flex-end; padding: 0 8px 0; }
-  .portrait img {
-    height: auto; width: auto; max-width: none; image-rendering: pixelated;
-    opacity: 0; transform: translateX(var(--tx,0));
-    transition: transform .26s ease, opacity .26s ease; filter: drop-shadow(0 0 18px rgba(0,0,0,.9));
+  .cine-portraits{ position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; pointer-events:none; }
+  .portrait{ width:50%; max-width:500px; position:relative; display:flex; justify-content:center; align-items:flex-end; padding:0 8px 0; }
+  .portrait img{
+    height:auto; width:auto; max-width:none; image-rendering:pixelated;
+    opacity:0; transform: translateX(var(--tx,0)); transition: transform .26s ease, opacity .26s ease;
+    filter: drop-shadow(0 0 18px rgba(0,0,0,.9));
   }
   .portrait.left  img{ --tx:-12%; }
   .portrait.right img{ --tx: 12%; }
-  .portrait.show img{ opacity:1; transform: translateX(0); }
+  .portrait.show img{ opacity:1; transform:translateX(0); }
 
-  /* Panel de opciones: sin título, encima a la derecha del diálogo */
+  /* Panel de opciones arriba-dcha del diálogo, sin título */
   .choice-panel{
     position:absolute; background: rgba(12,12,24,0.95);
-    border:1px solid #3cf; border-radius: 8px; z-index: 26; display:none;
-    min-width: 160px; padding: 6px; box-shadow: 0 6px 14px rgba(0,0,0,.45);
+    border:1px solid #3cf; border-radius:8px; z-index:26; display:none;
+    min-width:160px; padding:6px; box-shadow:0 6px 14px rgba(0,0,0,.45);
   }
   .choice-panel.show{ display:block; }
   .choices{ display:flex; flex-direction:column; gap:6px; }
   .choice{
-    font-family:'VT323', monospace; font-size:18px; color:#E6F6FF; padding: 4px 8px; text-align:left;
-    border:1px solid transparent; background:transparent; border-radius: 4px;
+    font-family:'VT323', monospace; font-size:18px; color:#E6F6FF;
+    padding:4px 8px; text-align:left; border:1px solid transparent; background:transparent; border-radius:4px;
   }
-  .choice.selected{ border-color:#8df; background: rgba(60, 120, 255, 0.18); }
+  .choice.selected{ border-color:#8df; background: rgba(60,120,255,.18); }
 
-  .scene-fade{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; z-index:999; transition: opacity .45s ease; }
+  .scene-fade{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; z-index:999; transition:opacity .45s ease; }
   .scene-fade.show{ opacity:1; }
 
   .boot-mask{ position:absolute; inset:0; background:#000; z-index:1000; opacity:1; transition: opacity .25s ease;}
@@ -99,27 +138,26 @@
       <div id="toast" class="toast"></div>
       <div id="sceneFade" class="scene-fade"></div>
 
-      <!-- Diálogo in-world -->
+      <!-- Diálogo in-world (estilo exacto) -->
       <div id="dialog" class="dialog" aria-live="polite">
         <div id="dialogName" class="dialog-name"></div>
         <div id="dialogText" class="dialog-text"></div>
         <div id="dialogHint" class="dialog-hint">→</div>
       </div>
 
-      <!-- Capa de CINEMÁTICA -->
+      <!-- CINEMÁTICA -->
       <div id="cine" class="cine">
         <div class="cine-portraits">
           <div id="pOld"  class="portrait left"><img id="imgOld"  alt="Viejo"></div>
           <div id="pJuan" class="portrait right"><img id="imgJuan" alt="Juan"></div>
         </div>
-        <!-- Diálogo sobre la capa cine -->
-        <div id="cineDialog" class="dialog" style="z-index:25; bottom: 12px;">
+        <div id="cineDialog" class="dialog" style="z-index:25; bottom:12px;">
           <div id="cineName" class="dialog-name"></div>
           <div id="cineText" class="dialog-text"></div>
           <div id="cineHint" class="dialog-hint">→</div>
         </div>
 
-        <!-- Opciones (encima del diálogo, pegadas a la derecha) -->
+        <!-- Opciones (sin título) -->
         <div id="choicePanel" class="choice-panel">
           <div id="choices" class="choices"></div>
         </div>
@@ -145,37 +183,44 @@
 </div>
 
 <script>
-/* ===== CONFIG ===== */
+/* ===== CONFIG BÁSICA ===== */
 const BACKGROUND = "assets/locations/outside.PNG";
+
+/* Sprites player (igual lógica que tenías) */
 const SPRITES_JUAN = {
   size: { w: 36, h: 40 }, scale: 0.9,
   idle: { down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
   walk: { down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
+/* NPC frontal */
 const NPC_IMG = "assets/characters/gandalf.PNG";
+/* Retratos grandes */
 const PORTRAIT_OLD  = "assets/characters/gandalf_big.PNG";
 const PORTRAIT_JUAN = "assets/characters/juansin_big.PNG";
+
+/* Audio */
 const bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.35;
 
-/* ===== CANVAS ===== */
+/* Canvas */
 const roomOriginal = { w: 512, h: 350 };
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
 
-let bgRect = { dx:0, dy:0, dw:0, dh:0 }, scaleFactor=1;
+let bgRect={dx:0,dy:0,dw:0,dh:0}, scaleFactor=1;
 let bgImg=null, npcImg=null, sprites=null;
 
-const player = { x:0, y:0, speed:230, dir:'down', moving:false, frame:0, frameTime:0 };
-const npc    = { x:0, y:0 };
+const player={ x:0, y:0, speed:230, dir:'down', moving:false, frame:0, frameTime:0 };
+const npc={ x:0, y:0 };
 
-/* ===== INPUT mover por dpad. Acción SOLO botón/touch ===== */
-const keys = { up:false, down:false, left:false, right:false };
-const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
-window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
-window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
-function bindHold(btn, on, off){
-  const start = e => { e.preventDefault(); on(); };
-  const end   = e => { e.preventDefault(); off(); };
+/* ===== INPUT mover (teclas y dpad). Acción SOLO botón/touch ===== */
+const keys={ up:false,down:false,left:false,right:false };
+const mapKey={ ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
+window.addEventListener('keydown', e=>{ const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
+window.addEventListener('keyup',   e=>{ const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
+
+function bindHold(btn,on,off){
+  const start=e=>{ e.preventDefault(); on(); };
+  const end  =e=>{ e.preventDefault(); off(); };
   btn.addEventListener('touchstart', start, {passive:false});
   btn.addEventListener('touchend', end, {passive:false});
   btn.addEventListener('touchcancel', end, {passive:false});
@@ -188,20 +233,20 @@ bindHold(document.getElementById('btn-left'),  ()=>keys.left=true,  ()=>keys.lef
 bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.right=false);
 
 /* Acción: SOLO botón/touch */
-const btnAct = document.getElementById('btn-act');
+const btnAct=document.getElementById('btn-act');
 btnAct.addEventListener('click', e=>{ e.preventDefault(); onAction(); });
 btnAct.addEventListener('touchstart', e=>{ e.preventDefault(); onAction(); }, {passive:false});
 
-/* D-pad controla las opciones (NO teclado) */
-const dpadUp   = document.getElementById('btn-up');
-const dpadDown = document.getElementById('btn-down');
+/* D-pad controla las opciones (no teclado) */
+const dpadUp=document.getElementById('btn-up');
+const dpadDown=document.getElementById('btn-down');
 ['click','touchstart'].forEach(evt=>{
-  dpadUp.addEventListener(evt, e=>{ if (state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('up'); } }, {passive:false});
-  dpadDown.addEventListener(evt, e=>{ if (state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('down'); } }, {passive:false});
+  dpadUp.addEventListener(evt, e=>{ if(state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('up'); } }, {passive:false});
+  dpadDown.addEventListener(evt, e=>{ if(state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('down'); } }, {passive:false});
 });
 
 /* ===== UTIL ===== */
-const loadImage = (src) => new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; });
+const loadImage = (src)=>new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; });
 async function preloadSprites(map){
   const out={ idle:{}, walk:{}, size:map.size, scale:map.scale };
   for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage));
@@ -210,41 +255,38 @@ async function preloadSprites(map){
 
 /* ===== DIBUJO ===== */
 function resizeCanvas(){
-  const screen = document.querySelector('.screen');
-  canvas.width = screen.clientWidth; canvas.height = screen.clientHeight;
+  const screen=document.querySelector('.screen');
+  canvas.width=screen.clientWidth; canvas.height=screen.clientHeight;
 
-  if (bgImg){
-    scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
-    bgRect.dw = roomOriginal.w * scaleFactor; bgRect.dh = roomOriginal.h * scaleFactor;
+  if(bgImg){
+    scaleFactor = Math.min(canvas.width/roomOriginal.w, canvas.height/roomOriginal.h);
+    bgRect.dw = roomOriginal.w*scaleFactor; bgRect.dh = roomOriginal.h*scaleFactor;
     bgRect.dx = (canvas.width - bgRect.dw)/2; bgRect.dy = (canvas.height - bgRect.dh)/2;
 
     player.x = bgRect.dx + bgRect.dw*0.5;
     player.y = bgRect.dy + bgRect.dh*0.80;
-
     npc.x = bgRect.dx + bgRect.dw*0.52;
     npc.y = bgRect.dy + bgRect.dh*0.35;
   }
-
-  if (cineVisible) sizePortraitsToBackground();
-  if (choicePanel.classList.contains('show')) positionChoices();
+  if(cineVisible) sizePortraitsToBackground();
+  if(choicePanel.classList.contains('show')) positionChoices();
 }
 window.addEventListener('resize', resizeCanvas);
 
 function update(dt){
-  if (state.mode!=='play') return;
-
+  if(state.mode!=='play') return;
   const vx=(keys.left?-1:0)+(keys.right?1:0);
   const vy=(keys.up?-1:0)+(keys.down?1:0);
-  player.moving = (vx!==0 || vy!==0);
+  player.moving=(vx!==0||vy!==0);
 
-  if (player.moving){
+  if(player.moving){
     player.dir = Math.abs(vx) > Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
     const len = Math.hypot(vx,vy)||1;
     player.x += (vx/len)*player.speed*dt;
     player.y += (vy/len)*player.speed*dt;
 
-    const halfW = Math.round(sprites.size.w*sprites.scale)/2;
-    const halfH = Math.round(sprites.size.h*sprites.scale)/2;
+    const halfW=Math.round(sprites.size.w*sprites.scale)/2;
+    const halfH=Math.round(sprites.size.h*sprites.scale)/2;
     const minX=bgRect.dx+halfW, maxX=bgRect.dx+bgRect.dw-halfW;
     const minY=bgRect.dy+halfH, maxY=bgRect.dy+bgRect.dh-halfH;
     player.x=Math.max(minX,Math.min(maxX,player.x));
@@ -257,19 +299,18 @@ function update(dt){
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if (!bgImg) return;
+  if(!bgImg) return;
 
   ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
 
-  const things = [];
-  things.push({ y:npc.y, draw: ()=>{
-    const w=36, h=40, s=0.9;
-    const dw=Math.round(w*s), dh=Math.round(h*s);
+  const things=[];
+  things.push({ y:npc.y, draw:()=>{
+    const w=36,h=40,s=0.9; const dw=Math.round(w*s), dh=Math.round(h*s);
     ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath();
     ctx.ellipse(Math.round(npc.x), Math.round(npc.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
     ctx.drawImage(npcImg, Math.round(npc.x-dw/2), Math.round(npc.y-dh/2), dw, dh);
   }});
-  things.push({ y:player.y, draw: ()=>{
+  things.push({ y:player.y, draw:()=>{
     const sw=sprites.size.w, sh=sprites.size.h;
     const dw=Math.round(sw*sprites.scale), dh=Math.round(sh*sprites.scale);
     const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
@@ -281,35 +322,31 @@ function draw(){
 }
 
 /* ===== PROX & ACCIÓN ===== */
-function isNearNPC(){
-  const dx=player.x-npc.x, dy=player.y-npc.y; return Math.hypot(dx,dy) < 28;
-}
+function isNearNPC(){ const dx=player.x-npc.x, dy=player.y-npc.y; return Math.hypot(dx,dy)<28; }
+
 function onAction(){
-  if (state.mode==='play'){
-    if (isNearNPC()){
-      if (!state.metGandalf){
-        startIntroDialogue();
-      } else {
-        startShortDialogue(); // diálogo breve para siguientes veces
-      }
-    }
+  if(state.mode==='play'){
+    if(isNearNPC()){ startIntroDialogue(); }
     return;
   }
-  if (state.mode==='dialog') advanceDialog();
-  if (state.mode==='cine'){
-    // Si el nodo actual tiene choices pero aún no se han desplegado, ábrelos ahora
+  if(state.mode==='dialog'){ advanceDialog(); return; }
+  if(state.mode==='cine'){
     const node = NODES[currentId];
-    if (node && node.choices && state.pendingChoices && !state.inChoices){
-      openChoicesNow(node.choices);
-      return;
+    // 1) Si está escribiendo, solo completar
+    if(isTyping){ completeTypingNow(); return; }
+    // 2) Si hay choices pendientes, abrirlos ahora (no antes)
+    if(node && node.choices && state.pendingChoices && !state.inChoices){
+      openChoicesNow(node.choices); return;
     }
-    if (state.inChoices){ confirmChoice(); }
-    else { advanceCine(); }
+    // 3) Si ya están abiertos, confirmar
+    if(state.inChoices){ confirmChoice(); return; }
+    // 4) Si no hay choices, avanzar
+    advanceCine();
   }
 }
 
 /* ===== DIÁLOGO previo ===== */
-const dialogEl   = document.getElementById('dialog');
+const dialogEl = document.getElementById('dialog');
 const dialogName = document.getElementById('dialogName');
 const dialogText = document.getElementById('dialogText');
 const dialogHint = document.getElementById('dialogHint');
@@ -318,21 +355,31 @@ let typingTimer=null, typingSpeed=22, isTyping=false;
 function playBip(){
   try{
     if(!window.__ctx) window.__ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const ctx=window.__ctx; const osc=ctx.createOscillator(); const gain=ctx.createGain();
+    const ctxA=window.__ctx; const osc=ctxA.createOscillator(); const gain=ctxA.createGain();
     osc.type='square'; osc.frequency.value=760+Math.random()*120;
-    const now=ctx.currentTime, dur=.075, v0=.05;
+    const now=ctxA.currentTime, dur=.075, v0=.05;
     gain.gain.setValueAtTime(0,now); gain.gain.linearRampToValueAtTime(v0,now+.01); gain.gain.exponentialRampToValueAtTime(.0005,now+dur);
-    osc.connect(gain).connect(ctx.destination); osc.start(now); osc.stop(now+dur);
+    osc.connect(gain).connect(ctxA.destination); osc.start(now); osc.stop(now+dur);
   }catch(e){}
 }
-function bipForChar(ch,i){ const ok=/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9]/.test(ch); if(ok || (ch===' ' && i%6===0)) playBip(); }
-function typeInto(el, text, done){
+function bipForChar(ch,i){ const ok=/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9]/.test(ch); if(ok||(ch===' '&&i%6===0)) playBip(); }
+
+function typeInto(el,text,done){
   clearInterval(typingTimer); el.textContent=''; isTyping=true; let i=0;
   typingTimer=setInterval(()=>{
     if(i<text.length){ const ch=text[i++]; el.textContent+=ch; bipForChar(ch,i); }
     else{ clearInterval(typingTimer); isTyping=false; el.parentElement.classList.add('ready'); if(done)done(); }
   }, typingSpeed);
 }
+function completeTypingNow(){
+  clearInterval(typingTimer); isTyping=false;
+  const el = (state.mode==='dialog')? dialogText : cineText;
+  const node = (state.mode==='dialog')? {talk:'Hola, chico...'} : NODES[currentId];
+  el.textContent = node.talk || 'Hola, chico...';
+  (state.mode==='dialog'?dialogEl:cineDialogEl).classList.add('ready');
+  (state.mode==='dialog'?dialogHint:cineHint).style.opacity=1;
+}
+
 function startIntroDialogue(){
   state.mode='dialog';
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
@@ -341,158 +388,140 @@ function startIntroDialogue(){
   typeInto(dialogText, 'Hola, chico...', ()=>{ dialogHint.style.opacity=1; });
 }
 function advanceDialog(){
-  if (isTyping){ clearInterval(typingTimer); isTyping=false; dialogText.textContent='Hola, chico...'; dialogEl.classList.add('ready'); dialogHint.style.opacity=1; return; }
+  if(isTyping){ completeTypingNow(); return; }
   dialogEl.classList.remove('show','ready');
-  startCinematic(); // transición suave aquí
-}
-function startShortDialogue(){
-  state.mode='dialog';
-  dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
-  dialogName.textContent='Gandalf';
-  dialogHint.style.opacity=0;
-  typeInto(dialogText, 'Ya sabes lo que tienes que hacer.', ()=>{ dialogHint.style.opacity=1; });
+  startCinematic(); // transición suave con blur mientras carga
 }
 
 /* ===== CINEMÁTICA ===== */
-const cineEl       = document.getElementById('cine');
-const cineDialogEl = document.getElementById('cineDialog');
-const cineName = document.getElementById('cineName');
-const cineText = document.getElementById('cineText');
-const cineHint = document.getElementById('cineHint');
-const pOld = document.getElementById('pOld'), imgOld = document.getElementById('imgOld');
-const pJuan= document.getElementById('pJuan'), imgJuan= document.getElementById('imgJuan');
-const choicePanel = document.getElementById('choicePanel');
-const choicesEl   = document.getElementById('choices');
+const cineEl=document.getElementById('cine');
+const cineDialogEl=document.getElementById('cineDialog');
+const cineName=document.getElementById('cineName');
+const cineText=document.getElementById('cineText');
+const cineHint=document.getElementById('cineHint');
+const pOld=document.getElementById('pOld'), imgOld=document.getElementById('imgOld');
+const pJuan=document.getElementById('pJuan'), imgJuan=document.getElementById('imgJuan');
+const choicePanel=document.getElementById('choicePanel');
+const choicesEl=document.getElementById('choices');
 
-const NODES = {
-  start1: { who:'???',     show:'old',  talk:'Qué bueno que te he encontrado.', next:'start2' },
-  start2: { who:'Juan',    show:'juan', talk:'¿Quién eres??',                   next:'start3' },
-  start3: { who:'Gandalf', show:'old',  talk:'Puedes llamarme Gandalf.',        next:'choice1', rename:true },
-  choice1:{ who:'Gandalf', show:'old',  talk:'¿Quieres que te guíe o prefieres explorar?',
-            choices:[ { label:'Guíame', next:'guide1' }, { label:'Prefiero explorar', next:'explore1' } ] },
-  guide1:   { who:'Gandalf', show:'old', talk:'Entonces sígueme, pero pisa donde yo pise.', next:null },
-  explore1: { who:'Gandalf', show:'old', talk:'Como quieras. El norte guarda respuestas.',   next:null }
+const NODES={
+  start1:{ who:'???',     show:'old',  talk:'Qué bueno que te he encontrado.', next:'start2' },
+  start2:{ who:'Juan',    show:'juan', talk:'¿Quién eres??',                   next:'start3' },
+  start3:{ who:'Gandalf', show:'old',  talk:'Puedes llamarme Gandalf.',        next:'choice1', rename:true },
+  choice1:{ who:'Gandalf', show:'old', talk:'¿Quieres que te guíe o prefieres explorar?',
+            choices:[ {label:'Guíame', next:'guide1'}, {label:'Prefiero explorar', next:'explore1'} ] },
+  guide1:{ who:'Gandalf', show:'old', talk:'Entonces sígueme, pero pisa donde yo pise.', next:null },
+  explore1:{ who:'Gandalf', show:'old', talk:'Como quieras. El norte guarda respuestas.', next:null }
 };
+let currentId=null, cineVisible=false;
 
-let currentId = null;
-let cineVisible = false;
-
-/* Transición suave + aparición simultánea de retratos y diálogo */
 async function startCinematic(){
-  // marca que ya lo has conocido para siguientes clics
-  state.metGandalf = true;
-
-  // Pre-carga retratos grandes
-  const [oldBig, juanBig] = await Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
-  imgOld.src  = oldBig.src;
-  imgJuan.src = juanBig.src;
-
-  cineEl.style.setProperty('--blur', '0px');
-  cineEl.style.setProperty('--dim', '0');
+  // Mostrar overlay con blur/dim YA para que se note actividad
+  cineEl.style.setProperty('--blur','2px');
+  cineEl.style.setProperty('--dim','0.18');
   cineEl.classList.add('show');
-  cineVisible = true;
+  cineVisible=true;
 
-  sizePortraitsToBackground(); // ajuste a 90% de altura del fondo
+  // Comenzar a cargar retratos
+  const portraitsPromise = Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
 
+  // Suaviza a blur/dim destino mientras carga
   requestAnimationFrame(()=>{
-    cineEl.style.setProperty('--blur', '4px');
-    cineEl.style.setProperty('--dim', '0.25');
+    cineEl.style.setProperty('--blur','4px');
+    cineEl.style.setProperty('--dim','0.25');
   });
 
-  setTimeout(()=>{
-    state.mode='cine';
-    currentId = 'start1';
-    state.inChoices=false; state.pendingChoices=false;
-    choicePanel.classList.remove('show');
+  // Espera retratos y luego muestra todo a la vez
+  const [oldBig, juanBig] = await portraitsPromise;
+  imgOld.src=oldBig.src; imgJuan.src=juanBig.src;
 
-    cineDialogEl.classList.add('show');
-    pOld.classList.add('show'); pJuan.classList.remove('show');
+  sizePortraitsToBackground();
 
-    showCineNode(NODES[currentId]);
-  }, 240);
+  // Mostrar diálogo + retrato sincronizados
+  state.mode='cine';
+  currentId='start1';
+  state.inChoices=false; state.pendingChoices=false;
+  choicePanel.classList.remove('show');
+
+  pOld.classList.add('show'); pJuan.classList.remove('show');
+  cineDialogEl.classList.add('show');
+  showCineNode(NODES[currentId]);
 }
 
-/* retratos = 90% de alto del fondo y pegados abajo */
+/* retratos = 90% de alto del fondo */
 function sizePortraitsToBackground(){
   const h = Math.round(bgRect.dh * 0.90);
-  imgOld.style.height  = h + 'px';
-  imgJuan.style.height = h + 'px';
+  imgOld.style.height = h+'px';
+  imgJuan.style.height = h+'px';
 }
 
 function showCineNode(node){
-  // quién aparece
+  // Mostrar el retrato correcto
   pOld.classList.remove('show'); pJuan.classList.remove('show');
-  if (node.show==='old')  pOld.classList.add('show'); else if (node.show==='juan') pJuan.classList.add('show');
+  if(node.show==='old') pOld.classList.add('show'); else if(node.show==='juan') pJuan.classList.add('show');
 
-  cineName.textContent = node.who;
+  cineName.textContent=node.who;
   cineHint.style.opacity=0;
   cineText.textContent='';
   typeInto(cineText, node.talk, ()=>{ cineHint.style.opacity=1; });
 
-  // Si el nodo tiene choices, NO abrir todavía: pedir un Acción para desplegar
-  if (node.choices){
-    state.pendingChoices = true;
-    state.inChoices = false;
+  // Si hay opciones, no abrir hasta que el jugador pulse Acción tras completar
+  if(node.choices){
+    state.pendingChoices=true;
+    state.inChoices=false;
     choicePanel.classList.remove('show');
-    setTimeout(positionChoices, 0); // preposicionar cuando se despliegue
+    // Precalcular posición en el siguiente frame
+    setTimeout(positionChoices, 0);
   } else {
-    state.pendingChoices = false;
-    state.inChoices = false;
+    state.pendingChoices=false;
+    state.inChoices=false;
     choicePanel.classList.remove('show');
   }
 }
 
-/* Abrir el panel de opciones justo cuando el jugador pulsa Acción en el diálogo que lo lleva */
-function openChoicesNow(list){
-  buildChoices(list);
-  state.pendingChoices = false;
-  state.inChoices = true;
-  positionChoices();
-}
-
 function advanceCine(){
-  const node = NODES[currentId];
-  if (isTyping){ clearInterval(typingTimer); isTyping=false; cineText.textContent=node.talk; cineHint.style.opacity=1; return; }
-  if (node.choices) return; // ahora solo se abre con Acción (openChoicesNow)
-  if (node.next){ currentId = node.next; showCineNode(NODES[currentId]); }
-  else { endCinematic(); }
+  const node=NODES[currentId];
+  if(isTyping){ completeTypingNow(); return; }
+  if(node.choices) return; // solo abrimos con Acción (openChoicesNow)
+  if(node.next){ currentId=node.next; showCineNode(NODES[currentId]); }
+  else{ endCinematic(); }
 }
 
 function endCinematic(){
-  cineVisible = false;
+  cineVisible=false;
   cineEl.classList.remove('show');
   cineDialogEl.classList.remove('show');
   choicePanel.classList.remove('show');
-  cineEl.style.setProperty('--blur', '0px');
-  cineEl.style.setProperty('--dim', '0');
+  cineEl.style.setProperty('--blur','0px');
+  cineEl.style.setProperty('--dim','0');
   state.mode='play';
 }
 
-/* Coloca el panel de opciones encima-derecha del diálogo */
+/* Panel de opciones: encima-dcha del cuadro de diálogo */
 function positionChoices(){
-  const screen = document.querySelector('.screen').getBoundingClientRect();
-  const dlg = cineDialogEl.getBoundingClientRect();
-  const panel = choicePanel;
+  const screen=document.querySelector('.screen').getBoundingClientRect();
+  const dlg=cineDialogEl.getBoundingClientRect();
+  const panel=choicePanel;
 
   panel.style.visibility='hidden';
   panel.classList.add('show');
-  const pr = panel.getBoundingClientRect();
-  const gap = 6;
+  const pr=panel.getBoundingClientRect();
+  const gap=6;
 
-  const top = (dlg.top - screen.top) - pr.height - gap;
-  const left = (dlg.right - screen.left) - pr.width;
+  const top=(dlg.top - screen.top) - pr.height - gap;
+  const left=(dlg.right - screen.left) - pr.width;
 
-  panel.style.top  = Math.max(0, top) + 'px';
-  panel.style.left = Math.max(0, left) + 'px';
-  panel.style.right = '';
-  panel.style.bottom= '';
+  panel.style.top=Math.max(0, top)+'px';
+  panel.style.left=Math.max(0, left)+'px';
+  panel.style.right='';
+  panel.style.bottom='';
   panel.style.visibility='';
 }
 
 /* ===== CHOICES ===== */
 let choiceIndex=0, currentChoices=null;
 function buildChoices(list){
-  currentChoices = list; choiceIndex=0;
+  currentChoices=list; choiceIndex=0;
   choicesEl.innerHTML='';
   list.forEach((c,i)=>{
     const div=document.createElement('div');
@@ -502,31 +531,38 @@ function buildChoices(list){
   });
   choicePanel.classList.add('show');
 }
-function refreshChoiceSel(){
-  [...choicesEl.children].forEach((el,i)=> el.classList.toggle('selected', i===choiceIndex));
-}
+function refreshChoiceSel(){ [...choicesEl.children].forEach((el,i)=>el.classList.toggle('selected', i===choiceIndex)); }
 function moveChoice(dir){
-  if (!state.inChoices || !currentChoices) return;
+  if(!state.inChoices||!currentChoices) return;
   const n=currentChoices.length;
-  if (dir==='up')   choiceIndex=(choiceIndex-1+n)%n;
-  if (dir==='down') choiceIndex=(choiceIndex+1)%n;
+  if(dir==='up') choiceIndex=(choiceIndex-1+n)%n;
+  if(dir==='down') choiceIndex=(choiceIndex+1)%n;
   refreshChoiceSel();
 }
 function confirmChoice(){
-  if (!state.inChoices || !currentChoices) return;
-  const nextId = currentChoices[choiceIndex].next;
+  if(!state.inChoices||!currentChoices) return;
+  const nextId=currentChoices[choiceIndex].next;
   state.inChoices=false;
   choicePanel.classList.remove('show');
-  currentId = nextId;
+  currentId=nextId;
   showCineNode(NODES[currentId]);
+}
+/* Abrir choices SOLO cuando: texto completo y jugador pulsa Acción */
+function openChoicesNow(list){
+  // Si por lo que sea aún está escribiendo, no abrir
+  if(isTyping) return;
+  buildChoices(list);
+  state.pendingChoices=false;
+  state.inChoices=true;
+  positionChoices();
 }
 
 /* ===== STATE & LOOP ===== */
-const state = { mode:'play', inChoices:false, pendingChoices:false, metGandalf:false };
+const state={ mode:'play', inChoices:false, pendingChoices:false };
 
 function loop(now){
   if(!loop.last) loop.last=now;
-  const dt = Math.min(1/30,(now-loop.last)/1000);
+  const dt=Math.min(1/30,(now-loop.last)/1000);
   loop.last=now;
   update(dt); draw();
   requestAnimationFrame(loop);
@@ -541,11 +577,11 @@ async function init(){
   ]);
   bgImg=bg; sprites=spr; npcImg=npcPng;
 
-  const screen = document.querySelector('.screen');
-  canvas.width = screen.clientWidth; canvas.height = screen.clientHeight;
+  const screen=document.querySelector('.screen');
+  canvas.width=screen.clientWidth; canvas.height=screen.clientHeight;
   resizeCanvas();
 
-  try{ bgMusic.play().catch(()=>{}); }catch(e){}
+  try{ bgMusic.play().catch(()=>{});}catch(e){}
   document.getElementById('bootMask').classList.add('hidden');
   requestAnimationFrame(loop);
 }
