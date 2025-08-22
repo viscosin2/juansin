@@ -56,25 +56,22 @@
 
   .cine-portraits { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; pointer-events:none; }
   .portrait {
-    width: 50%; max-width: 500px; position: relative; display:flex; justify-content:center; align-items:flex-end; padding: 8px 8px 0; /* 0 abajo para pegar pies */
+    width: 50%; max-width: 500px; position: relative; display:flex; justify-content:center; align-items:flex-end;
+    padding: 0 8px 0; /* pies pegados abajo */
   }
   .portrait img {
-    /* retratos: 90% de alto del área de juego */
-    height: 90%;
-    width: auto;
-    max-width: none;
-    image-rendering: pixelated; opacity: 0; transform: translateX(var(--tx,0));
+    /* La altura REAL la fija JS (90% de bgRect.dh). Aquí solo base. */
+    height: auto; width: auto; max-width: none; image-rendering: pixelated;
+    opacity: 0; transform: translateX(var(--tx,0));
     transition: transform .26s ease, opacity .26s ease; filter: drop-shadow(0 0 18px rgba(0,0,0,.9));
   }
   .portrait.left  img{ --tx:-12%; }
   .portrait.right img{ --tx: 12%; }
   .portrait.show img{ opacity:1; transform: translateX(0); }
 
-  /* ===== Panel de opciones: SIN título, arriba del diálogo y pegado a su borde derecho ===== */
+  /* Panel de opciones: sin título, encima del diálogo, pegado a su derecha */
   .choice-panel{
-    position:absolute;
-    /* sin posición fija: se coloca vía JS en la esquina sup-der del diálogo */
-    background: rgba(12,12,24,0.95);
+    position:absolute; background: rgba(12,12,24,0.95);
     border:1px solid #3cf; border-radius: 8px; z-index: 26; display:none;
     min-width: 160px; padding: 6px; box-shadow: 0 6px 14px rgba(0,0,0,.45);
   }
@@ -150,26 +147,16 @@
 </div>
 
 <script>
-/* ===== CONFIG BÁSICA ===== */
-const DEBUG = false;
-
-/* ===== MAPA/ESCENA ===== */
+/* ===== CONFIG ===== */
 const BACKGROUND = "assets/locations/outside.PNG";
-
-/* ===== SPRITES ===== */
 const SPRITES_JUAN = {
   size: { w: 36, h: 40 }, scale: 0.9,
   idle: { down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
   walk: { down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
-/* NPC frontal único */
 const NPC_IMG = "assets/characters/gandalf.PNG";
-
-/* ===== RETRATOS GRANDES ===== */
 const PORTRAIT_OLD  = "assets/characters/gandalf_big.PNG";
 const PORTRAIT_JUAN = "assets/characters/juansin_big.PNG";
-
-/* ===== AUDIO ===== */
 const bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.35;
 
 /* ===== CANVAS ===== */
@@ -183,7 +170,7 @@ let bgImg=null, npcImg=null, sprites=null;
 const player = { x:0, y:0, speed:230, dir:'down', moving:false, frame:0, frameTime:0 };
 const npc    = { x:0, y:0 };
 
-/* ===== INPUT mover (teclas y dpad). Acción SOLO botón/touch ===== */
+/* ===== INPUT mover por dpad. Acción SOLO botón/touch ===== */
 const keys = { up:false, down:false, left:false, right:false };
 const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
@@ -207,16 +194,16 @@ const btnAct = document.getElementById('btn-act');
 btnAct.addEventListener('click', e=>{ e.preventDefault(); onAction(); });
 btnAct.addEventListener('touchstart', e=>{ e.preventDefault(); onAction(); }, {passive:false});
 
-/* === D-PAD controla el menú de opciones cuando está abierto (sin teclado) === */
-document.getElementById('btn-up').addEventListener('click', e=>{
-  if (state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('up'); }
-});
-document.getElementById('btn-down').addEventListener('click', e=>{
-  if (state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('down'); }
+/* D-pad controla las opciones (no teclado) */
+const dpadUp   = document.getElementById('btn-up');
+const dpadDown = document.getElementById('btn-down');
+['click','touchstart'].forEach(evt=>{
+  dpadUp.addEventListener(evt, e=>{ if (state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('up'); } }, {passive:false});
+  dpadDown.addEventListener(evt, e=>{ if (state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('down'); } }, {passive:false});
 });
 
 /* ===== UTIL ===== */
-const loadImage = (src) => new Promise(res=>{ const img=new Image(); img.onload=()=>res(img); img.src=src; });
+const loadImage = (src) => new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; });
 async function preloadSprites(map){
   const out={ idle:{}, walk:{}, size:map.size, scale:map.scale };
   for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage));
@@ -240,7 +227,8 @@ function resizeCanvas(){
     npc.y = bgRect.dy + bgRect.dh*0.35;
   }
 
-  // re-posicionar el panel si está visible
+  // Reajustar retratos si la cine está visible
+  if (cineVisible) sizePortraitsToBackground();
   if (choicePanel.classList.contains('show')) positionChoices();
 }
 window.addEventListener('resize', resizeCanvas);
@@ -295,12 +283,7 @@ function draw(){
   things.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 }
 
-/* ===== NEAR / ACTION ===== */
-function playerRect(){
-  const sw=sprites.size.w, sh=sprites.size.h, sc=sprites.scale;
-  const dw=Math.round(sw*sc), dh=Math.round(sh*sc);
-  return { x: player.x-dw/2, y: player.y-dh/2, w:dw, h:dh };
-}
+/* ===== PROX & ACCIÓN ===== */
 function isNearNPC(){
   const dx=player.x-npc.x, dy=player.y-npc.y; return Math.hypot(dx,dy) < 28;
 }
@@ -311,23 +294,18 @@ function onAction(){
   }
   if (state.mode==='dialog') advanceDialog();
   if (state.mode==='cine'){
-    if (state.inChoices){
-      confirmChoice();
-    } else {
-      advanceCine();
-    }
+    if (state.inChoices){ confirmChoice(); }
+    else { advanceCine(); }
   }
 }
 
-/* ===== DIALOGO EN ESCENA (previo) ===== */
+/* ===== DIÁLOGO previo ===== */
 const dialogEl   = document.getElementById('dialog');
 const dialogName = document.getElementById('dialogName');
 const dialogText = document.getElementById('dialogText');
 const dialogHint = document.getElementById('dialogHint');
 
 let typingTimer=null, typingSpeed=22, isTyping=false;
-
-/* Beep retro */
 function playBip(){
   try{
     if(!window.__ctx) window.__ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -339,7 +317,6 @@ function playBip(){
   }catch(e){}
 }
 function bipForChar(ch,i){ const ok=/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9]/.test(ch); if(ok || (ch===' ' && i%6===0)) playBip(); }
-
 function typeInto(el, text, done){
   clearInterval(typingTimer); el.textContent=''; isTyping=true; let i=0;
   typingTimer=setInterval(()=>{
@@ -347,8 +324,6 @@ function typeInto(el, text, done){
     else{ clearInterval(typingTimer); isTyping=false; el.parentElement.classList.add('ready'); if(done)done(); }
   }, typingSpeed);
 }
-
-/* Intro: sin cinemática, nombre "???", texto "Hola, chico..." */
 function startIntroDialogue(){
   state.mode='dialog';
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
@@ -359,10 +334,11 @@ function startIntroDialogue(){
 function advanceDialog(){
   if (isTyping){ clearInterval(typingTimer); isTyping=false; dialogText.textContent='Hola, chico...'; dialogEl.classList.add('ready'); dialogHint.style.opacity=1; return; }
   dialogEl.classList.remove('show','ready');
+  // Al pulsar Acción: arranca cinemática, pero mostrando TODO a la vez
   startCinematic();
 }
 
-/* ===== CINEMÁTICA (Árbol) ===== */
+/* ===== CINEMÁTICA ===== */
 const cineEl       = document.getElementById('cine');
 const cineDialogEl = document.getElementById('cineDialog');
 const cineName = document.getElementById('cineName');
@@ -373,97 +349,105 @@ const pJuan= document.getElementById('pJuan'), imgJuan= document.getElementById(
 const choicePanel = document.getElementById('choicePanel');
 const choicesEl   = document.getElementById('choices');
 
-/* --- grafo de nodos por id --- */
 const NODES = {
   start1: { who:'???',     show:'old',  talk:'Qué bueno que te he encontrado.', next:'start2' },
   start2: { who:'Juan',    show:'juan', talk:'¿Quién eres??',                   next:'start3' },
   start3: { who:'Gandalf', show:'old',  talk:'Puedes llamarme Gandalf.',        next:'choice1', rename:true },
-
   choice1:{ who:'Gandalf', show:'old',  talk:'¿Quieres que te guíe o prefieres explorar?',
-            choices:[
-              { label:'Guíame',           next:'guide1' },
-              { label:'Prefiero explorar',next:'explore1' }
-            ] },
-
+            choices:[ { label:'Guíame', next:'guide1' }, { label:'Prefiero explorar', next:'explore1' } ] },
   guide1:   { who:'Gandalf', show:'old', talk:'Entonces sígueme, pero pisa donde yo pise.', next:null },
   explore1: { who:'Gandalf', show:'old', talk:'Como quieras. El norte guarda respuestas.',   next:null }
 };
 
 let currentId = null;
-let currentOldName='???';
+let cineVisible = false;
 
-function startCinematic(){
+async function startCinematic(){
+  // Pre-carga retratos grandes y SOLO entonces muestra todo junto
+  const [oldBig, juanBig] = await Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
+  imgOld.src  = oldBig.src;
+  imgJuan.src = juanBig.src;
+
+  // Ajustar tamaño de retratos a la altura del fondo
+  sizePortraitsToBackground();
+
+  // Mostrar todo a la vez
+  cineVisible = true;
+  cineEl.classList.add('show');
+  cineDialogEl.classList.add('show');
+  // Retratos entran con su anim (opacity/translate)
+  pOld.classList.add('show'); pJuan.classList.remove('show');
+
+  // Arranca árbol
   state.mode='cine';
   currentId = 'start1';
   state.inChoices=false; choicePanel.classList.remove('show');
-  imgOld.src = PORTRAIT_OLD; imgJuan.src = PORTRAIT_JUAN;
-  cineEl.classList.add('show');
-  cineDialogEl.classList.add('show');
-  showCineNode(NODES[currentId]);
+  showCineNode(NODES[currentId], true);
+}
+
+function sizePortraitsToBackground(){
+  const h = Math.round(bgRect.dh * 0.90); // 90% de alto del fondo
+  imgOld.style.height  = h + 'px';
+  imgJuan.style.height = h + 'px';
+  // alinear pies: los contenedores ya están flex-end y sin padding inferior
 }
 
 function showCineNode(node){
-  /* retratos */
+  // quién aparece
   pOld.classList.remove('show'); pJuan.classList.remove('show');
   if (node.show==='old')  pOld.classList.add('show'); else if (node.show==='juan') pJuan.classList.add('show');
 
-  if (node.rename) currentOldName = 'Gandalf';
   cineName.textContent = node.who;
   cineHint.style.opacity=0;
   cineText.textContent='';
   typeInto(cineText, node.talk, ()=>{ cineHint.style.opacity=1; });
 
-  /* opciones */
+  // opciones
   if (node.choices){
     buildChoices(node.choices);
     state.inChoices=true;
-    // posicionalas justo encima y a la derecha del diálogo
-    setTimeout(positionChoices, 0); // esperar layout
+    setTimeout(positionChoices, 0);
   } else {
     state.inChoices=false;
     choicePanel.classList.remove('show');
   }
 }
 
-/* coloca el choicePanel pegado arriba-derecha del diálogo de cine */
+function advanceCine(){
+  const node = NODES[currentId];
+  if (isTyping){ clearInterval(typingTimer); isTyping=false; cineText.textContent=node.talk; cineHint.style.opacity=1; return; }
+  if (node.choices) return; // espera confirmación
+  if (node.next){ currentId = node.next; showCineNode(NODES[currentId]); }
+  else { endCinematic(); }
+}
+
+function endCinematic(){
+  cineVisible = false;
+  cineEl.classList.remove('show');
+  cineDialogEl.classList.remove('show');
+  choicePanel.classList.remove('show');
+  state.mode='play';
+}
+
+/* Coloca el panel de opciones encima-derecha del diálogo */
 function positionChoices(){
   const screen = document.querySelector('.screen').getBoundingClientRect();
   const dlg = cineDialogEl.getBoundingClientRect();
   const panel = choicePanel;
 
-  // asegurar que está visible para leer su tamaño
-  panel.style.visibility = 'hidden';
+  panel.style.visibility='hidden';
   panel.classList.add('show');
-
-  const panelRect = panel.getBoundingClientRect();
+  const pr = panel.getBoundingClientRect();
   const gap = 6;
 
-  // top = parte superior del diálogo menos la altura del panel - gap
-  const top = (dlg.top - screen.top) - panelRect.height - gap;
-  // left = borde derecho del diálogo menos ancho del panel
-  const left = (dlg.right - screen.left) - panelRect.width;
+  const top = (dlg.top - screen.top) - pr.height - gap;
+  const left = (dlg.right - screen.left) - pr.width;
 
-  panel.style.top = Math.max(0, top) + 'px';
+  panel.style.top  = Math.max(0, top) + 'px';
   panel.style.left = Math.max(0, left) + 'px';
   panel.style.right = '';
-  panel.style.bottom = '';
-
-  panel.style.visibility = '';
-}
-
-/* avanzar nodos */
-function advanceCine(){
-  const node = NODES[currentId];
-  if (isTyping){ clearInterval(typingTimer); isTyping=false; cineText.textContent=node.talk; cineHint.style.opacity=1; return; }
-  if (node.choices){ return; }              // espera a confirmación
-  if (node.next){ currentId = node.next; showCineNode(NODES[currentId]); }
-  else { endCinematic(); }
-}
-function endCinematic(){
-  cineEl.classList.remove('show');
-  cineDialogEl.classList.remove('show');
-  choicePanel.classList.remove('show');
-  state.mode='play';
+  panel.style.bottom= '';
+  panel.style.visibility='';
 }
 
 /* ===== CHOICES ===== */
@@ -498,10 +482,9 @@ function confirmChoice(){
   showCineNode(NODES[currentId]);
 }
 
-/* ===== STATE ===== */
+/* ===== STATE & LOOP ===== */
 const state = { mode:'play', inChoices:false };
 
-/* ===== LOOP ===== */
 function loop(now){
   if(!loop.last) loop.last=now;
   const dt = Math.min(1/30,(now-loop.last)/1000);
@@ -519,7 +502,10 @@ async function init(){
   ]);
   bgImg=bg; sprites=spr; npcImg=npcPng;
 
+  const screen = document.querySelector('.screen');
+  canvas.width = screen.clientWidth; canvas.height = screen.clientHeight;
   resizeCanvas();
+
   try{ bgMusic.play().catch(()=>{}); }catch(e){}
   document.getElementById('bootMask').classList.add('hidden');
   requestAnimationFrame(loop);
