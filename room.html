@@ -31,21 +31,36 @@
     padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5; }
   .toast.show{ opacity:1; }
 
-  .dialog { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%) scaleX(0); transform-origin: center bottom;
-    width: calc(100% - 24px); max-width: 460px; min-height: 70px; box-sizing: border-box; padding: 12px 16px 16px;
-    display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.75); border-radius: 10px; image-rendering: pixelated; z-index: 6; transition: transform .22s ease; }
-  .dialog.has-sprite { background: url("assets/ui/bocadillo.png") center/100% 100% no-repeat, rgba(0,0,0,0); }
-  .dialog.show { transform: translateX(-50%) scaleX(1); }
-.dialog-text {
+/* ===== Estilo "pixel" con nombre ===== */
+.dialog {
+  background: rgba(12,12,24,0.9);           /* caja sólida tipo HUD */
+  border-top: 2px solid #3cf;               /* línea arriba estilo retro */
+}
+.dialog.has-sprite { background: rgba(12,12,24,0.9); } /* ignora bocadillo */
+
+.dialog-name{
+  font-family: 'Press Start 2P', system-ui;
+  font-size: 10px;
+  color:#8df;
+  margin-bottom:6px;
+  text-shadow: 0 1px 0 #000;
+}
+
+.dialog-text{
   font-family: 'VT323', monospace;
   font-size: 22px;
   letter-spacing: 1px;
-  line-height: 1.3;
-  color: #fff;
+  line-height: 1.15;
+  color: #E6F6FF;
+  min-height: 2.2em;
 }
-  .dialog-hint { margin-left: auto; color: #bbb; font: 600 10px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; opacity: .0; transition: opacity .18s ease; }
-  .dialog.ready .dialog-hint { opacity: .9; }
-
+.dialog-hint{
+  margin-left: auto;
+  color:#B8D7FF;
+  font: 600 10px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  opacity: .0; transition: opacity .18s ease;
+}
+.dialog.ready .dialog-hint { opacity: .9; }
   .scene-fade{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; z-index:999; transition: opacity .45s ease; }
   .scene-fade.show{ opacity:1; }
 
@@ -89,10 +104,11 @@
       <div id="toast" class="toast"></div>
       <div id="sceneFade" class="scene-fade"></div>
 
-      <div id="dialog" class="dialog">
-        <div id="dialogText" class="dialog-text"></div>
-        <div id="dialogHint" class="dialog-hint">[Acción]</div>
-      </div>
+<div id="dialog" class="dialog">
+  <div id="dialogName" class="dialog-name"></div>
+  <div id="dialogText" class="dialog-text"></div>
+  <div id="dialogHint" class="dialog-hint">[Acción]</div>
+</div>
     </div>
   </div>
 
@@ -341,27 +357,93 @@ function showToast(msg, ms=2000){
   showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
 }
 
+
 /* ===== DIÁLOGO ===== */
-const dialogEl   = document.getElementById('dialog');
-const dialogText = document.getElementById('dialogText');
-const dialogHint = document.getElementById('dialogHint');
+const dialogEl    = document.getElementById('dialog');
+const dialogName  = document.getElementById('dialogName');
+const dialogText  = document.getElementById('dialogText');
+const dialogHint  = document.getElementById('dialogHint');
 
-let dialogQueue = ["...","¡Toma combo!","...","...","Qué hambre tengo...","Me apetecen unos Tresor.","Voy al super."];
-let dialogIndex = 0, typingTimer = null, typingSpeed = 22, isTyping = false, dialogOpen = false;
+let isTyping = false, typingTimer = null, typingSpeed = 22;
+let dialogOpen = false;
+let dialogIndex = 0;
 
-function openDialog(){ dialogEl.classList.add('show'); dialogEl.classList.remove('ready'); dialogText.textContent = ""; dialogHint.style.opacity = 0; dialogOpen = true; }
-function closeDialog(){ dialogEl.classList.remove('show','ready'); dialogOpen = false; preDialogLock = false; }
-function startTyping(text){
-  clearInterval(typingTimer); dialogText.textContent = ""; isTyping = true; let i = 0;
-  typingTimer = setInterval(()=>{ if (i < text.length) dialogText.textContent += text[i++]; else { clearInterval(typingTimer); isTyping=false; dialogEl.classList.add('ready'); }}, typingSpeed);
+/* Guion con nombre + texto (pon lo que quieras aquí) */
+const dialogScript = [
+  { speaker: 'Juan',  text: '...' },
+  { speaker: 'Juan',  text: '¡Toma combo!' },
+  { speaker: 'Juan',  text: '...' },
+  { speaker: 'Juan',  text: '...' },
+  { speaker: 'Juan',  text: 'Qué hambre tengo...' },
+  { speaker: 'Juan',  text: 'Me apetecen unos Tresor.' },
+  { speaker: 'Juan',  text: 'Voy al super.' }
+];
+
+function openDialog(){
+  dialogEl.classList.add('show');
+  dialogEl.classList.remove('ready');
+  dialogOpen = true;
+  dialogIndex = 0;
+  renderCurrentLine(true);
 }
+
+function closeDialog(){
+  dialogEl.classList.remove('show','ready');
+  dialogOpen = false;
+  preDialogLock = false; // tu flag original
+}
+
+function renderCurrentLine(startTyping = false){
+  const line = dialogScript[dialogIndex] || { speaker:'', text:'' };
+  dialogName.textContent = line.speaker || '';
+  dialogText.textContent = '';
+  dialogHint.style.opacity = 0;
+
+  if (startTyping){
+    startTypingEffect(line.text);
+  } else {
+    dialogText.textContent = line.text;
+    dialogEl.classList.add('ready');
+  }
+}
+
+function startTypingEffect(text){
+  clearInterval(typingTimer);
+  isTyping = true;
+  let i = 0;
+  typingTimer = setInterval(()=>{
+    if (i < text.length){
+      dialogText.textContent += text[i++];
+    } else {
+      clearInterval(typingTimer);
+      isTyping = false;
+      dialogEl.classList.add('ready');
+      dialogHint.style.opacity = 1;
+    }
+  }, typingSpeed);
+}
+
 function advanceDialog(){
   if (!dialogOpen) return;
-  const full = dialogQueue[dialogIndex] ?? "";
-  if (isTyping){ clearInterval(typingTimer); dialogText.textContent = full; isTyping=false; dialogEl.classList.add('ready'); return; }
+
+  const full = dialogScript[dialogIndex]?.text ?? '';
+  if (isTyping){
+    clearInterval(typingTimer);
+    isTyping = false;
+    dialogText.textContent = full;
+    dialogEl.classList.add('ready');
+    dialogHint.style.opacity = 1;
+    return;
+  }
+
   dialogIndex++;
-  if (dialogIndex < dialogQueue.length){ dialogEl.classList.remove('ready'); startTyping(dialogQueue[dialogIndex]); }
-  else { closeDialog(); }
+  if (dialogIndex < dialogScript.length){
+    dialogEl.classList.remove('ready');
+    dialogHint.style.opacity = 0;
+    renderCurrentLine(true);
+  } else {
+    closeDialog();
+  }
 }
 
 /* ===== FADE AUDIO ===== */
