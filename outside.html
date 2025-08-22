@@ -46,21 +46,25 @@
   .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
   .dialog.ready .dialog-hint{ opacity:.9; }
 
-  /* ===== Cinemática: blur + retratos grandes ===== */
+  /* ===== Cinemática: blur + retratos grandes con transición suave ===== */
   .cine {
     position:absolute; inset:0; z-index: 20; display:none;
-    background: rgba(0,0,0,0.2); backdrop-filter: blur(6px);
+    /* Transición suave controlada por variables CSS */
+    --blur: 0px;
+    --dim: 0;
+    backdrop-filter: blur(var(--blur));
+    background: rgba(0,0,0,var(--dim));
+    transition: backdrop-filter .22s ease, background .22s ease;
   }
-  .cine.show { display:block; animation: fadeIn .18s ease both; }
+  .cine.show { display:block; }
   @keyframes fadeIn{ from{ opacity:0 } to{ opacity:1 } }
 
   .cine-portraits { position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; pointer-events:none; }
   .portrait {
     width: 50%; max-width: 500px; position: relative; display:flex; justify-content:center; align-items:flex-end;
-    padding: 0 8px 0; /* pies pegados abajo */
+    padding: 0 8px 0;
   }
   .portrait img {
-    /* La altura REAL la fija JS (90% de bgRect.dh). Aquí solo base. */
     height: auto; width: auto; max-width: none; image-rendering: pixelated;
     opacity: 0; transform: translateX(var(--tx,0));
     transition: transform .26s ease, opacity .26s ease; filter: drop-shadow(0 0 18px rgba(0,0,0,.9));
@@ -69,7 +73,7 @@
   .portrait.right img{ --tx: 12%; }
   .portrait.show img{ opacity:1; transform: translateX(0); }
 
-  /* Panel de opciones: sin título, encima del diálogo, pegado a su derecha */
+  /* Panel de opciones: sin título, encima a la derecha del diálogo */
   .choice-panel{
     position:absolute; background: rgba(12,12,24,0.95);
     border:1px solid #3cf; border-radius: 8px; z-index: 26; display:none;
@@ -334,8 +338,7 @@ function startIntroDialogue(){
 function advanceDialog(){
   if (isTyping){ clearInterval(typingTimer); isTyping=false; dialogText.textContent='Hola, chico...'; dialogEl.classList.add('ready'); dialogHint.style.opacity=1; return; }
   dialogEl.classList.remove('show','ready');
-  // Al pulsar Acción: arranca cinemática, pero mostrando TODO a la vez
-  startCinematic();
+  startCinematic(); // transición suave aquí
 }
 
 /* ===== CINEMÁTICA ===== */
@@ -362,34 +365,46 @@ const NODES = {
 let currentId = null;
 let cineVisible = false;
 
+/* Transición suave: blur/dim animado y luego aparecen retratos+diálogo */
 async function startCinematic(){
-  // Pre-carga retratos grandes y SOLO entonces muestra todo junto
+  // Pre-carga retratos grandes
   const [oldBig, juanBig] = await Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
   imgOld.src  = oldBig.src;
   imgJuan.src = juanBig.src;
 
+  // Preparar capa cine con blur 0 y dim 0; mostrarla para que anime
+  cineEl.style.setProperty('--blur', '0px');
+  cineEl.style.setProperty('--dim', '0');
+  cineEl.classList.add('show');
+  cineVisible = true;
+
   // Ajustar tamaño de retratos a la altura del fondo
   sizePortraitsToBackground();
 
-  // Mostrar todo a la vez
-  cineVisible = true;
-  cineEl.classList.add('show');
-  cineDialogEl.classList.add('show');
-  // Retratos entran con su anim (opacity/translate)
-  pOld.classList.add('show'); pJuan.classList.remove('show');
+  // Lanzar la transición a valores destino (sutiles)
+  requestAnimationFrame(()=>{
+    cineEl.style.setProperty('--blur', '4px');   // difuminado leve
+    cineEl.style.setProperty('--dim', '0.25');   // oscurecer un poco
+  });
 
-  // Arranca árbol
-  state.mode='cine';
-  currentId = 'start1';
-  state.inChoices=false; choicePanel.classList.remove('show');
-  showCineNode(NODES[currentId], true);
+  // Cuando termina la transición (~220ms), mostrar todo junto
+  setTimeout(()=>{
+    state.mode='cine';
+    currentId = 'start1';
+    state.inChoices=false; choicePanel.classList.remove('show');
+
+    // Mostrar diálogo y primer retrato al mismo tiempo
+    cineDialogEl.classList.add('show');
+    pOld.classList.add('show'); pJuan.classList.remove('show');
+
+    showCineNode(NODES[currentId]);
+  }, 240);
 }
 
 function sizePortraitsToBackground(){
   const h = Math.round(bgRect.dh * 0.90); // 90% de alto del fondo
   imgOld.style.height  = h + 'px';
   imgJuan.style.height = h + 'px';
-  // alinear pies: los contenedores ya están flex-end y sin padding inferior
 }
 
 function showCineNode(node){
@@ -426,6 +441,9 @@ function endCinematic(){
   cineEl.classList.remove('show');
   cineDialogEl.classList.remove('show');
   choicePanel.classList.remove('show');
+  // reset blur/dim (por si vuelves a entrar)
+  cineEl.style.setProperty('--blur', '0px');
+  cineEl.style.setProperty('--dim', '0');
   state.mode='play';
 }
 
