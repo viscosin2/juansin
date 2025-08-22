@@ -3,14 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Outside</title>
+<title>Outside + NPC & Diálogo</title>
 
-<!-- Mismas fuentes que tu room -->
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 
 <style>
-  /* ====== CONTENEDOR IGUAL QUE EN ROOM ====== */
   html, body { height: 100%; margin: 0; background: #111; display: flex; justify-content: center; align-items: center; }
   .gameboy { width: 100%; max-width: 500px; height: 100%; background: #000; display: flex; flex-direction: column;
     padding: 12px; box-sizing: border-box; border-radius: 20px; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
@@ -19,7 +17,6 @@
     border-radius: 8px; overflow: hidden; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.6); }
   canvas { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; background: black; }
 
-  /* Controles iguales (si no los usas, puedes borrar esta parte) */
   .controls { height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px; box-sizing: border-box; }
   .dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 0; justify-content: center; margin-left: 12px; align-content: center; overflow: visible; }
   .img-btn, .img-act { border: none; outline: none; padding: 0; background: transparent; cursor: pointer; transition: transform 0.06s ease, filter 0.06s ease; -webkit-tap-highlight-color: transparent; }
@@ -35,15 +32,70 @@
     padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5; }
   .toast.show{ opacity:1; }
 
-  /* (Opcional) indicador de estado arriba a la izquierda */
   .hud{
     position:absolute; left:8px; top:8px; color:#9ee7e7; font: 12px/1 monospace;
     text-shadow: 0 1px 0 #000; opacity:.75; user-select:none; z-index:6;
   }
 
-  /* Mask de arranque */
   .boot-mask{ position:absolute; inset:0; background:#000; z-index:10; opacity:1; transition: opacity .25s ease; }
   .boot-mask.hidden{ opacity:0; pointer-events:none; }
+
+  /* ====== OVERLAY DE CINEMÁTICA / DIÁLOGO ====== */
+  .dialogue-overlay{
+    position:absolute; inset:0; background: rgba(0,0,0,0.92);
+    display:none; z-index:20; overflow:hidden;
+  }
+  .dialogue-overlay.show{ display:block; animation: fadeIn .18s ease both; }
+  @keyframes fadeIn{ from{ opacity:0 } to{ opacity:1 } }
+
+  .portrait{
+    position:absolute; bottom:0; width:100%; height:100%; pointer-events:none;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .portrait img{
+    width: 92%;
+    max-width: 480px;
+    image-rendering: pixelated;
+    transform: translateX(var(--tx,0)) scale(1);
+    opacity: 0;
+    transition: transform .22s ease, opacity .22s ease;
+    filter: drop-shadow(0 0 18px rgba(0,0,0,0.8));
+  }
+  .portrait.show img{ opacity:1; transform: translateX(0) }
+
+  .portrait.left img{ --tx:-12%; }   /* entra desde la izquierda */
+  .portrait.right img{ --tx:12%; }   /* entra desde la derecha */
+
+  .dialogue-box{
+    position:absolute; left:0; right:0; bottom:0;
+    background: rgba(12,12,24,0.9); border-top: 2px solid #3cf; color:#E6F6FF;
+    font-family: 'VT323', monospace; letter-spacing: .5px;
+    padding: 12px 14px 16px; z-index:22;
+  }
+  .dialogue-name{
+    font-family: 'Press Start 2P', system-ui; font-size: 10px; color:#8df; margin-bottom:6px;
+    text-shadow: 0 1px 0 #000;
+  }
+  .dialogue-text{ font-size: 18px; line-height: 1.1; min-height: 2.2em; }
+  .dialogue-hint{ font-size: 12px; opacity:.7; margin-top:6px }
+  .choices{
+    display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;
+  }
+  .choice{
+    font-family: 'Press Start 2P', system-ui; font-size: 9px;
+    padding:8px 10px; border:1px solid #8df; background:#0b1020; color:#e6f6ff; cursor:pointer;
+    transition: transform .06s ease, filter .06s ease;
+  }
+  .choice:active{ transform: scale(0.96); filter: brightness(0.9); }
+  .choice.selected{ outline:2px solid #fff; }
+
+  /* “Pulsa Acción” globito */
+  .bubble{
+    position:absolute; transform: translate(-50%,-100%); padding:4px 6px; font: 600 12px/1 system-ui;
+    color:#111; background:#fff; border-radius:6px; box-shadow:0 2px 0 rgba(0,0,0,0.6);
+    pointer-events:none; z-index:7; display:none;
+  }
+  .bubble.show{ display:block; }
 </style>
 </head>
 <body>
@@ -55,10 +107,25 @@
       <canvas id="game"></canvas>
       <div id="toast" class="toast"></div>
       <div id="hud" class="hud"></div>
+
+      <!-- Globito de interacción -->
+      <div id="bubble" class="bubble">Pulsa Acción</div>
+
+      <!-- Overlay de diálogo/cinemática -->
+      <div id="dlg" class="dialogue-overlay" aria-live="polite">
+        <div id="portrait" class="portrait"><img id="portraitImg" alt=""></div>
+        <div class="dialogue-box" id="dialogueBox">
+          <div class="dialogue-name" id="dlgName"></div>
+          <div class="dialogue-text" id="dlgText"></div>
+          <div class="choices" id="dlgChoices" hidden></div>
+          <div class="dialogue-hint" id="dlgHint">Toca la pantalla o pulsa Acción para continuar</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- Controles táctiles (opcional) -->
+  <!-- Controles táctiles -->
   <div class="controls">
     <div class="dpad">
       <div></div>
@@ -76,15 +143,15 @@
 </div>
 
 <script>
-/* ====== PROPORCIONES Y ESCALA IGUALES A ROOM ====== */
-const roomOriginal = { w: 512, h: 350 }; // mismas que usas internamente
+/* ====== PROPORCIONES Y ESCALA ====== */
+const roomOriginal = { w: 512, h: 350 };
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
 
 /* ====== ASSETS ====== */
-const MAP_IMG = "assets/locations/outside.PNG"; // imagen MUY vertical (9:32 aprox)
+const MAP_IMG = "assets/locations/outside.PNG"; // vertical
 const SPRITES_SHOES = {
-  size: { w: 36, h: 40 },  // EXACTO igual que en tu room
+  size: { w: 36, h: 40 },
   scale: 0.9,
   idle: {
     down:["assets/juan_character/idle_down_shoes.png"],
@@ -100,20 +167,48 @@ const SPRITES_SHOES = {
   }
 };
 
-/* ====== PLAYER (MISMA MEDIDA Y ESCALA) ====== */
+/* ====== NPC (mismo tamaño que el jugador) ====== */
+/* TODO: cambia las rutas del NPC si quieres otro sprite */
+const SPRITES_NPC = {
+  size: { w: 36, h: 40 },
+  scale: 0.9,
+  idle: {
+    down:["assets/characters/gandalf.PNG"],
+    up:["assets/characters/gandalf.PNG"],
+    left:["assets/characters/gandalf.PNG"],
+    right:["assets/characters/gandalf.PNG"]
+  }
+};
+
+/* ====== RETRATOS GRANDES (cinemática) ====== */
+/* TODO: cambia estas rutas a tus PNG grandes */
+const PORTRAITS = {
+  juan: "assets/characters/juansin_big.PNG",
+  oldman: "assets/characters/gandalf_big.PNG"
+};
+
+/* ====== PLAYER ====== */
 const player = {
   x: 0, y: 0,
   dir: 'up',
-  speed: 200 + 30,        // BASE_SPEED + SHOES_BONUS como en tu room
+  speed: 230,
   moving: false,
   frame: 0, frameTime: 0
 };
-const meta = SPRITES_SHOES; // ya spawnea con zapatos
+const meta = SPRITES_SHOES;
+
+/* ====== NPC STATE ====== */
+const npc = {
+  x: 0, y: 0,
+  dir: 'down',
+  frame: 0,
+  sprites: null
+};
 
 /* ====== INPUT ====== */
-const keys = { up:false, down:false, left:false, right:false };
-const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
-window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
+const keys = { up:false, down:false, left:false, right:false, act:false };
+const mapKey = { ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', Space:'act', Enter:'act' };
+window.addEventListener('keydown', e => { const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); handleActPress(d);} });
 window.addEventListener('keyup',   e => { const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
 function bindHold(btn, on, off){
   const start = e => { e.preventDefault(); on(); };
@@ -128,6 +223,10 @@ bindHold(document.getElementById('btn-up'),    ()=>keys.up=true,    ()=>keys.up=
 bindHold(document.getElementById('btn-down'),  ()=>keys.down=true,  ()=>keys.down=false);
 bindHold(document.getElementById('btn-left'),  ()=>keys.left=true,  ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.right=false);
+bindHold(document.getElementById('btn-act'),
+  ()=>{ keys.act=true; handleActPress('act'); },
+  ()=>{ keys.act=false; }
+);
 
 /* ====== CARGA DE IMÁGENES ====== */
 const loadImage = (src) => new Promise(res=>{
@@ -135,17 +234,23 @@ const loadImage = (src) => new Promise(res=>{
 });
 async function preloadSprites(map){
   const out = { idle:{}, walk:{}, size: map.size, scale: map.scale };
-  for (const st of ['idle','walk']){
-    for (const d of Object.keys(map[st])){
-      out[st][d] = await Promise.all(map[st][d].map(loadImage));
+  if(map.idle){
+    for (const d of Object.keys(map.idle)){
+      out.idle[d] = await Promise.all(map.idle[d].map(loadImage));
+    }
+  }
+  if(map.walk){
+    out.walk = {};
+    for (const d of Object.keys(map.walk)){
+      out.walk[d] = await Promise.all(map.walk[d].map(loadImage));
     }
   }
   return out;
 }
 
-/* ====== ESTADO DEL MAPA Y CÁMARA ====== */
+/* ====== MAPA & CÁMARA ====== */
 let bgRect = { dx:0, dy:0, dw:0, dh:0 }, scaleFactor = 1;
-let mapImg=null, mapW=0, mapH=0;           // tamaño escalado dentro de canvas
+let mapImg=null, mapW=0, mapH=0;
 let sprites=null;
 let camY = 0, camMin=0, camMax=0;
 
@@ -155,7 +260,6 @@ function resizeCanvas(){
   canvas.width = screen.clientWidth;
   canvas.height = screen.clientHeight;
 
-  // Igual que la room: encaja 512x350 dentro del cuadrado .screen
   scaleFactor = Math.min(canvas.width / roomOriginal.w, canvas.height / roomOriginal.h);
   bgRect.dw = roomOriginal.w * scaleFactor;
   bgRect.dh = roomOriginal.h * scaleFactor;
@@ -163,19 +267,21 @@ function resizeCanvas(){
   bgRect.dy = (canvas.height - bgRect.dh) / 2;
 
   if (mapImg){
-    // El mapa se escala al ancho visible (bgRect.dw)
     mapW = bgRect.dw;
     mapH = mapW * (mapImg.naturalHeight / mapImg.naturalWidth);
 
-    // Límite vertical de cámara (no salir del mapa)
     const viewH = bgRect.dh;
     camMin = 0;
     camMax = Math.max(0, mapH - viewH);
 
-    // Re-posiciona jugador (spawn abajo-centro)
+    // Spawn jugador y NPC
     player.x = bgRect.dx + mapW/2;
     player.y = bgRect.dy + viewH*0.85;
-    camY = camMax; // arrancamos viendo la parte de abajo
+    // Coloca el NPC en un punto del mapa (arriba-centro visible al empezar a moverte)
+    npc.x = bgRect.dx + mapW/2 + 40;
+    npc.y = bgRect.dy + viewH*0.35;
+
+    camY = camMax;
   }
 }
 
@@ -186,19 +292,179 @@ function showToast(msg, ms=1800){
   showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
 }
 
-/* ====== LOOP ====== */
+/* ====== BUBBLE “Pulsa Acción” ====== */
+const bubble = document.getElementById('bubble');
+function updateBubble(px, py, visible){
+  if(!visible){ bubble.classList.remove('show'); return; }
+  bubble.style.left = px + 'px';
+  bubble.style.top = (py - 20) + 'px';
+  bubble.classList.add('show');
+}
+
+/* ====== ESTADO DEL JUEGO ====== */
+let mode = 'play'; // 'play' | 'dialogue'
+let playerControlEnabled = true;
+
+/* ====== DIÁLOGO ====== */
+const dlgEl = document.getElementById('dlg');
+const dlgName = document.getElementById('dlgName');
+const dlgText = document.getElementById('dlgText');
+const dlgChoices = document.getElementById('dlgChoices');
+const dlgHint = document.getElementById('dlgHint');
+const portraitWrap = document.getElementById('portrait');
+const portraitImg = document.getElementById('portraitImg');
+
+function setPortrait(speaker){
+  const isJuan = (speaker === 'Juan');
+  portraitWrap.classList.remove('left','right','show');
+  // Juan entra desde la derecha; NPC (Señor) desde la izquierda
+  portraitWrap.classList.add(isJuan ? 'right' : 'left');
+  portraitImg.src = isJuan ? PORTRAITS.juan : PORTRAITS.oldman;
+  // forzar reflow para reiniciar anim
+  void portraitImg.offsetWidth;
+  portraitWrap.classList.add('show');
+}
+
+function openDialogue(){
+  mode = 'dialogue';
+  playerControlEnabled = false;
+  dlgEl.classList.add('show');
+}
+function closeDialogue(){
+  dlgEl.classList.remove('show');
+  mode = 'play';
+  playerControlEnabled = true;
+}
+
+const DIALOGUE = {
+  // guion con ids encadenados y una rama con opciones
+  start: {
+    speaker: 'Señor',
+    text: 'Hola chico.',
+    next: 'intro2'
+  },
+  intro2: {
+    speaker: 'Señor',
+    text: 'Te estaba esperando aquí fuera. ¿Tienes un minuto?',
+    next: 'juan1'
+  },
+  juan1: {
+    speaker: 'Juan',
+    text: 'Sí, dime. (dimmi!)',
+    next: 'señor_opciones'
+  },
+  señor_opciones: {
+    speaker: 'Señor',
+    text: 'Puedo ayudarte de dos maneras. ¿Qué prefieres?',
+    choices: [
+      { label: 'Saber un secreto', next: 'secreto' },
+      { label: 'Un consejo', next: 'consejo' }
+    ]
+  },
+  secreto: {
+    speaker: 'Señor',
+    text: 'El camino del norte se abre solo al caer la tarde.',
+    next: 'juan2'
+  },
+  consejo: {
+    speaker: 'Señor',
+    text: 'Muévete con calma y observa el entorno. Piano piano.',
+    next: 'juan2'
+  },
+  juan2: {
+    speaker: 'Juan',
+    text: 'Gracias. Me será útil.',
+    next: 'fin'
+  },
+  fin: {
+    speaker: 'Señor',
+    text: 'Va bene. ¡Suerte ahí fuera!',
+    end: true
+  }
+};
+
+let currentNodeId = null;
+let choiceIndex = 0;
+
+function showNode(id){
+  currentNodeId = id;
+  const node = DIALOGUE[id];
+  if(!node){ closeDialogue(); return; }
+
+  setPortrait(node.speaker);
+  dlgName.textContent = node.speaker;
+  dlgText.textContent = node.text || '';
+  dlgChoices.innerHTML = '';
+
+  if(node.choices){
+    dlgChoices.hidden = false;
+    choiceIndex = 0;
+    node.choices.forEach((c, i)=>{
+      const btn = document.createElement('button');
+      btn.className = 'choice' + (i===0?' selected':'');
+      btn.textContent = c.label;
+      btn.addEventListener('click', e=>{
+        proceedTo(c.next);
+      });
+      dlgChoices.appendChild(btn);
+    });
+    dlgHint.textContent = 'Toca una opción • Usa ← → y Acción';
+  } else {
+    dlgChoices.hidden = true;
+    dlgHint.textContent = 'Toca la pantalla o pulsa Acción para continuar';
+  }
+}
+
+function proceed(){
+  const node = DIALOGUE[currentNodeId];
+  if(!node) return;
+
+  if(node.choices){
+    // si hay opciones, activar la seleccion actual
+    const targetNext = node.choices[choiceIndex]?.next;
+    if(targetNext) proceedTo(targetNext);
+    return;
+  }
+  if(node.end){ closeDialogue(); return; }
+  if(node.next){ showNode(node.next); }
+  else{ closeDialogue(); }
+}
+
+function proceedTo(nextId){
+  showNode(nextId);
+}
+
+function moveChoice(dir){
+  const node = DIALOGUE[currentNodeId];
+  if(!node || !node.choices) return;
+  const total = node.choices.length;
+  choiceIndex = (choiceIndex + (dir==='right'?1:-1) + total) % total;
+  [...dlgChoices.children].forEach((el,i)=>{
+    el.classList.toggle('selected', i===choiceIndex);
+  });
+}
+
+dlgEl.addEventListener('click', ()=>{
+  // Si no hay choices, avanzar con click/tap sobre overlay
+  const node = DIALOGUE[currentNodeId];
+  if(node && !node.choices) proceed();
+});
+
+/* ====== RUNTIME ====== */
 function update(dt){
+  // si estamos en diálogo, no mover al jugador
+  if(mode === 'dialogue'){ return; }
+
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
   player.moving = (vx!==0 || vy!==0);
 
-  if (player.moving){
+  if (player.moving && playerControlEnabled){
     player.dir = Math.abs(vx) > Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
     const len = Math.hypot(vx,vy) || 1;
     player.x += (vx/len) * player.speed * dt;
     player.y += (vy/len) * player.speed * dt;
 
-    // Mantén al jugador dentro del rectángulo visible (mismos límites que room)
     const halfW = Math.round(meta.size.w * meta.scale)/2;
     const halfH = Math.round(meta.size.h * meta.scale)/2;
     const minX = bgRect.dx + halfW, maxX = bgRect.dx + bgRect.dw - halfW;
@@ -206,18 +472,15 @@ function update(dt){
     player.x = Math.max(minX, Math.min(maxX, player.x));
     player.y = Math.max(minY, Math.min(maxY, player.y));
 
-    // Animación
     player.frameTime += dt;
     if(player.frameTime >= 0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else {
     player.frame = 0;
   }
 
-  // Sigue al jugador verticalmente: movemos la "ventana" sobre el mapa largo
-  const yInMap = (player.y - bgRect.dy) + camY; // posición del pj respecto al mapa largo
-  const topBand = bgRect.dh*0.35, bottomBand = bgRect.dh*0.65;
+  // seguimiento vertical
   const yInView = (player.y - bgRect.dy);
-
+  const topBand = bgRect.dh*0.35, bottomBand = bgRect.dh*0.65;
   if (yInView < topBand){
     camY = Math.max(camMin, camY - (topBand - yInView));
   } else if (yInView > bottomBand){
@@ -227,68 +490,91 @@ function update(dt){
   // HUD
   document.getElementById('hud').textContent =
     `camY:${camY.toFixed(1)}  px:${player.x.toFixed(1)},${player.y.toFixed(1)}`;
+
+  // Mostrar bubble si estamos cerca del NPC
+  const near = isNearNPC();
+  updateBubble(npc.x, npc.y - 20, near);
 }
 
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Marco negro como en room (fuera del bgRect)
+  // Marco negro
   ctx.fillStyle = '#000';
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
   if (!mapImg) return;
 
-  // Dibujar el recorte del mapa largo dentro del rectángulo visible bgRect
+  // recorte del mapa
   const sx = 0;
-  const sy = camY * (mapImg.naturalWidth / mapW); // convertir a coords de la imagen original
+  const sy = camY * (mapImg.naturalWidth / mapW);
   const sWidth  = mapImg.naturalWidth;
   const sHeight = (bgRect.dh) * (mapImg.naturalWidth / mapW);
 
   ctx.save();
   ctx.beginPath(); ctx.rect(bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh); ctx.clip();
   ctx.drawImage(mapImg, sx, sy, sWidth, sHeight, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
-  ctx.restore();
 
-  // Sombra y personaje centrados sobre el mapa
+  // ====== NPC ======
+  if(npc.sprites){
+    const sw=npc.sprites.size.w, sh=npc.sprites.size.h;
+    const dw=Math.round(sw*npc.sprites.scale), dh=Math.round(sh*npc.sprites.scale);
+    const img = npc.sprites.idle[npc.dir][0];
+    // sombra
+    ctx.fillStyle='rgba(0,0,0,0.28)';
+    ctx.beginPath();
+    ctx.ellipse(Math.round(npc.x), Math.round(npc.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.drawImage(img, 0,0, sw,sh, Math.round(npc.x-dw/2), Math.round(npc.y-dh/2), dw, dh);
+  }
+
+  // ====== PLAYER ======
   const sw=meta.size.w, sh=meta.size.h;
   const dw=Math.round(sw*meta.scale), dh=Math.round(sh*meta.scale);
   const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
-
   // sombra
   ctx.fillStyle='rgba(0,0,0,0.28)';
   ctx.beginPath();
   ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2);
   ctx.fill();
-
   ctx.drawImage(img, 0,0, sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2), dw, dh);
+
+  ctx.restore();
 }
 
-/* ====== RUNTIME ====== */
-function loop(now){
-  if(!loop.last) loop.last=now;
-  const dt = Math.min(1/30,(now-loop.last)/1000);
-  loop.last=now;
-  update(dt);
-  draw();
-  requestAnimationFrame(loop);
+/* ====== INTERACCIÓN CON NPC ====== */
+function isNearNPC(){
+  // usamos distancia circular pequeña y mismo plano “vista”
+  const dx = player.x - npc.x;
+  const dy = (player.y - npc.y);
+  const dist = Math.hypot(dx, dy);
+  const threshold = 28; // ajusta al gusto (en px de la vista)
+  return dist < threshold;
+}
+
+function tryTalk(){
+  if(!isNearNPC()) { showToast('Acércate un poco…'); return; }
+  openDialogue();
+  showNode('start');
 }
 
 /* ====== INIT ====== */
 async function init(){
-  const [map, spr] = await Promise.all([
+  const [map, sprPlayer, sprNPC] = await Promise.all([
     loadImage(MAP_IMG),
-    preloadSprites(SPRITES_SHOES)
+    preloadSprites(SPRITES_SHOES),
+    preloadSprites(SPRITES_NPC)
   ]);
-  mapImg = map; sprites = spr;
+  mapImg = map; sprites = sprPlayer; npc.sprites = sprNPC;
 
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  // Spawn abajo-centro, misma escala visual que en room
+  // posición inicial (se recalcula en resizeCanvas)
+  const viewH = bgRect.dh || 1;
   player.x = bgRect.dx + bgRect.dw/2;
-  player.y = bgRect.dy + bgRect.dh*0.85;
+  player.y = bgRect.dy + viewH*0.85;
 
-  // Cámara mirando la parte baja del mapa
   mapW = bgRect.dw;
   mapH = mapW * (mapImg.naturalHeight / mapImg.naturalWidth);
   camMin = 0;
@@ -298,10 +584,44 @@ async function init(){
   document.getElementById('bootMask').classList.add('hidden');
   requestAnimationFrame(loop);
 
-  // Acción (por ahora sin lógica adicional)
-  document.getElementById('btn-act').addEventListener('click', e=>{ e.preventDefault(); showToast('…'); });
-  document.getElementById('btn-act').addEventListener('touchstart', e=>{ e.preventDefault(); showToast('…'); }, {passive:false});
+  // Acción
+  document.getElementById('btn-act').addEventListener('click', e=>{
+    e.preventDefault();
+    if(mode==='play') tryTalk(); else proceed();
+  }, {passive:false});
+
+  document.getElementById('btn-act').addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if(mode==='play') tryTalk(); else proceed();
+  }, {passive:false});
+
+  // teclas izq/der para navegar opciones cuando hay choices
+  window.addEventListener('keydown', e=>{
+    if(mode!=='dialogue') return;
+    if(e.code==='ArrowLeft'){ e.preventDefault(); moveChoice('left'); }
+    if(e.code==='ArrowRight'){ e.preventDefault(); moveChoice('right'); }
+  });
 }
+
+function loop(now){
+  if(!loop.last) loop.last=now;
+  const dt = Math.min(1/30,(now-loop.last)/1000);
+  loop.last=now;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function handleActPress(source){
+  if(source!=='act') return;
+  if(mode==='play'){ /* si estás cerca del NPC, hablar */
+    // lo maneja el botón/touch también; aquí por teclado:
+    if(isNearNPC()) tryTalk();
+  } else {
+    proceed();
+  }
+}
+
 init();
 </script>
 </body>
