@@ -28,7 +28,7 @@
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering: pixelated; transform: scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform: scale(0.95); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9); }
 
-  .toast{ position:absolute; top:19px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  .toast{ position:absolute; top:19px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui;
     padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5; }
   .toast.show{ opacity:1; }
 
@@ -59,17 +59,21 @@
     width: 50%; max-width: 500px; position: relative; display:flex; justify-content:center; align-items:flex-end; padding: 8px;
   }
   .portrait img {
-    width: 86%; max-width: 440px; image-rendering: pixelated; opacity: 0; transform: translateX(var(--tx,0));
+    /* === retratos al 90% de la altura de la pantalla de juego === */
+    height: 90%;
+    width: auto;
+    max-width: none;
+    image-rendering: pixelated; opacity: 0; transform: translateX(var(--tx,0));
     transition: transform .26s ease, opacity .26s ease; filter: drop-shadow(0 0 18px rgba(0,0,0,.9));
   }
   .portrait.left  img{ --tx:-12%; }
   .portrait.right img{ --tx: 12%; }
   .portrait.show img{ opacity:1; transform: translateX(0); }
 
-  /* Panel de opciones: centrado justo encima del cuadro de diálogo */
+  /* Panel de opciones: centrado encima del cuadro de diálogo */
   .choice-panel{
     position:absolute; left:50%; transform:translateX(-50%);
-    bottom: 92px; /* encima del cuadro */
+    bottom: 92px;
     background: rgba(12,12,24,0.95);
     border-left: 2px solid #3cf; padding: 8px; border-radius: 8px; z-index: 26; display:none; min-width: 160px;
     box-shadow: 0 6px 14px rgba(0,0,0,.45);
@@ -121,7 +125,7 @@
           <div id="cineHint" class="dialog-hint">→</div>
         </div>
 
-        <!-- Opciones justo encima del diálogo -->
+        <!-- Opciones encima del diálogo -->
         <div id="choicePanel" class="choice-panel">
           <div class="choice-title">Opciones</div>
           <div id="choices" class="choices"></div>
@@ -130,7 +134,7 @@
     </div>
   </div>
 
-  <!-- Controles táctiles (solo Acción dispara diálogos) -->
+  <!-- Controles táctiles -->
   <div class="controls">
     <div class="dpad">
       <div></div>
@@ -204,6 +208,14 @@ bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.rig
 const btnAct = document.getElementById('btn-act');
 btnAct.addEventListener('click', e=>{ e.preventDefault(); onAction(); });
 btnAct.addEventListener('touchstart', e=>{ e.preventDefault(); onAction(); }, {passive:false});
+
+/* === D-PAD controla el menú de opciones cuando está abierto === */
+document.getElementById('btn-up').addEventListener('click', e=>{
+  if (state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('up'); }
+});
+document.getElementById('btn-down').addEventListener('click', e=>{
+  if (state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('down'); }
+});
 
 /* ===== UTIL ===== */
 const loadImage = (src) => new Promise(res=>{ const img=new Image(); img.onload=()=>res(img); img.src=src; });
@@ -349,7 +361,7 @@ function advanceDialog(){
   startCinematic();
 }
 
-/* ===== CINEMÁTICA ===== */
+/* ===== CINEMÁTICA (Árbol) ===== */
 const cineEl       = document.getElementById('cine');
 const cineDialogEl = document.getElementById('cineDialog');
 const cineName = document.getElementById('cineName');
@@ -360,42 +372,47 @@ const pJuan= document.getElementById('pJuan'), imgJuan= document.getElementById(
 const choicePanel = document.getElementById('choicePanel');
 const choicesEl   = document.getElementById('choices');
 
-const CINE = [
-  { who:'???',     talk:'Qué bueno que te he encontrado.', show:'old' },
-  { who:'Juan',    talk:'¿Quién eres??',                   show:'juan' },
-  { who:'Gandalf', talk:'Puedes llamarme Gandalf.',        show:'old', rename:true },
-  { who:'Gandalf', talk:'¿Quieres que te guíe o prefieres explorar?', show:'old',
-    choices:[
-      { label:'Guíame', next:'guide' },
-      { label:'Prefiero explorar', next:'explore' }
-    ]
-  },
-  { id:'guide',   who:'Gandalf', talk:'Entonces sígueme, pero pisa donde yo pise.' },
-  { id:'explore', who:'Gandalf', talk:'Como quieras. El norte guarda respuestas.' }
-];
-let cineIndex=0;
+/* --- grafo de nodos por id --- */
+const NODES = {
+  start1: { who:'???',     show:'old',  talk:'Qué bueno que te he encontrado.', next:'start2' },
+  start2: { who:'Juan',    show:'juan', talk:'¿Quién eres??',                   next:'start3' },
+  start3: { who:'Gandalf', show:'old',  talk:'Puedes llamarme Gandalf.',        next:'choice1', rename:true },
+
+  choice1:{ who:'Gandalf', show:'old',  talk:'¿Quieres que te guíe o prefieres explorar?',
+            choices:[
+              { label:'Guíame',           next:'guide1' },
+              { label:'Prefiero explorar',next:'explore1' }
+            ] },
+
+  guide1:   { who:'Gandalf', show:'old', talk:'Entonces sígueme, pero pisa donde yo pise.', next:null },
+  explore1: { who:'Gandalf', show:'old', talk:'Como quieras. El norte guarda respuestas.',   next:null }
+};
+
+let currentId = null;
+let currentOldName='???';
 
 function startCinematic(){
   state.mode='cine';
-  cineIndex=0; state.inChoices=false; choicePanel.classList.remove('show');
+  currentId = 'start1';
+  state.inChoices=false; choicePanel.classList.remove('show');
   imgOld.src = PORTRAIT_OLD; imgJuan.src = PORTRAIT_JUAN;
   cineEl.classList.add('show');
-  cineDialogEl.classList.add('show');            // <<< IMPORTANTE: mostrar cuadro
-  showCineNode(CINE[cineIndex], true);
+  cineDialogEl.classList.add('show');
+  showCineNode(NODES[currentId]);
 }
 
 function showCineNode(node){
+  /* retratos */
   pOld.classList.remove('show'); pJuan.classList.remove('show');
   if (node.show==='old')  pOld.classList.add('show'); else if (node.show==='juan') pJuan.classList.add('show');
 
   if (node.rename) currentOldName = 'Gandalf';
-  const name = node.who;
-
-  cineName.textContent = name;
+  cineName.textContent = node.who;
   cineHint.style.opacity=0;
   cineText.textContent='';
   typeInto(cineText, node.talk, ()=>{ cineHint.style.opacity=1; });
 
+  /* opciones */
   if (node.choices){
     buildChoices(node.choices);
     state.inChoices=true;
@@ -404,18 +421,13 @@ function showCineNode(node){
     choicePanel.classList.remove('show');
   }
 }
-let currentOldName='???';
 
 function advanceCine(){
-  const node = CINE[cineIndex];
+  const node = NODES[currentId];
   if (isTyping){ clearInterval(typingTimer); isTyping=false; cineText.textContent=node.talk; cineHint.style.opacity=1; return; }
-  if (node && node.choices){ return; }
-  cineIndex++;
-  if (cineIndex < CINE.length){
-    showCineNode(CINE[cineIndex]);
-  } else {
-    endCinematic();
-  }
+  if (node.choices){ return; }              // espera a confirmación
+  if (node.next){ currentId = node.next; showCineNode(NODES[currentId]); }
+  else { endCinematic(); }
 }
 function endCinematic(){
   cineEl.classList.remove('show');
@@ -450,12 +462,13 @@ function moveChoice(dir){
 function confirmChoice(){
   if (!state.inChoices || !currentChoices) return;
   const nextId = currentChoices[choiceIndex].next;
-  const idx = CINE.findIndex(n=>n.id===nextId);
-  if (idx>=0){ state.inChoices=false; choicePanel.classList.remove('show'); cineIndex=idx; showCineNode(CINE[cineIndex]); }
-  else { endCinematic(); }
+  state.inChoices=false;
+  choicePanel.classList.remove('show');
+  currentId = nextId;
+  showCineNode(NODES[currentId]);
 }
 
-/* flechas ↑/↓ SOLO para opciones en cine */
+/* flechas ↑/↓ de teclado SOLO para opciones en cine */
 window.addEventListener('keydown', e=>{
   if (state.mode==='cine' && state.inChoices){
     if (e.code==='ArrowUp'){ e.preventDefault(); moveChoice('up'); }
