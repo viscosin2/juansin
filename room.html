@@ -57,20 +57,22 @@
 /* Animación de entrada/salida */
 .dialog.show { transform: translateX(-50%) scaleX(1); }
 .dialog {
-  background: rgba(12,12,24,0.9);           /* caja sólida tipo HUD */
-  border-top: 2px solid #3cf;               /* línea arriba estilo retro */
+  background: rgba(12,12,24,0.9);
+  border-top: 2px solid #3cf;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
 }
-.dialog.has-sprite { background: rgba(12,12,24,0.9); } /* ignora bocadillo */
 
-.dialog-name{
+.dialog-name {
   font-family: 'Press Start 2P', system-ui;
-  font-size: 10px;
+  font-size: 12px;
   color:#8df;
-  margin-bottom:6px;
+  margin-bottom: 6px;   /* separa el nombre del texto */
   text-shadow: 0 1px 0 #000;
 }
 
-.dialog-text{
+.dialog-text {
   font-family: 'VT323', monospace;
   font-size: 22px;
   letter-spacing: 1px;
@@ -129,9 +131,9 @@
       <div id="sceneFade" class="scene-fade"></div>
 
 <div id="dialog" class="dialog">
-  <div id="dialogName" class="dialog-name"></div>
-  <div id="dialogText" class="dialog-text"></div>
-  <div id="dialogHint" class="dialog-hint">[Acción]</div>
+  <div id="dialogName" class="dialog-name"></div>   <!-- nombre SIEMPRE arriba -->
+  <div id="dialogText" class="dialog-text"></div>   <!-- debajo va el texto -->
+  <div id="dialogHint" class="dialog-hint">→</div>
 </div>
     </div>
   </div>
