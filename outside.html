@@ -430,7 +430,7 @@ async function startGandalfCine(){
   Scene.set('gandalf_cine'); showCineOverlay();
   const [oldB,juanB]=await Promise.all([loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN)]);
   imgOld.src=oldB.src; imgJuan.src=juanB.src; sizePortraitsToBackground();
-  showSpeaker('old'); hudEl.classList.remove('show');
+  showSpeaker('old'); hudEl.classList.remove('show'); pJuan.classList.remove('right'); pJuan.classList.add('left');
   Gandalf.id='start1'; Gandalf.showNode(Gandalf.nodes[Gandalf.id]);
 }
 
@@ -580,7 +580,7 @@ async function startEnemyFight(){
     loadImage(PORTRAIT_JUAN_FIGHT),
     loadFirstAvailable(ENEMY_FIGHT_CANDIDATES)
   ]);
-  imgJuan.src=juanB.src; imgEnemy.src=enemyB.src; sizePortraitsToBackground();
+  imgJuan.src=juanB.src; imgEnemy.src=enemyB.src; sizePortraitsToBackground(); pJuan.classList.remove('left'); pJuan.classList.add('right'); pEnemy.classList.remove('right'); pEnemy.classList.add('left');
 
   cineDialogEl.classList.add('show'); hudEl.classList.add('show');
   Fight.start();
