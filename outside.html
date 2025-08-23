@@ -21,7 +21,7 @@
   .img-btn{ width:64px; height:64px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.85)); }
   .img-btn.arrow::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/arrow.PNG") center/contain no-repeat; image-rendering:pixelated; transform:rotate(var(--rot,0deg)) scale(1.28); transform-origin:center; }
   .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
-  .img-act{ width:120px; height:120px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; }
+  .img-act{ width:120px; height:120px; filter:drop-shadow(0 5px 6px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; }
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
 
@@ -45,7 +45,6 @@
   .portrait.left img{ --tx:-12%; margin-left:40px; }
   .portrait.right img{ --tx:12%; margin-right:40px; }
   .portrait.show img{ opacity:1; transform:translateX(0); }
-  /* <- importantísimo: si no está activo NO ocupa sitio (evita “huecos”) */
   .portrait:not(.show){ display:none; }
 
   .choice-panel{ position:absolute; background:rgba(12,12,24,.95); border:1px solid #3cf; border-radius:8px; z-index:70; display:none; min-width:110px; padding:6px; box-shadow:0 6px 14px rgba(0,0,0,.45); }
@@ -145,9 +144,8 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
 const NPC_GANDALF_IMG="assets/characters/gandalf.PNG";
 const ENEMY_IMG="assets/characters/enemy1.PNG";
 const PORTRAIT_OLD="assets/characters/gandalf_big.PNG";
-const PORTRAIT_JUAN="assets/characters/juansin_big.PNG"; /* <-- corregido */
+const PORTRAIT_JUAN="assets/characters/juansin_big.PNG";
 const PORTRAIT_JUAN_FIGHT="assets/characters/juansin_big_fight.PNG";
-/* usa la que tengas, con fallback a varias rutas */
 const ENEMY_FIGHT_CANDIDATES=[
   "assets/characters/enemy1_big_fight.PNG",
   "assets/characters/enemy1_big.PNG",
@@ -251,11 +249,43 @@ const pEnemy=document.getElementById('pEnemy'), imgEnemy=document.getElementById
 const choicePanel=document.getElementById('choicePanel'), choicesEl=document.getElementById('choices');
 const hudEl=document.getElementById('hud'); const hpEnemyBar=document.getElementById('hpEnemyBar'); const hpJuanBar=document.getElementById('hpJuanBar'); const hpEnemyTxt=document.getElementById('hpEnemyTxt'); const hpJuanTxt=document.getElementById('hpJuanTxt');
 
-/* ===== typer ===== */
-let typingTimer=null, typingSpeed=22, isTyping=false, currentFullText=null;
-function typeInto(el,text,done){ stopTyping(); el.textContent=''; currentFullText=text; isTyping=true; let i=0; typingTimer=setInterval(()=>{ if(i<text.length){ el.textContent+=text[i++]; } else { stopTyping(); el.parentElement.classList.add('ready'); if(done)done(); } }, typingSpeed); }
-function stopTyping(){ if(typingTimer){ clearInterval(typingTimer); typingTimer=null; } isTyping=false; }
-function completeTyping(el){ stopTyping(); if(currentFullText!=null){ el.textContent=currentFullText; el.parentElement.classList.add('ready'); } }
+/* ===== typer (a prueba de taps) ===== */
+let typingTimer=null, typingSpeed=22;
+let activeType=null; // {el, text, done}
+
+function isTypingNow(){ return !!activeType && !!typingTimer; }
+
+function typeInto(el,text,done){
+  stopTyping();
+  el.textContent='';
+  el.parentElement.classList.remove('ready');
+  activeType = { el, text, done, i:0 };
+  typingTimer = setInterval(()=>{
+    if(!activeType) return;
+    if(activeType.i < activeType.text.length){
+      el.textContent += activeType.text.charAt(activeType.i++);
+    }else{
+      stopTyping();
+      el.parentElement.classList.add('ready');
+      if(typeof done === 'function') done();
+    }
+  }, typingSpeed);
+}
+
+function completeTypingNow(){
+  if(!activeType) return false;
+  const { el, text, done } = activeType;
+  el.textContent = text;
+  stopTyping();
+  el.parentElement.classList.add('ready');
+  if(typeof done === 'function') done();
+  return true;
+}
+
+function stopTyping(){
+  if(typingTimer){ clearInterval(typingTimer); typingTimer=null; }
+  activeType=null;
+}
 
 /* ===== timers ===== */
 let activeTimers=[]; function setT(fn,ms){ const id=setTimeout(fn,ms); activeTimers.push(id); return id; }
@@ -301,30 +331,37 @@ function onAction(){
   }
 
   if(Scene.state==='gandalf_dialog'){
-    if(isTyping){ completeTyping(dialogText); return; }
+    if(isTypingNow()){ completeTypingNow(); return; }
     advanceGandalfDialog(); return;
   }
 
   if(Scene.state==='gandalf_cine'){
-    if(isTyping){ completeTyping(cineText); return; }
+    if(isTypingNow()){ completeTypingNow(); return; }
     if(GandalfChoice.open) { GandalfChoice.confirm(); return; }
     Gandalf.advance(); return;
   }
 
   if(Scene.state==='enemy_intro'){
-    if(isTyping){ completeTyping(dialogText); return; }
+    if(isTypingNow()){ completeTypingNow(); return; }
     dialogEl.classList.remove('show','ready');
     startEnemyFight(); return;
   }
 
   if(Scene.state==='enemy_fight'){
-    if(isTyping){ completeTyping(cineText); return; }
+    if(isTypingNow()){ completeTypingNow(); return; }
     if(Fight.inChoices){ Fight.confirmChoice(); return; }
     Fight.advanceByAction();
   }
 }
 
-/* ===== Gandalf (igual que lo tenías) ===== */
+/* Tocar los cuadros también cuenta como Acción (para autocompletar) */
+[dialogEl, cineDialogEl].forEach(el=>{
+  ['click','touchstart'].forEach(evt=>{
+    el.addEventListener(evt, (e)=>{ e.preventDefault(); onAction(); }, {passive:false});
+  });
+});
+
+/* ===== Gandalf ===== */
 const Gandalf={
   nodes:{
     start1:{who:'???', show:'old',  talk:'Qué bueno que te he encontrado.', next:'start2'},
@@ -399,10 +436,10 @@ function positionChoices(){
   }, {passive:false});
 });
 
-/* ===== Fight: speaker único, sin textos durante animaciones ===== */
+/* ===== Fight ===== */
 const Fight={
   hpEnemy:100, hpJuan:100,
-  step:0,              // 0 habla1; 1 narrador1; 2 habla2; 3 anim2; 4 narrador2; 5 fin
+  step:0,
   waitingInput:false,
   inChoices:false, currentChoices:null, choiceIndex:0,
 
@@ -426,7 +463,7 @@ const Fight={
     showSpeaker('enemy');
     cineName.textContent='Enemigo';
     typeInto(cineText,'Soy tu enemigo. Te vas a enterar con este golpe.', ()=>{
-      this.waitingInput=true;               // espera tu Acción para animación 1
+      this.waitingInput=true;
     });
   },
 
@@ -437,7 +474,6 @@ const Fight={
     this.waitingInput=false;
 
     if(this.step===0){
-      // Animación enemigo 1
       showSpeaker('enemy');
       doLungeLong(imgEnemy,'right'); Scene.lock(2000);
       setT(()=>{ showSpeaker('juan'); doShakeLong(imgJuan); this.hpJuan-=20; this.updateHud();
@@ -449,7 +485,6 @@ const Fight={
     }
 
     if(this.step===1){
-      // Elección
       typeInto(cineText,'¿Cómo vas a contraatacar?', ()=>{
         this.buildChoices([{label:'Puñetazo',next:'juanAttack1'},{label:'Patada giratoria',next:'juanAttack1'}]);
       });
@@ -457,16 +492,14 @@ const Fight={
     }
 
     if(this.step===2){
-      // Habla el enemigo 2 (FIX: avanzar a 3 tras Acción)
       showSpeaker('enemy'); cineName.textContent='Enemigo';
       typeInto(cineText,'No has tenido suficiente. ¡Toma polvo a los ojos!', ()=>{
-        this.waitingInput=true; this.step=3; // <- evita el bucle
+        this.waitingInput=true; this.step=3;
       });
       return;
     }
 
     if(this.step===3){
-      // Animación enemigo 2
       showSpeaker('enemy'); doLungeLong(imgEnemy,'right'); Scene.lock(2000);
       setT(()=>{ showSpeaker('juan'); doShakeLong(imgJuan); this.hpJuan-=15; this.updateHud();
         setT(()=>{ cineName.textContent=''; typeInto(cineText,'El enemigo te cegó con polvo. Es tu turno.', ()=>{
@@ -477,7 +510,6 @@ const Fight={
     }
 
     if(this.step===4){
-      // Elección final
       typeInto(cineText,'¿Cómo vas a contraatacar?', ()=>{
         this.buildChoices([{label:'Golpe final',next:'juanFinish'},{label:'Uppercut',next:'juanFinish'}]);
       });
@@ -485,7 +517,6 @@ const Fight={
     }
 
     if(this.step===5){
-      // Fin
       showSpeaker('juan'); cineName.textContent='Juan';
       typeInto(cineText,'¡He ganado!', ()=>{
         setT(()=> Scene.set('free'), 400);
@@ -527,7 +558,6 @@ function startEnemyIntro(){
 async function startEnemyFight(){
   Scene.set('enemy_fight'); showCineOverlay();
 
-  // Carga robusta de retratos
   const [juanB, enemyB]=await Promise.all([
     loadImage(PORTRAIT_JUAN_FIGHT),
     loadFirstAvailable(ENEMY_FIGHT_CANDIDATES)
