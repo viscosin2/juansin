@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Juansin 30th birthday - outside (cine + combate)</title>
+<title>Juansin 30th birthday - outside (cine + combate, interacciones separadas)</title>
 
 <!-- Pixel fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -32,7 +32,7 @@
     padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5; }
   .toast.show{ opacity:1; }
 
-  /* ===== Estilo de diálogo (igual al que pasaste) ===== */
+  /* ===== Estilo de diálogo ===== */
   .dialog {
     position: absolute;
     left: 50%;
@@ -51,18 +51,14 @@
     image-rendering: pixelated;
     z-index: 6;
     transition: transform .22s ease;
-  }
-  .dialog.show { transform: translateX(-50%) scaleX(1); }
-  .dialog {
     background: rgba(12,12,24,0.9);
     border: none;
     border-top: 2px solid #3cf;
-    display: flex;
     align-items: flex-start;
     flex-direction: column;
-    padding: 10px;
     text-align: left;
   }
+  .dialog.show { transform: translateX(-50%) scaleX(1); }
   .dialog-name{
     font-family: 'Press Start 2P', system-ui;
     font-size: 10px;
@@ -85,7 +81,7 @@
   }
   .dialog.ready .dialog-hint{ opacity:.9; }
 
-  /* ===== Cinemática: overlay con blur/dim (también muestra carga) ===== */
+  /* ===== Cinemática ===== */
   .cine{
     position:absolute; inset:0; z-index:20; display:none;
     --blur: 0px; --dim: 0;
@@ -107,7 +103,7 @@
   .portrait.right img{ --tx: 12%; margin-right: 40px;}
   .portrait.show img{ opacity:1; transform:translateX(0); }
 
-  /* Panel de opciones arriba-dcha del diálogo, sin título */
+  /* Opciones */
   .choice-panel{
     position:absolute; background: rgba(12,12,24,0.95);
     border:1px solid #3cf; border-radius:8px; z-index:26; display:none;
@@ -127,7 +123,7 @@
   .boot-mask{ position:absolute; inset:0; background:#000; z-index:1000; opacity:1; transition: opacity .25s ease;}
   .boot-mask.hidden{ opacity:0; pointer-events:none; }
 
-  /* ===== HUD Combate retro (visibilidad + colores) ===== */
+  /* ===== HUD Combate ===== */
   .hud{ position:absolute; top:6px; left:0; right:0; z-index:999; pointer-events:none; display:none; }
   .hud.show{ display:block; }
   .hpwrap{
@@ -144,15 +140,15 @@
   .hpwrap.left .hplabel{ left:0; }
   .hpwrap.right .hplabel{ right:0; }
   .hpbar{ height:100%; width:100%; position:relative; transform-origin:left center; }
-  .hpwrap.right .hpbar{ transform-origin:right center; } /* Juan reduce desde la derecha */
+  .hpwrap.right .hpbar{ transform-origin:right center; }
   .hpbar::after{ content:""; position:absolute; inset:1px; opacity:.9; }
-  .hpbar.red::after{ background:#d33; }   /* enemigo rojo */
-  .hpbar.blue::after{ background:#29f; }  /* Juan azul */
+  .hpbar.red::after{ background:#d33; }
+  .hpbar.blue::after{ background:#29f; }
   .hptext{ position:absolute; top:16px; font-family:'VT323', monospace; font-size:16px; color:#E6F6FF; }
   .hpwrap.left .hptext{ left:0; }
   .hpwrap.right .hptext{ right:0; }
 
-  /* ===== Animaciones largas ===== */
+  /* ===== Animaciones ===== */
   @keyframes shake2s {
     0%,100% { transform: translate(0,0); }
     10% { transform: translate(-3px,1px); }
@@ -187,7 +183,7 @@
       <div id="toast" class="toast"></div>
       <div id="sceneFade" class="scene-fade"></div>
 
-      <!-- Diálogo in-world (estilo exacto) -->
+      <!-- Diálogo in-world -->
       <div id="dialog" class="dialog" aria-live="polite">
         <div id="dialogName" class="dialog-name"></div>
         <div id="dialogText" class="dialog-text"></div>
@@ -222,7 +218,7 @@
           </div>
         </div>
 
-        <!-- Opciones (sin título) -->
+        <!-- Opciones -->
         <div id="choicePanel" class="choice-panel">
           <div id="choices" class="choices"></div>
         </div>
@@ -248,10 +244,10 @@
 </div>
 
 <script>
-/* ===== CONFIG BÁSICA ===== */
+/* ===== CONFIG ===== */
 const BACKGROUND = "assets/locations/outside.PNG";
 
-/* Sprites player */
+/* Sprites Juan */
 const SPRITES_JUAN = {
   size: { w: 36, h: 40 }, scale: 0.9,
   idle: { down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
@@ -261,12 +257,12 @@ const SPRITES_JUAN = {
 const NPC_GANDALF_IMG = "assets/characters/gandalf.PNG";
 const ENEMY_IMG       = "assets/characters/enemy1.PNG";
 
-/* Retratos grandes conversación */
+/* Retratos */
 const PORTRAIT_OLD   = "assets/characters/gandalf_big.PNG";
 const PORTRAIT_JUAN  = "assets/characters/juansin_big.PNG";
-/* Retratos de combate */
-const PORTRAIT_JUAN_FIGHT  = "assets/characters/juansin_big_fight.PNG";   // como pediste
-const PORTRAIT_ENEMY_FIGHT = "assets/characters/enemy1_big.PNG";           // pareja
+/* Combate */
+const PORTRAIT_JUAN_FIGHT  = "assets/characters/juansin_big_fight.PNG";
+const PORTRAIT_ENEMY_FIGHT = "assets/characters/enemy1_big.PNG";
 
 /* Audio */
 const bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.35;
@@ -276,7 +272,7 @@ const roomOriginal = { w: 512, h: 350 };
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
 
-let bgRect={dx:0,dy:0,dw:0,dh:0}, scaleFactor=1;
+let bgRect={dx:0,dy:0,dw:0,dh:0};
 let bgImg=null, sprites=null, npcGandalfImg=null, enemyImg=null;
 
 const player={ x:0, y:0, speed:230, dir:'down', moving:false, frame:0, frameTime:0 };
@@ -285,7 +281,7 @@ const player={ x:0, y:0, speed:230, dir:'down', moving:false, frame:0, frameTime
 const gandalf={ x:0, y:0 };
 const enemy1 ={ x:0, y:0, alive:true };
 
-/* ===== INPUT mover (teclas y dpad). Acción SOLO botón/touch ===== */
+/* ===== INPUT ===== */
 const keys={ up:false,down:false,left:false,right:false };
 const mapKey={ ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
 window.addEventListener('keydown', e=>{ const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
@@ -305,12 +301,12 @@ bindHold(document.getElementById('btn-down'),  ()=>keys.down=true,  ()=>keys.dow
 bindHold(document.getElementById('btn-left'),  ()=>keys.left=true,  ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.right=false);
 
-/* Acción: SOLO botón/touch */
+/* Acción */
 const btnAct=document.getElementById('btn-act');
 btnAct.addEventListener('click', e=>{ e.preventDefault(); onAction(); });
 btnAct.addEventListener('touchstart', e=>{ e.preventDefault(); onAction(); }, {passive:false});
 
-/* D-pad controla las opciones (no teclado) */
+/* D-pad mueve selección en choices */
 const dpadUp=document.getElementById('btn-up');
 const dpadDown=document.getElementById('btn-down');
 ['click','touchstart'].forEach(evt=>{
@@ -325,6 +321,8 @@ async function preloadSprites(map){
   for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage));
   return out;
 }
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+function isNear(obj, rad=28){ return dist(player,obj)<rad; }
 
 /* ===== DIBUJO ===== */
 function resizeCanvas(){
@@ -332,14 +330,13 @@ function resizeCanvas(){
   canvas.width=screen.clientWidth; canvas.height=screen.clientHeight;
 
   if(bgImg){
-    scaleFactor = Math.min(canvas.width/roomOriginal.w, canvas.height/roomOriginal.h);
+    const scaleFactor = Math.min(canvas.width/roomOriginal.w, canvas.height/roomOriginal.h);
     bgRect.dw = roomOriginal.w*scaleFactor; bgRect.dh = roomOriginal.h*scaleFactor;
     bgRect.dx = (canvas.width - bgRect.dw)/2; bgRect.dy = (canvas.height - bgRect.dh)/2;
 
     player.x = bgRect.dx + bgRect.dw*0.5;
     player.y = bgRect.dy + bgRect.dh*0.80;
 
-    /* colocación NPCs */
     gandalf.x = bgRect.dx + bgRect.dw*0.52;
     gandalf.y = bgRect.dy + bgRect.dh*0.35;
 
@@ -376,6 +373,7 @@ function update(dt){
 }
 
 function draw(){
+  const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(!bgImg) return;
 
@@ -411,54 +409,30 @@ function draw(){
   things.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 }
 
-/* ===== PROX & ACCIÓN ===== */
-function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
-function isNear(obj, rad=28){ return dist(player,obj)<rad; }
+/* ===== STATE ===== */
+const state={
+  mode:'play',
+  interactingWith:null,           // "gandalf" | "enemy1" | null
+  inChoices:false, pendingChoices:false, cineTypingComplete:false,
+  metGandalf:false, gandalfCineDone:false, quickDialog:false,
+  metEnemy1:false, enemyDefeated:false, enemyIntro:false, enemyQuick:false,
+  lockUntil: 0
+};
 
-/* ===== Bloqueo temporal de entrada ===== */
 function lockInput(ms){ state.lockUntil = performance.now() + ms; }
 function inputLocked(){ return state.lockUntil && performance.now() < state.lockUntil; }
 
-function onAction(){
-  if(inputLocked()) return; // bloquea mientras dura el tembleque
-
-  if(state.mode==='play'){
-    if(isNear(gandalf)){
-      if(!state.metGandalf){ startIntroDialogue(); }
-      else { startNPCRepeatDialogue(); }
-      return;
-    }
-    if(enemy1.alive && isNear(enemy1)){
-      if(!state.metEnemy1){ startEnemyIntro(); }
-      else if(!state.enemyDefeated){ startEnemyCine(); }
-      else { startEnemyAfterDefeat(); }
-      return;
-    }
-    return;
-  }
-
-  if(state.mode==='dialog'){
-    if(isTyping){ completeTypingNow(); return; }
-    advanceDialog(); 
-    return;
-  }
-
-  if(state.mode==='cine'){
-    if(isTyping){ 
-      completeTypingNow(); 
-      return; 
-    }
-    const node = NODES[currentId];
-    if(node && node.choices && state.pendingChoices && !state.inChoices){
-      if(state.cineTypingComplete){ openChoicesNow(node.choices); }
-      return;
-    }
-    if(state.inChoices){ confirmChoice(); return; }
-    advanceCine();
-  }
+/* ===== SELECCIÓN DE INTERACCIÓN (prioriza el más cercano) ===== */
+function getClosestInteractable(){
+  const candidates=[];
+  if(isNear(gandalf)) candidates.push({id:'gandalf', d:dist(player,gandalf)});
+  if(enemy1.alive && isNear(enemy1)) candidates.push({id:'enemy1', d:dist(player,enemy1)});
+  if(candidates.length===0) return null;
+  candidates.sort((a,b)=>a.d-b.d);
+  return candidates[0].id;
 }
 
-/* ===== DIÁLOGO in-world ===== */
+/* ===== DIÁLOGO IN-WORLD ===== */
 const dialogEl = document.getElementById('dialog');
 const dialogName = document.getElementById('dialogName');
 const dialogText = document.getElementById('dialogText');
@@ -485,27 +459,22 @@ function typeInto(el,text,done){
     else{ clearInterval(typingTimer); isTyping=false; el.parentElement.classList.add('ready'); if(done)done(); }
   }, typingSpeed);
 }
-
-/* ===== Autocompletar general ===== */
-let currentCineFullText = null; // para cine "ad hoc" (combate)
-function typeIntoCine(text, done){
-  currentCineFullText = text;
-  typeInto(cineText, text, done);
-}
-
 function completeTypingNow(){
   clearInterval(typingTimer); isTyping=false;
   if(state.mode==='dialog'){
-    const full = state.quickDialog
-      ? (state.enemyQuick? 'Sigue tu camino, ya no molesto.' : state.enemyIntro ? '¡Ajá!' : 'Ya sabes lo que tienes que hacer.')
-      : (state.enemyIntro ? '¡Ajá!' : 'Hola, chico...');
+    let full=''; 
+    if(state.interactingWith==='gandalf'){
+      full = state.quickDialog ? 'Ya sabes lo que tienes que hacer.' : 'Hola, chico...';
+    } else if(state.interactingWith==='enemy1'){
+      full = state.enemyIntro ? '¡Ajá!' : (state.enemyQuick ? 'Sigue tu camino, ya no molesto.' : '');
+    }
     dialogText.textContent = full;
     dialogEl.classList.add('ready'); dialogHint.style.opacity=1;
   } else if(state.mode==='cine'){
     if(currentCineFullText){
       cineText.textContent = currentCineFullText;
     } else {
-      const node=NODES[currentId];
+      const node = (state.interactingWith==='gandalf') ? NODES[currentId] : FIGHT_NODES[currentId];
       if(node) cineText.textContent = node.talk;
     }
     cineDialogEl.classList.add('ready'); cineHint.style.opacity=1;
@@ -513,66 +482,73 @@ function completeTypingNow(){
   }
 }
 
-/* Primer contacto (Gandalf) */
-function startIntroDialogue(){
+/* ===== GESTOR ACCIÓN ===== */
+function onAction(){
+  if(inputLocked()) return;
+
+  if(state.mode==='play'){
+    const target = getClosestInteractable();
+    if(!target) return;
+
+    // Fija foco y abre interacción correspondiente
+    state.interactingWith = target;
+
+    if(target==='gandalf'){
+      if(!state.metGandalf){ startGandalfIntro(); }
+      else { startGandalfRepeat(); }
+    } else if(target==='enemy1'){
+      if(!state.metEnemy1){ startEnemyIntro(); }
+      else if(!state.enemyDefeated){ startEnemyCine(); }
+      else { startEnemyAfterDefeat(); }
+    }
+    return;
+  }
+
+  if(state.mode==='dialog'){
+    if(isTyping){ completeTypingNow(); return; }
+    if(state.interactingWith==='gandalf') advanceGandalfDialog();
+    else if(state.interactingWith==='enemy1') advanceEnemyDialog();
+    return;
+  }
+
+  if(state.mode==='cine'){
+    if(isTyping){ completeTypingNow(); return; }
+    if(state.inChoices){ confirmChoice(); return; }
+    if(state.interactingWith==='gandalf') advanceCineGandalf();
+    else if(state.interactingWith==='enemy1') advanceCineEnemy();
+  }
+}
+
+/* ======== GANDALF ========= */
+function startGandalfIntro(){
   state.mode='dialog';
-  state.quickDialog=false;
-  state.enemyIntro=false; state.enemyQuick=false;
+  state.metGandalf=false; state.quickDialog=false;
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent='???';
   dialogHint.style.opacity=0;
   typeInto(dialogText, 'Hola, chico...', ()=>{ dialogHint.style.opacity=1; });
 }
-/* Repetición Gandalf (sin cine) */
-function startNPCRepeatDialogue(){
+function startGandalfRepeat(){
   state.mode='dialog';
   state.quickDialog=true;
-  state.enemyQuick=false;
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent='Gandalf';
   dialogHint.style.opacity=0;
   typeInto(dialogText, 'Ya sabes lo que tienes que hacer.', ()=>{ dialogHint.style.opacity=1; });
 }
-
-/* Intro enemigo: Ajá! */
-function startEnemyIntro(){
-  state.mode='dialog';
-  state.quickDialog=false; state.enemyIntro=true; state.enemyQuick=false;
-  dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
-  dialogName.textContent='???';
-  dialogHint.style.opacity=0;
-  typeInto(dialogText, '¡Ajá!', ()=>{ dialogHint.style.opacity=1; });
-}
-
-function startEnemyAfterDefeat(){
-  state.mode='dialog';
-  state.quickDialog=true; state.enemyQuick=true;
-  dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
-  dialogName.textContent='Enemigo';
-  dialogHint.style.opacity=0;
-  typeInto(dialogText, 'Sigue tu camino, ya no molesto.', ()=>{ dialogHint.style.opacity=1; });
-}
-
-function advanceDialog(){
-  if(isTyping){ completeTypingNow(); return; }
-  if(state.enemyIntro){
-    dialogEl.classList.remove('show','ready');
-    state.metEnemy1=true;
-    startEnemyCine();
-    return;
-  }
+function advanceGandalfDialog(){
   if(state.quickDialog){
     dialogEl.classList.remove('show','ready');
     state.quickDialog=false;
     state.mode='play';
+    state.interactingWith=null;
     return;
   }
-  // “Hola chico...” del viejo -> cine
+  // Pasar a cinemática SOLO la primera vez
   dialogEl.classList.remove('show','ready');
-  startCinematic(); // Gandalf
+  startCinematicGandalf();
 }
 
-/* ===== CINEMÁTICA ===== */
 const cineEl=document.getElementById('cine');
 const cineDialogEl=document.getElementById('cineDialog');
 const cineName=document.getElementById('cineName');
@@ -583,15 +559,15 @@ const pJuan=document.getElementById('pJuan'), imgJuan=document.getElementById('i
 const pEnemy=document.getElementById('pEnemy'), imgEnemy=document.getElementById('imgEnemy');
 const choicePanel=document.getElementById('choicePanel');
 const choicesEl=document.getElementById('choices');
-
 const hudEl=document.getElementById('hud');
 const hpEnemyBar=document.getElementById('hpEnemyBar');
 const hpJuanBar =document.getElementById('hpJuanBar');
 const hpEnemyTxt=document.getElementById('hpEnemyTxt');
 const hpJuanTxt =document.getElementById('hpJuanTxt');
 
+let cineVisible=false, currentId=null, currentCineFullText=null;
+
 const NODES={
-  /* GANDALF */
   start1:{ who:'???',     show:'old',  talk:'Qué bueno que te he encontrado.', next:'start2' },
   start2:{ who:'Juan',    show:'juan', talk:'¿Quién eres??',                   next:'start3' },
   start3:{ who:'Gandalf', show:'old',  talk:'Puedes llamarme Gandalf.',        next:'choice1', rename:true },
@@ -600,7 +576,6 @@ const NODES={
   guide1:{ who:'Gandalf', show:'old', talk:'Entonces sígueme, pero pisa donde yo pise.', next:null },
   explore1:{ who:'Gandalf', show:'old', talk:'Como quieras. El norte guarda respuestas.', next:null }
 };
-let currentId=null, cineVisible=false;
 
 async function showCineOverlay(){
   cineEl.style.setProperty('--blur','2px');
@@ -612,159 +587,90 @@ async function showCineOverlay(){
     cineEl.style.setProperty('--dim','0.25');
   });
 }
-async function loadConversationPortraits(){
-  const [oldBig, juanBig] = await Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
-  imgOld.src=oldBig.src; imgJuan.src=juanBig.src;
-  sizePortraitsToBackground();
-}
-
-/* retratos grandes */
 function sizePortraitsToBackground(){
   const h = Math.round(bgRect.dh * 1.5);
   [imgOld, imgJuan, imgEnemy].forEach(i=>{ if(i) i.style.height = h+'px'; });
 }
-
-function showCineNode(node){
-  // retrato
-  pOld.classList.remove('show'); pJuan.classList.remove('show'); pEnemy.classList.remove('show');
-  if(node.show==='old') pOld.classList.add('show');
-  else if(node.show==='juan') pJuan.classList.add('show');
-  else if(node.show==='enemy') pEnemy.classList.add('show');
-
-  // texto
-  cineName.textContent=node.who;
-  cineHint.style.opacity=0;
-  state.cineTypingComplete=false;
-  currentCineFullText=null;
+function typeIntoCine(text, done){
+  currentCineFullText = text;
   cineText.textContent='';
-  typeInto(cineText, node.talk, ()=>{
-    cineHint.style.opacity=1;
-    state.cineTypingComplete=true;
-  });
-
-  if(node.choices){
-    state.pendingChoices=true; state.inChoices=false; choicePanel.classList.remove('show');
-  } else { state.pendingChoices=false; state.inChoices=false; choicePanel.classList.remove('show'); }
+  typeInto(cineText, text, done);
 }
 
-function advanceCine(){
+async function startCinematicGandalf(){
+  await showCineOverlay();
+  const [oldBig, juanBig] = await Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
+  imgOld.src=oldBig.src; imgJuan.src=juanBig.src; sizePortraitsToBackground();
+
+  state.mode='cine'; state.inChoices=false; state.pendingChoices=false; state.cineTypingComplete=false;
+  choicePanel.classList.remove('show'); hudEl.classList.remove('show');
+
+  pOld.classList.add('show'); pJuan.classList.remove('show'); pEnemy.classList.remove('show');
+  cineDialogEl.classList.add('show');
+
+  currentId='start1';
+  showCineNodeGandalf(NODES[currentId]);
+}
+function showCineNodeGandalf(node){
+  pOld.classList.toggle('show', node.show==='old');
+  pJuan.classList.toggle('show', node.show==='juan');
+  pEnemy.classList.remove('show');
+
+  cineName.textContent=node.who;
+  cineHint.style.opacity=0; state.cineTypingComplete=false; currentCineFullText=null;
+  typeInto(cineText, node.talk, ()=>{ cineHint.style.opacity=1; state.cineTypingComplete=true; });
+
+  if(node.choices){ state.pendingChoices=true; state.inChoices=false; currentChoices=node.choices; }
+  else { state.pendingChoices=false; state.inChoices=false; currentChoices=null; }
+}
+function advanceCineGandalf(){
   const node=NODES[currentId];
   if(isTyping){ completeTypingNow(); return; }
-  if(node && node.choices) return;
-  if(node && node.next){ currentId=node.next; showCineNode(NODES[currentId]); }
-  else{ endCinematic(true); }
+  if(node && node.choices){
+    if(state.cineTypingComplete && !state.inChoices){ openChoicesNow(node.choices); }
+    return;
+  }
+  if(node && node.next){ currentId=node.next; showCineNodeGandalf(NODES[currentId]); }
+  else{ endCinematic('gandalf'); }
 }
 
-function endCinematic(markMet=false){
-  if(markMet) state.metGandalf = true;
-  cineVisible=false;
-  cineEl.classList.remove('show');
-  cineDialogEl.classList.remove('show');
-  choicePanel.classList.remove('show');
-  hudEl.classList.remove('show');
-  cineEl.style.setProperty('--blur','0px');
-  cineEl.style.setProperty('--dim','0');
-  state.mode='play';
+/* ======== ENEMIGO / COMBATE ========= */
+function startEnemyIntro(){
+  state.mode='dialog';
+  state.enemyIntro=true; state.enemyQuick=false; state.metEnemy1=false;
+  dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
+  dialogName.textContent='???';
+  dialogHint.style.opacity=0;
+  typeInto(dialogText, '¡Ajá!', ()=>{ dialogHint.style.opacity=1; });
+}
+function startEnemyAfterDefeat(){
+  state.mode='dialog';
+  state.enemyQuick=true;
+  dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
+  dialogName.textContent='Enemigo';
+  dialogHint.style.opacity=0;
+  typeInto(dialogText, 'Sigue tu camino, ya no molesto.', ()=>{ dialogHint.style.opacity=1; });
+}
+function advanceEnemyDialog(){
+  if(isTyping){ completeTypingNow(); return; }
+  if(state.enemyIntro){
+    dialogEl.classList.remove('show','ready');
+    state.metEnemy1=true;
+    startEnemyCine();
+    return;
+  }
+  if(state.enemyQuick){
+    dialogEl.classList.remove('show','ready');
+    state.mode='play';
+    state.interactingWith=null;
+  }
 }
 
-/* Panel de opciones: encima-dcha del cuadro de diálogo */
-function positionChoices(){
-  const screen=document.querySelector('.screen').getBoundingClientRect();
-  const dlg=cineDialogEl.getBoundingClientRect();
-  const panel=choicePanel;
-
-  panel.style.visibility='hidden';
-  panel.classList.add('show');
-  const pr=panel.getBoundingClientRect();
-  const gap=6;
-
-  const top=(dlg.top - screen.top) - pr.height - gap;
-  const left=(dlg.right - screen.left) - pr.width;
-
-  panel.style.top=Math.max(0, top)+'px';
-  panel.style.left=Math.max(0, left)+'px';
-  panel.style.right='';
-  panel.style.bottom='';
-  panel.style.visibility='';
-}
-
-/* ===== CHOICES ===== */
-let choiceIndex=0, currentChoices=null;
-function buildChoices(list){
-  currentChoices=list; choiceIndex=0;
-  choicesEl.innerHTML='';
-  list.forEach((c,i)=>{
-    const div=document.createElement('div');
-    div.className='choice'+(i===0?' selected':'');
-    div.textContent=c.label;
-    choicesEl.appendChild(div);
-  });
-}
-function refreshChoiceSel(){ [...choicesEl.children].forEach((el,i)=>el.classList.toggle('selected', i===choiceIndex)); }
-function moveChoice(dir){
-  if(!state.inChoices||!currentChoices) return;
-  const n=currentChoices.length;
-  if(dir==='up') choiceIndex=(choiceIndex-1+n)%n;
-  if(dir==='down') choiceIndex=(choiceIndex+1)%n;
-  refreshChoiceSel();
-}
-function confirmChoice(){
-  if(!state.inChoices||!currentChoices) return;
-  const key = currentChoices[choiceIndex].next;
-  state.inChoices=false;
-  choicePanel.classList.remove('show');
-
-  // Acciones de combate:
-  if(FIGHT_ACTIONS[key]){ FIGHT_ACTIONS[key](); return; }
-  // Nodos de prefacio combate:
-  if(FIGHT_NODES[key]){ currentId=key; showFightNode(FIGHT_NODES[currentId]); return; }
-  // Nodos normales:
-  if(NODES[key]){ currentId=key; showCineNode(NODES[currentId]); return; }
-}
-
-/* ====== COMBATE ENEMIGO ====== */
 const FIGHT_NODES={
   pre1:{ who:'Enemigo', show:'enemy', talk:'Voy a acabar contigo, mocoso.', next:'pre2' },
   pre2:{ who:'Juan',    show:'juan',  talk:'¡Prueba, si te atreves!',       next:'startFight' }
 };
-
 let hpEnemy=100, hpJuan=100;
-
-function showFightNode(node){
-  pOld.classList.remove('show'); pEnemy.classList.remove('show'); pJuan.classList.remove('show');
-  if(node.show==='enemy') pEnemy.classList.add('show'); else if(node.show==='juan') pJuan.classList.add('show');
-  cineName.textContent=node.who;
-  cineHint.style.opacity=0; state.cineTypingComplete=false;
-  currentCineFullText=null;
-  cineText.textContent='';
-  typeInto(cineText, node.talk, ()=>{
-    cineHint.style.opacity=1; state.cineTypingComplete=true;
-  });
-}
-
-async function startEnemyCine(){
-  await showCineOverlay();
-  // Cargar retratos de combate
-  const [juanB, enemyB] = await Promise.all([ loadImage(PORTRAIT_JUAN_FIGHT), loadImage(PORTRAIT_ENEMY_FIGHT) ]);
-  imgJuan.src=juanB.src; imgEnemy.src=enemyB.src;
-  sizePortraitsToBackground();
-
-  state.mode='cine';
-  state.inChoices=false; state.pendingChoices=false; state.cineTypingComplete=false;
-  choicePanel.classList.remove('show');
-
-  // Reset HUD y mostrarlo
-  hpEnemy=100; hpJuan=100; updateHud();
-  hudEl.classList.add('show');
-
-  pEnemy.classList.add('show'); pJuan.classList.remove('show'); pOld.classList.remove('show');
-  cineDialogEl.classList.add('show');
-
-  // Prefacio conversacional
-  currentId='pre1';
-  showFightNode(FIGHT_NODES[currentId]);
-}
-
 function updateHud(){
   hpEnemy = Math.max(0, Math.min(100, hpEnemy));
   hpJuan  = Math.max(0, Math.min(100, hpJuan));
@@ -773,66 +679,108 @@ function updateHud(){
   hpEnemyTxt.textContent = `${hpEnemy}|100`;
   hpJuanTxt .textContent = `${hpJuan}|100`;
 }
-
 function doShakeLong(el){ el.classList.remove('shaking-long'); void el.offsetWidth; el.classList.add('shaking-long'); }
 function doLungeLong(el, dir){ el.classList.remove('lunge-left-long','lunge-right-long'); void el.offsetWidth; el.classList.add(dir==='left'?'lunge-left-long':'lunge-right-long'); }
 function doFallLong(el){ el.classList.add('fall-long'); }
 
-/* Secuencia fija:
-   1) Enemigo ataca (tembleque 2s)
-   2) Juan elige ataque (dos opciones) -> enemigo a 50
-   3) Enemigo ataca de nuevo
-   4) Juan remata (dos opciones) -> enemigo 0 y cae “¡Me las pagarás!” */
+async function startEnemyCine(){
+  await showCineOverlay();
+  const [juanB, enemyB] = await Promise.all([ loadImage(PORTRAIT_JUAN_FIGHT), loadImage(PORTRAIT_ENEMY_FIGHT) ]);
+  imgJuan.src=juanB.src; imgEnemy.src=enemyB.src; sizePortraitsToBackground();
+
+  state.mode='cine'; state.inChoices=false; state.pendingChoices=false; state.cineTypingComplete=false;
+  choicePanel.classList.remove('show'); hudEl.classList.add('show');
+
+  hpEnemy=100; hpJuan=100; updateHud();
+
+  pEnemy.classList.add('show'); pJuan.classList.remove('show'); pOld.classList.remove('show');
+  cineDialogEl.classList.add('show');
+
+  currentId='pre1'; showFightNode(FIGHT_NODES[currentId]);
+}
+function showFightNode(node){
+  pEnemy.classList.toggle('show', node.show==='enemy');
+  pJuan .classList.toggle('show', node.show==='juan');
+  pOld  .classList.remove('show');
+
+  cineName.textContent=node.who;
+  cineHint.style.opacity=0; state.cineTypingComplete=false; currentCineFullText=null;
+  typeInto(cineText, node.talk, ()=>{ cineHint.style.opacity=1; state.cineTypingComplete=true; });
+}
+function advanceCineEnemy(){
+  if(isTyping){ completeTypingNow(); return; }
+  const node=FIGHT_NODES[currentId];
+  if(node && node.next==='startFight'){ enemyTurn1(); currentId='fight'; return; }
+  if(node && node.next){ currentId=node.next; showFightNode(FIGHT_NODES[currentId]); return; }
+}
+
+/* Turnos */
+let currentChoices=null, choiceIndex=0;
+function buildChoices(list){ currentChoices=list; choiceIndex=0; choicesEl.innerHTML=''; list.forEach((c,i)=>{ const div=document.createElement('div'); div.className='choice'+(i===0?' selected':''); div.textContent=c.label; choicesEl.appendChild(div); }); }
+function refreshChoiceSel(){ [...choicesEl.children].forEach((el,i)=>el.classList.toggle('selected', i===choiceIndex)); }
+function moveChoice(dir){ if(!state.inChoices||!currentChoices) return; const n=currentChoices.length; if(dir==='up') choiceIndex=(choiceIndex-1+n)%n; if(dir==='down') choiceIndex=(choiceIndex+1)%n; refreshChoiceSel(); }
+function positionChoices(){
+  const screen=document.querySelector('.screen').getBoundingClientRect();
+  const dlg=cineDialogEl.getBoundingClientRect(); const panel=choicePanel;
+  panel.style.visibility='hidden'; panel.classList.add('show');
+  const pr=panel.getBoundingClientRect(); const gap=6;
+  const top=(dlg.top - screen.top) - pr.height - gap;
+  const left=(dlg.right - screen.left) - pr.width;
+  panel.style.top=Math.max(0, top)+'px'; panel.style.left=Math.max(0, left)+'px';
+  panel.style.right=''; panel.style.bottom=''; panel.style.visibility='';
+}
+function openChoicesNow(list){ if(!state.cineTypingComplete) return; buildChoices(list); state.pendingChoices=false; state.inChoices=true; positionChoices(); }
+function confirmChoice(){
+  if(!state.inChoices||!currentChoices) return;
+  const key = currentChoices[choiceIndex].next;
+  state.inChoices=false; choicePanel.classList.remove('show');
+  if(FIGHT_ACTIONS[key]){ FIGHT_ACTIONS[key](); return; }
+}
+
 function enemyTurn1(){
   pEnemy.classList.add('show'); pJuan.classList.remove('show');
   cineName.textContent='Enemigo';
   state.cineTypingComplete=false; cineHint.style.opacity=1;
   typeIntoCine('El enemigo te lanza una piedra.', ()=>{
-    doLungeLong(imgEnemy,'right');
-    lockInput(2000);
+    doLungeLong(imgEnemy,'right'); lockInput(2000);
     setTimeout(()=>{
-      doShakeLong(imgJuan);
-      hpJuan-=20; updateHud();
+      doShakeLong(imgJuan); hpJuan-=20; updateHud();
       state.cineTypingComplete=true;
       state.pendingChoices=true;
-      buildChoices([
+      currentChoices=[
         {label:'Puñetazo',           next:'juanAttack1'},
         {label:'Patada giratoria',   next:'juanAttack1'}
-      ]);
+      ];
+      openChoicesNow(currentChoices);
     }, 1500);
   });
 }
-
 function enemyTurn2(){
   pEnemy.classList.add('show'); pJuan.classList.remove('show');
   cineName.textContent='Enemigo';
   state.cineTypingComplete=false; cineHint.style.opacity=1;
   typeIntoCine('El enemigo te arroja polvo a los ojos.', ()=>{
-    doLungeLong(imgEnemy,'right');
-    lockInput(2000);
+    doLungeLong(imgEnemy,'right'); lockInput(2000);
     setTimeout(()=>{
-      doShakeLong(imgJuan);
-      hpJuan-=15; updateHud();
+      doShakeLong(imgJuan); hpJuan-=15; updateHud();
       state.cineTypingComplete=true;
       state.pendingChoices=true;
-      buildChoices([
+      currentChoices=[
         {label:'Golpe final', next:'juanFinish'},
         {label:'Uppercut',    next:'juanFinish'}
-      ]);
+      ];
+      openChoicesNow(currentChoices);
     }, 1500);
   });
 }
-
 const FIGHT_ACTIONS={
   juanAttack1: ()=>{
     pJuan.classList.add('show'); pEnemy.classList.remove('show');
     cineName.textContent='Juan';
     typeIntoCine('¡Juan ataca!', ()=>{
-      doLungeLong(imgJuan,'left');
-      lockInput(2000);
+      doLungeLong(imgJuan,'left'); lockInput(2000);
       setTimeout(()=>{
-        doShakeLong(imgEnemy);
-        hpEnemy=50; updateHud();
+        doShakeLong(imgEnemy); hpEnemy=50; updateHud();
         setTimeout(()=>enemyTurn2(), 400);
       }, 1500);
     });
@@ -841,20 +789,16 @@ const FIGHT_ACTIONS={
     pJuan.classList.add('show'); pEnemy.classList.remove('show');
     cineName.textContent='Juan';
     typeIntoCine('¡Ataque definitivo!', ()=>{
-      doLungeLong(imgJuan,'left');
-      lockInput(2000);
+      doLungeLong(imgJuan,'left'); lockInput(2000);
       setTimeout(()=>{
-        doShakeLong(imgEnemy);
-        hpEnemy=0; updateHud();
+        doShakeLong(imgEnemy); hpEnemy=0; updateHud();
         setTimeout(()=>{
-          pEnemy.classList.add('show');
-          doFallLong(imgEnemy);
+          pEnemy.classList.add('show'); doFallLong(imgEnemy);
           setTimeout(()=>{
             cineName.textContent='Enemigo';
             typeIntoCine('¡Me las pagarás...!', ()=>{
-              state.enemyDefeated=true;
-              enemy1.alive=false; // desaparece del mapa
-              setTimeout(()=> endCinematic(false), 260);
+              state.enemyDefeated=true; enemy1.alive=false;
+              setTimeout(()=> endCinematic('enemy1'), 260);
             });
           }, 800);
         }, 600);
@@ -863,53 +807,22 @@ const FIGHT_ACTIONS={
   }
 };
 
-/* Avance dentro del prefacio de combate y arranque de turnos */
-const _advanceCineOriginal = advanceCine;
-advanceCine = function(){
-  // Si estamos en prefacio de combate:
-  if(currentId && FIGHT_NODES[currentId]){
-    if(isTyping){ completeTypingNow(); return; }
-    const node=FIGHT_NODES[currentId];
-    if(node.next==='startFight'){
-      // Arrancar combate
-      enemyTurn1();
-      currentId='fight-running';
-      return;
-    }
-    if(node.next){
-      currentId=node.next;
-      showFightNode(FIGHT_NODES[currentId]);
-      return;
-    }
-    return;
+/* ===== FIN DE CINEMÁTICA (con limpieza de foco) ===== */
+function endCinematic(who){
+  cineVisible=false;
+  cineEl.classList.remove('show'); cineDialogEl.classList.remove('show');
+  choicePanel.classList.remove('show'); hudEl.classList.remove('show');
+  cineEl.style.setProperty('--blur','0px'); cineEl.style.setProperty('--dim','0');
+  state.mode='play';
+
+  if(who==='gandalf'){
+    state.metGandalf = true;
+    state.gandalfCineDone = true;
   }
-
-  // Si hay elecciones pendientes y el texto está completo (cualquier dominio)
-  if(state.mode==='cine' && state.pendingChoices && state.cineTypingComplete && !state.inChoices){
-    openChoicesNow(currentChoices || (NODES[currentId] && NODES[currentId].choices) || []);
-    return;
-  }
-
-  _advanceCineOriginal();
-};
-
-function openChoicesNow(list){
-  if(!state.cineTypingComplete) return;
-  buildChoices(list);
-  state.pendingChoices=false;
-  state.inChoices=true;
-  positionChoices();
+  state.interactingWith=null; // limpiar foco SIEMPRE
 }
 
-/* ===== STATE & LOOP ===== */
-const state={
-  mode:'play',
-  inChoices:false, pendingChoices:false, cineTypingComplete:false,
-  metGandalf:false, quickDialog:false,
-  metEnemy1:false, enemyDefeated:false, enemyIntro:false, enemyQuick:false,
-  lockUntil: 0
-};
-
+/* ===== LOOP & INIT ===== */
 function loop(now){
   if(!loop.last) loop.last=now;
   const dt=Math.min(1/30,(now-loop.last)/1000);
@@ -918,7 +831,6 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
-/* ===== INIT ===== */
 async function init(){
   const [bg, spr, gandalfPng, enemyPng] = await Promise.all([
     loadImage(BACKGROUND),
@@ -937,7 +849,6 @@ async function init(){
   requestAnimationFrame(loop);
 }
 init();
-
 </script>
 </body>
 </html>
