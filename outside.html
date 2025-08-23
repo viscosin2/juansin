@@ -21,7 +21,7 @@
   .img-btn{ width:64px; height:64px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.85)); }
   .img-btn.arrow::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/arrow.PNG") center/contain no-repeat; image-rendering:pixelated; transform:rotate(var(--rot,0deg)) scale(1.28); transform-origin:center; }
   .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
-  .img-act{ width:120px; height:120px; filter:drop-shadow(0 5px 6px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; }
+  .img-act{ width:120px; height:120px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; }
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
 
@@ -45,7 +45,8 @@
   .portrait.left img{ --tx:-12%; margin-left:40px; }
   .portrait.right img{ --tx:12%; margin-right:40px; }
   .portrait.show img{ opacity:1; transform:translateX(0); }
-  .portrait:not(.show){ display:none; } /* <- no huecos */
+  /* <- importantísimo: si no está activo NO ocupa sitio (evita “huecos”) */
+  .portrait:not(.show){ display:none; }
 
   .choice-panel{ position:absolute; background:rgba(12,12,24,.95); border:1px solid #3cf; border-radius:8px; z-index:70; display:none; min-width:110px; padding:6px; box-shadow:0 6px 14px rgba(0,0,0,.45); }
   .choice-panel.show{ display:block; }
@@ -68,7 +69,7 @@
 
   /* anims */
   @keyframes shake2s{ 0%,100%{transform:translate(0,0)} 10%{transform:translate(-3px,1px)} 20%{transform:translate(3px,-2px)} 30%{transform:translate(-2px,2px)} 40%{transform:translate(2px,-1px)} 50%{transform:translate(-2px,1px)} 60%{transform:translate(2px,2px)} 70%{transform:translate(-3px,-1px)} 80%{transform:translate(3px,1px)} 90%{transform:translate(-1px,0)} }
-  .shaking-long{ animation:shake2s 2s steps(2,end) 1; }         /* <- 2s tembleque */
+  .shaking-long{ animation:shake2s 2s steps(2,end) 1; }
   @keyframes lungeLeftLong{ from{transform:translateX(0)} to{transform:translateX(-20px)} }
   @keyframes lungeRightLong{ from{transform:translateX(0)} to{transform:translateX(20px)} }
   .lunge-left-long{ animation:lungeLeftLong 1.5s steps(4,end) 1; }
@@ -98,8 +99,8 @@
       <div id="cine" class="cine">
         <div class="cine-portraits">
           <div id="pOld"   class="portrait left"><img id="imgOld"   alt="Viejo"></div>
-          <div id="pJuan"  class="portrait left"><img id="imgJuan"  alt="Juan"></div>      <!-- JUAN IZQUIERDA -->
-          <div id="pEnemy" class="portrait right"><img id="imgEnemy" alt="Enemigo"></div>  <!-- ENEMIGO DERECHA -->
+          <div id="pJuan"  class="portrait right"><img id="imgJuan"  alt="Juan"></div>
+          <div id="pEnemy" class="portrait left"><img id="imgEnemy" alt="Enemigo"></div>
         </div>
         <div id="cineDialog" class="dialog" style="bottom:12px;">
           <div id="cineName" class="dialog-name"></div>
@@ -144,8 +145,9 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
 const NPC_GANDALF_IMG="assets/characters/gandalf.PNG";
 const ENEMY_IMG="assets/characters/enemy1.PNG";
 const PORTRAIT_OLD="assets/characters/gandalf_big.PNG";
-const PORTRAIT_JUAN="assets/characters/juansin_big.PNG";
+const PORTRAIT_JUAN="assets/characters/juansin_big.PNG"; /* <-- corregido */
 const PORTRAIT_JUAN_FIGHT="assets/characters/juansin_big_fight.PNG";
+/* usa la que tengas, con fallback a varias rutas */
 const ENEMY_FIGHT_CANDIDATES=[
   "assets/characters/enemy1_big_fight.PNG",
   "assets/characters/enemy1_big.PNG",
@@ -242,7 +244,7 @@ function draw(){
 
 /* ===== UI refs ===== */
 const dialogEl=document.getElementById('dialog'), dialogName=document.getElementById('dialogName'), dialogText=document.getElementById('dialogText'), dialogHint=document.getElementById('dialogHint');
-const cineEl=document.getElementById('cine'), cineDialogEl=document.getElementById('cineDialog'), cineName=document.getElementById('cineName'), cineText=document.getElementById('cineText'), cineHint=document.getElementById['cineHint'];
+const cineEl=document.getElementById('cine'), cineDialogEl=document.getElementById('cineDialog'), cineName=document.getElementById('cineName'), cineText=document.getElementById('cineText'), cineHint=document.getElementById('cineHint');
 const pOld=document.getElementById('pOld'), imgOld=document.getElementById('imgOld');
 const pJuan=document.getElementById('pJuan'), imgJuan=document.getElementById('imgJuan');
 const pEnemy=document.getElementById('pEnemy'), imgEnemy=document.getElementById('imgEnemy');
@@ -261,7 +263,7 @@ function clearAllTimers(){ activeTimers.forEach(clearTimeout); activeTimers=[]; 
 
 /* ===== anim helpers ===== */
 function forceAnim(el,cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
-function doShakeLong(el){ forceAnim(el,'shaking-long'); }               // 2s
+function doShakeLong(el){ forceAnim(el,'shaking-long'); }
 function doLungeLong(el,dir){ forceAnim(el,dir==='left'?'lunge-left-long':'lunge-right-long'); }
 function doFallLong(el){ forceAnim(el,'fall-long'); }
 
@@ -322,7 +324,7 @@ function onAction(){
   }
 }
 
-/* ===== Gandalf (igual) ===== */
+/* ===== Gandalf (igual que lo tenías) ===== */
 const Gandalf={
   nodes:{
     start1:{who:'???', show:'old',  talk:'Qué bueno que te he encontrado.', next:'start2'},
@@ -377,7 +379,7 @@ async function startGandalfCine(){
   Gandalf.id='start1'; Gandalf.showNode(Gandalf.nodes[Gandalf.id]);
 }
 
-/* ===== Choice helpers ===== */
+/* ===== Choice helpers comunes (UI) ===== */
 function buildChoices(list){ choicesEl.innerHTML=''; list.forEach((c,i)=>{ const d=document.createElement('div'); d.className='choice'+(i===0?' selected':''); d.textContent=c.label; choicesEl.appendChild(d); }); }
 function refreshChoiceSel(idx){ [...choicesEl.children].forEach((el,i)=>el.classList.toggle('selected', i===idx)); }
 function positionChoices(){
@@ -397,7 +399,7 @@ function positionChoices(){
   }, {passive:false});
 });
 
-/* ===== Fight: speaker único con direcciones fijadas ===== */
+/* ===== Fight: speaker único, sin textos durante animaciones ===== */
 const Fight={
   hpEnemy:100, hpJuan:100,
   step:0,              // 0 habla1; 1 narrador1; 2 habla2; 3 anim2; 4 narrador2; 5 fin
@@ -421,7 +423,7 @@ const Fight={
     this.step=0; this.waitingInput=false; this.closeChoices();
     cineDialogEl.classList.add('show'); hudEl.classList.add('show');
 
-    showSpeaker('enemy');                   // ENEMIGO (derecha) habla primero
+    showSpeaker('enemy');
     cineName.textContent='Enemigo';
     typeInto(cineText,'Soy tu enemigo. Te vas a enterar con este golpe.', ()=>{
       this.waitingInput=true;               // espera tu Acción para animación 1
@@ -435,9 +437,9 @@ const Fight={
     this.waitingInput=false;
 
     if(this.step===0){
-      // Animación enemigo 1 -> atacar hacia IZQUIERDA
+      // Animación enemigo 1
       showSpeaker('enemy');
-      doLungeLong(imgEnemy,'left'); Scene.lock(2000);
+      doLungeLong(imgEnemy,'right'); Scene.lock(2000);
       setT(()=>{ showSpeaker('juan'); doShakeLong(imgJuan); this.hpJuan-=20; this.updateHud();
         setT(()=>{ cineName.textContent=''; typeInto(cineText,'El enemigo te golpeó con fuerza. Es tu turno.', ()=>{
           this.waitingInput=true; this.step=1;
@@ -447,7 +449,7 @@ const Fight={
     }
 
     if(this.step===1){
-      // Elección ataque de Juan
+      // Elección
       typeInto(cineText,'¿Cómo vas a contraatacar?', ()=>{
         this.buildChoices([{label:'Puñetazo',next:'juanAttack1'},{label:'Patada giratoria',next:'juanAttack1'}]);
       });
@@ -455,17 +457,17 @@ const Fight={
     }
 
     if(this.step===2){
-      // Habla enemigo 2
+      // Habla el enemigo 2 (FIX: avanzar a 3 tras Acción)
       showSpeaker('enemy'); cineName.textContent='Enemigo';
       typeInto(cineText,'No has tenido suficiente. ¡Toma polvo a los ojos!', ()=>{
-        this.waitingInput=true; this.step=3; // evitar bucle
+        this.waitingInput=true; this.step=3; // <- evita el bucle
       });
       return;
     }
 
     if(this.step===3){
-      // Animación enemigo 2 -> IZQUIERDA
-      showSpeaker('enemy'); doLungeLong(imgEnemy,'left'); Scene.lock(2000);
+      // Animación enemigo 2
+      showSpeaker('enemy'); doLungeLong(imgEnemy,'right'); Scene.lock(2000);
       setT(()=>{ showSpeaker('juan'); doShakeLong(imgJuan); this.hpJuan-=15; this.updateHud();
         setT(()=>{ cineName.textContent=''; typeInto(cineText,'El enemigo te cegó con polvo. Es tu turno.', ()=>{
           this.waitingInput=true; this.step=4;
@@ -475,7 +477,7 @@ const Fight={
     }
 
     if(this.step===4){
-      // Elección final de Juan
+      // Elección final
       typeInto(cineText,'¿Cómo vas a contraatacar?', ()=>{
         this.buildChoices([{label:'Golpe final',next:'juanFinish'},{label:'Uppercut',next:'juanFinish'}]);
       });
@@ -492,11 +494,10 @@ const Fight={
     }
   },
 
-  // Juan ataca -> hacia DERECHA, enemigo tiembla
   juanAttack1(){
     showSpeaker('juan'); cineName.textContent='Juan';
     typeInto(cineText,'¡Allá voy!', ()=>{
-      doLungeLong(imgJuan,'right'); Scene.lock(2000);
+      doLungeLong(imgJuan,'left'); Scene.lock(2000);
       setT(()=>{ showSpeaker('enemy'); doShakeLong(imgEnemy); this.hpEnemy=50; this.updateHud();
         setT(()=>{ this.step=2; this.waitingInput=true; }, 300);
       },1500);
@@ -506,7 +507,7 @@ const Fight={
   juanFinish(){
     showSpeaker('juan'); cineName.textContent='Juan';
     typeInto(cineText,'¡Esto se acaba!', ()=>{
-      doLungeLong(imgJuan,'right'); Scene.lock(2000);
+      doLungeLong(imgJuan,'left'); Scene.lock(2000);
       setT(()=>{ showSpeaker('enemy'); doShakeLong(imgEnemy); this.hpEnemy=0; this.updateHud();
         setT(()=>{ doFallLong(imgEnemy);
           setT(()=>{ this.step=5; this.waitingInput=true; }, 900);
@@ -526,7 +527,7 @@ function startEnemyIntro(){
 async function startEnemyFight(){
   Scene.set('enemy_fight'); showCineOverlay();
 
-  // Carga retratos
+  // Carga robusta de retratos
   const [juanB, enemyB]=await Promise.all([
     loadImage(PORTRAIT_JUAN_FIGHT),
     loadFirstAvailable(ENEMY_FIGHT_CANDIDATES)
