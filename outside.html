@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Juansin 30th birthday - outside (cine + combate, interacciones separadas)</title>
+<title>Juansin 30th birthday - outside (cine + combate, interacciones aisladas)</title>
 
 <!-- Pixel fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -66,8 +66,7 @@
     margin-bottom: 4px;
     text-shadow: 0 1px 0 #000;
   }
-  /* 👇 oculta la banda del speaker cuando no hay nombre (narrador) */
-  .dialog-name:empty{ display:none; }
+  .dialog-name:empty{ display:none; } /* narrador */
   .dialog-text{
     font-family: 'VT323', monospace;
     font-size: 18px;
@@ -312,8 +311,8 @@ btnAct.addEventListener('touchstart', e=>{ e.preventDefault(); onAction(); }, {p
 const dpadUp=document.getElementById('btn-up');
 const dpadDown=document.getElementById('btn-down');
 ['click','touchstart'].forEach(evt=>{
-  dpadUp.addEventListener(evt, e=>{ if(state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('up'); } }, {passive:false});
-  dpadDown.addEventListener(evt, e=>{ if(state.mode==='cine' && state.inChoices){ e.preventDefault(); moveChoice('down'); } }, {passive:false});
+  dpadUp.addEventListener(evt, e=>{ if(state.phase==='cine' && state.inChoices){ e.preventDefault(); moveChoice('up'); } }, {passive:false});
+  dpadDown.addEventListener(evt, e=>{ if(state.phase==='cine' && state.inChoices){ e.preventDefault(); moveChoice('down'); } }, {passive:false});
 });
 
 /* ===== UTIL ===== */
@@ -351,7 +350,7 @@ function resizeCanvas(){
 window.addEventListener('resize', resizeCanvas);
 
 function update(dt){
-  if(state.mode!=='play') return;
+  if(state.phase!=='play') return;
   const vx=(keys.left?-1:0)+(keys.right?1:0);
   const vy=(keys.up?-1:0)+(keys.down?1:0);
   player.moving=(vx!==0||vy!==0);
@@ -410,16 +409,30 @@ function draw(){
   things.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 }
 
-/* ===== STATE ===== */
+/* ===== STATE (aislamiento de escenas) ===== */
 const state={
-  mode:'play',
-  interactingWith:null,           // "gandalf" | "enemy1" | null
+  phase:'play',               // 'play' | 'dialog' | 'cine'
+  scene:'none',               // 'none' | 'gandalf' | 'enemy'
   inChoices:false, pendingChoices:false, cineTypingComplete:false,
   metGandalf:false, quickDialog:false,
   metEnemy1:false, enemyDefeated:false, enemyIntro:false, enemyQuick:false,
   lockUntil: 0
 };
-
+function resetChoiceUI(){
+  currentChoices=null; choiceIndex=0;
+  choicePanel.classList.remove('show');
+  state.inChoices=false; state.pendingChoices=false;
+}
+function resetCineFlags(){
+  state.cineTypingComplete=false; currentCineFullText=null;
+}
+function enterPlay(){
+  cineVisible=false;
+  cineEl.classList.remove('show'); cineDialogEl.classList.remove('show');
+  hudEl.classList.remove('show'); resetChoiceUI();
+  cineEl.style.setProperty('--blur','0px'); cineEl.style.setProperty('--dim','0');
+  state.phase='play'; state.scene='none';
+}
 function lockInput(ms){ state.lockUntil = performance.now() + ms; }
 function inputLocked(){ return state.lockUntil && performance.now() < state.lockUntil; }
 
@@ -462,22 +475,9 @@ function typeInto(el,text,done){
 }
 function completeTypingNow(){
   clearInterval(typingTimer); isTyping=false;
-  if(state.mode==='dialog'){
-    let full=''; 
-    if(state.interactingWith==='gandalf'){
-      full = state.quickDialog ? 'Ya sabes lo que tienes que hacer.' : 'Hola, chico...';
-    } else if(state.interactingWith==='enemy1'){
-      full = state.enemyIntro ? '¡Ajá!' : (state.enemyQuick ? 'Sigue tu camino, ya no molesto.' : '');
-    }
-    dialogText.textContent = full;
+  if(state.phase==='dialog'){
     dialogEl.classList.add('ready'); dialogHint.style.opacity=1;
-  } else if(state.mode==='cine'){
-    if(currentCineFullText){
-      cineText.textContent = currentCineFullText;
-    } else {
-      const node = (state.interactingWith==='gandalf') ? NODES[currentId] : FIGHT_NODES[currentId];
-      if(node) cineText.textContent = node.talk;
-    }
+  } else if(state.phase==='cine'){
     cineDialogEl.classList.add('ready'); cineHint.style.opacity=1;
     state.cineTypingComplete = true;
   }
@@ -487,15 +487,20 @@ function completeTypingNow(){
 function onAction(){
   if(inputLocked()) return;
 
-  if(state.mode==='play'){
+  if(state.phase==='play'){
     const target = getClosestInteractable();
     if(!target) return;
-    state.interactingWith = target;
 
     if(target==='gandalf'){
+      /* aislar escena del viejo */
+      state.scene='gandalf';
+      resetChoiceUI(); resetCineFlags();
       if(!state.metGandalf){ startGandalfIntro(); }
       else { startGandalfRepeat(); }
     } else if(target==='enemy1'){
+      /* aislar escena del enemigo */
+      state.scene='enemy';
+      resetChoiceUI(); resetCineFlags();
       if(!state.metEnemy1){ startEnemyIntro(); }
       else if(!state.enemyDefeated){ startEnemyCine(); }
       else { startEnemyAfterDefeat(); }
@@ -503,24 +508,24 @@ function onAction(){
     return;
   }
 
-  if(state.mode==='dialog'){
+  if(state.phase==='dialog'){
     if(isTyping){ completeTypingNow(); return; }
-    if(state.interactingWith==='gandalf') advanceGandalfDialog();
-    else if(state.interactingWith==='enemy1') advanceEnemyDialog();
+    if(state.scene==='gandalf') advanceGandalfDialog();
+    else if(state.scene==='enemy') advanceEnemyDialog();
     return;
   }
 
-  if(state.mode==='cine'){
+  if(state.phase==='cine'){
     if(isTyping){ completeTypingNow(); return; }
     if(state.inChoices){ confirmChoice(); return; }
-    if(state.interactingWith==='gandalf') advanceCineGandalf();
-    else if(state.interactingWith==='enemy1') advanceCineEnemy();
+    if(state.scene==='gandalf') advanceCineGandalf();
+    else if(state.scene==='enemy') advanceCineEnemy();
   }
 }
 
 /* ======== GANDALF ========= */
 function startGandalfIntro(){
-  state.mode='dialog';
+  state.phase='dialog';
   state.quickDialog=false;
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent='???';
@@ -528,7 +533,7 @@ function startGandalfIntro(){
   typeInto(dialogText, 'Hola, chico...', ()=>{ dialogHint.style.opacity=1; });
 }
 function startGandalfRepeat(){
-  state.mode='dialog';
+  state.phase='dialog';
   state.quickDialog=true;
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent='Gandalf';
@@ -539,8 +544,7 @@ function advanceGandalfDialog(){
   if(state.quickDialog){
     dialogEl.classList.remove('show','ready');
     state.quickDialog=false;
-    state.mode='play';
-    state.interactingWith=null;
+    enterPlay();
     return;
   }
   dialogEl.classList.remove('show','ready');
@@ -600,8 +604,8 @@ async function startCinematicGandalf(){
   const [oldBig, juanBig] = await Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
   imgOld.src=oldBig.src; imgJuan.src=juanBig.src; sizePortraitsToBackground();
 
-  state.mode='cine'; state.inChoices=false; state.pendingChoices=false; state.cineTypingComplete=false;
-  choicePanel.classList.remove('show'); hudEl.classList.remove('show');
+  state.phase='cine'; resetCineFlags(); resetChoiceUI();
+  hudEl.classList.remove('show');
 
   pOld.classList.add('show'); pJuan.classList.remove('show'); pEnemy.classList.remove('show');
   cineDialogEl.classList.add('show');
@@ -629,12 +633,15 @@ function advanceCineGandalf(){
     return;
   }
   if(node && node.next){ currentId=node.next; showCineNodeGandalf(NODES[currentId]); }
-  else{ endCinematic('gandalf'); }
+  else{
+    state.metGandalf = true;
+    enterPlay();
+  }
 }
 
 /* ======== ENEMIGO / COMBATE ========= */
 function startEnemyIntro(){
-  state.mode='dialog';
+  state.phase='dialog';
   state.enemyIntro=true; state.enemyQuick=false; state.metEnemy1=false;
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent='???';
@@ -642,7 +649,7 @@ function startEnemyIntro(){
   typeInto(dialogText, '¡Ajá!', ()=>{ dialogHint.style.opacity=1; });
 }
 function startEnemyAfterDefeat(){
-  state.mode='dialog';
+  state.phase='dialog';
   state.enemyQuick=true;
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent='Enemigo';
@@ -659,8 +666,7 @@ function advanceEnemyDialog(){
   }
   if(state.enemyQuick){
     dialogEl.classList.remove('show','ready');
-    state.mode='play';
-    state.interactingWith=null;
+    enterPlay();
   }
 }
 
@@ -681,10 +687,17 @@ function doShakeLong(el){ el.classList.remove('shaking-long'); void el.offsetWid
 function doLungeLong(el, dir){ el.classList.remove('lunge-left-long','lunge-right-long'); void el.offsetWidth; el.classList.add(dir==='left'?'lunge-left-long':'lunge-right-long'); }
 function doFallLong(el){ el.classList.add('fall-long'); }
 
-/* Helper para narrador (sin speaker) */
+/* Narrador (sin speaker) */
 function narrate(text, done){
   cineName.textContent=''; // sin speaker
   typeIntoCine(text, done);
+}
+
+/* Mantener portraits de combate SIEMPRE visibles */
+function showCombatPortraits(){
+  pEnemy.classList.add('show');
+  pJuan.classList.add('show');
+  pOld.classList.remove('show');
 }
 
 async function startEnemyCine(){
@@ -692,19 +705,19 @@ async function startEnemyCine(){
   const [juanB, enemyB] = await Promise.all([ loadImage(PORTRAIT_JUAN_FIGHT), loadImage(PORTRAIT_ENEMY_FIGHT) ]);
   imgJuan.src=juanB.src; imgEnemy.src=enemyB.src; sizePortraitsToBackground();
 
-  state.mode='cine'; state.inChoices=false; state.pendingChoices=false; state.cineTypingComplete=false;
-  choicePanel.classList.remove('show'); hudEl.classList.add('show');
+  state.phase='cine'; resetCineFlags(); resetChoiceUI();
+  hudEl.classList.add('show');
 
   hpEnemy=100; hpJuan=100; updateHud();
 
-  /* 👇 En combate, ambos en escena todo el rato */
-  pEnemy.classList.add('show'); pJuan.classList.add('show'); pOld.classList.remove('show');
+  showCombatPortraits(); // 👈 siempre visibles
   cineDialogEl.classList.add('show');
 
   currentId='pre1'; showFightNode(FIGHT_NODES[currentId]);
 }
 function showFightNode(node){
-  cineName.textContent = (node.who==='Enemigo') ? 'Enemigo' : (node.who==='Juan' ? 'Juan' : '');
+  showCombatPortraits(); // asegurar visibilidad en cada paso
+  cineName.textContent = node.who==='Enemigo' ? 'Enemigo' : (node.who==='Juan' ? 'Juan' : '');
   cineHint.style.opacity=0; state.cineTypingComplete=false; currentCineFullText=null;
   typeInto(cineText, node.talk, ()=>{ cineHint.style.opacity=1; state.cineTypingComplete=true; });
 }
@@ -735,24 +748,22 @@ function confirmChoice(){
   const nextKey = currentChoices[choiceIndex].next;
   state.inChoices=false; choicePanel.classList.remove('show');
 
-  if(state.interactingWith==='gandalf'){
+  if(state.scene==='gandalf'){
     if(NODES[nextKey]){ currentId=nextKey; showCineNodeGandalf(NODES[currentId]); return; }
-    endCinematic('gandalf'); return;
+    state.metGandalf=true; enterPlay(); return;
   }
-  if(state.interactingWith==='enemy1'){
+  if(state.scene==='enemy'){
     if(FIGHT_ACTIONS[nextKey]){ FIGHT_ACTIONS[nextKey](); return; }
   }
 }
 
-/* --- Secuencia de combate exacta que pediste --- */
+/* --- Secuencia de combate (portraits SIEMPRE visibles) --- */
 function enemyTurn1(){
-  // 1) Habla el enemigo (portrait enemigo visible)
+  showCombatPortraits();
   cineName.textContent='Enemigo';
   typeIntoCine('Soy tu enemigo. Te vas a enterar con este golpe.', ()=>{
-    // 2) Animación de ataque enemigo (mantener portrait del enemigo visible)
     doLungeLong(imgEnemy,'right'); lockInput(2000);
     setTimeout(()=>{
-      // 3) Juan recibe (Juan siempre visible); narrador sin speaker
       doShakeLong(imgJuan); hpJuan-=20; updateHud();
       setTimeout(()=>{
         narrate('El enemigo te golpeó con fuerza. Es tu turno.', ()=>{
@@ -763,12 +774,13 @@ function enemyTurn1(){
             ]);
           });
         });
-      }, 100); // pequeñísimo respiro
+      }, 120);
     }, 1500);
   });
 }
 
 function enemyTurn2(){
+  showCombatPortraits();
   cineName.textContent='Enemigo';
   typeIntoCine('No has tenido suficiente. ¡Toma polvo a los ojos!', ()=>{
     doLungeLong(imgEnemy,'right'); lockInput(2000);
@@ -783,40 +795,37 @@ function enemyTurn2(){
             ]);
           });
         });
-      }, 100);
+      }, 120);
     }, 1500);
   });
 }
 
 const FIGHT_ACTIONS={
   juanAttack1: ()=>{
-    // 4) Ataca Juan (ambos en escena, lunge de Juan)
+    showCombatPortraits();
     cineName.textContent='Juan';
     typeIntoCine('¡Allá voy!', ()=>{
       doLungeLong(imgJuan,'left'); lockInput(2000);
       setTimeout(()=>{
-        // 5) Enemigo recibe (tiembla)
         doShakeLong(imgEnemy); hpEnemy=50; updateHud();
         setTimeout(()=> enemyTurn2(), 500);
       }, 1500);
     });
   },
   juanFinish: ()=>{
+    showCombatPortraits();
     cineName.textContent='Juan';
     typeIntoCine('¡Esto se acaba!', ()=>{
       doLungeLong(imgJuan,'left'); lockInput(2000);
       setTimeout(()=>{
         doShakeLong(imgEnemy); hpEnemy=0; updateHud();
         setTimeout(()=>{
-          // 6) Muerte del enemigo: desliza hacia abajo
-          pEnemy.classList.add('show'); // asegurar visible antes de caer
           doFallLong(imgEnemy);
           setTimeout(()=>{
-            // 7) Juan declara victoria dentro de la cinemática
             cineName.textContent='Juan';
             typeIntoCine('¡He ganado!', ()=>{
               state.enemyDefeated=true; enemy1.alive=false;
-              setTimeout(()=> endCinematic('enemy1'), 500);
+              setTimeout(()=> enterPlay(), 500);
             });
           }, 900);
         }, 400);
@@ -824,17 +833,6 @@ const FIGHT_ACTIONS={
     });
   }
 };
-
-/* ===== FIN DE CINEMÁTICA ===== */
-function endCinematic(who){
-  cineVisible=false;
-  cineEl.classList.remove('show'); cineDialogEl.classList.remove('show');
-  choicePanel.classList.remove('show'); hudEl.classList.remove('show');
-  cineEl.style.setProperty('--blur','0px'); cineEl.style.setProperty('--dim','0');
-  state.mode='play';
-  if(who==='gandalf'){ state.metGandalf = true; }
-  state.interactingWith=null;
-}
 
 /* ===== LOOP & INIT ===== */
 function loop(now){
