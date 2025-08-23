@@ -66,6 +66,8 @@
     margin-bottom: 4px;
     text-shadow: 0 1px 0 #000;
   }
+  /* 👇 oculta la banda del speaker cuando no hay nombre (narrador) */
+  .dialog-name:empty{ display:none; }
   .dialog-text{
     font-family: 'VT323', monospace;
     font-size: 18px;
@@ -663,10 +665,10 @@ function advanceEnemyDialog(){
 }
 
 const FIGHT_NODES={
-  pre1:{ who:'Enemigo', show:'enemy', talk:'Voy a acabar contigo, mocoso.', next:'pre2' },
-  pre2:{ who:'Juan',    show:'juan',  talk:'¡Prueba, si te atreves!',       next:'startFight' }
+  pre1:{ who:'Enemigo', show:'enemy', talk:'Soy tu enemigo. Te vas a enterar con este golpe.', next:'startFight' }
 };
 let hpEnemy=100, hpJuan=100;
+
 function updateHud(){
   hpEnemy = Math.max(0, Math.min(100, hpEnemy));
   hpJuan  = Math.max(0, Math.min(100, hpJuan));
@@ -679,6 +681,12 @@ function doShakeLong(el){ el.classList.remove('shaking-long'); void el.offsetWid
 function doLungeLong(el, dir){ el.classList.remove('lunge-left-long','lunge-right-long'); void el.offsetWidth; el.classList.add(dir==='left'?'lunge-left-long':'lunge-right-long'); }
 function doFallLong(el){ el.classList.add('fall-long'); }
 
+/* Helper para narrador (sin speaker) */
+function narrate(text, done){
+  cineName.textContent=''; // sin speaker
+  typeIntoCine(text, done);
+}
+
 async function startEnemyCine(){
   await showCineOverlay();
   const [juanB, enemyB] = await Promise.all([ loadImage(PORTRAIT_JUAN_FIGHT), loadImage(PORTRAIT_ENEMY_FIGHT) ]);
@@ -689,28 +697,24 @@ async function startEnemyCine(){
 
   hpEnemy=100; hpJuan=100; updateHud();
 
-  pEnemy.classList.add('show'); pJuan.classList.remove('show'); pOld.classList.remove('show');
+  /* 👇 En combate, ambos en escena todo el rato */
+  pEnemy.classList.add('show'); pJuan.classList.add('show'); pOld.classList.remove('show');
   cineDialogEl.classList.add('show');
 
   currentId='pre1'; showFightNode(FIGHT_NODES[currentId]);
 }
 function showFightNode(node){
-  pEnemy.classList.toggle('show', node.show==='enemy');
-  pJuan .classList.toggle('show', node.show==='juan');
-  pOld  .classList.remove('show');
-
-  cineName.textContent=node.who;
+  cineName.textContent = (node.who==='Enemigo') ? 'Enemigo' : (node.who==='Juan' ? 'Juan' : '');
   cineHint.style.opacity=0; state.cineTypingComplete=false; currentCineFullText=null;
   typeInto(cineText, node.talk, ()=>{ cineHint.style.opacity=1; state.cineTypingComplete=true; });
 }
 function advanceCineEnemy(){
   if(isTyping){ completeTypingNow(); return; }
   const node=FIGHT_NODES[currentId];
-  if(node && node.next==='startFight'){ enemyTurn1(); currentId='fight'; return; }
-  if(node && node.next){ currentId=node.next; showFightNode(FIGHT_NODES[currentId]); return; }
+  if(node && node.next==='startFight'){ enemyTurn1(); currentId='fight1'; return; }
 }
 
-/* Turnos */
+/* Turnos con narrador y portraits persistentes */
 let currentChoices=null, choiceIndex=0;
 function buildChoices(list){ currentChoices=list; choiceIndex=0; choicesEl.innerHTML=''; list.forEach((c,i)=>{ const div=document.createElement('div'); div.className='choice'+(i===0?' selected':''); div.textContent=c.label; choicesEl.appendChild(div); }); }
 function refreshChoiceSel(){ [...choicesEl.children].forEach((el,i)=>el.classList.toggle('selected', i===choiceIndex)); }
@@ -725,9 +729,7 @@ function positionChoices(){
   panel.style.top=Math.max(0, top)+'px'; panel.style.left=Math.max(0, left)+'px';
   panel.style.right=''; panel.style.bottom=''; panel.style.visibility='';
 }
-function openChoicesNow(list){ if(!state.cineTypingComplete) return; buildChoices(list); state.pendingChoices=false; state.inChoices=true; positionChoices(); }
-
-/* ✅ confirmChoice sirve para Gandalf y para combate */
+function openChoicesNow(list){ buildChoices(list); state.pendingChoices=false; state.inChoices=true; positionChoices(); }
 function confirmChoice(){
   if(!state.inChoices||!currentChoices) return;
   const nextKey = currentChoices[choiceIndex].next;
@@ -742,77 +744,82 @@ function confirmChoice(){
   }
 }
 
-/* Turno 1 enemigo */
+/* --- Secuencia de combate exacta que pediste --- */
 function enemyTurn1(){
-  pEnemy.classList.add('show'); pJuan.classList.remove('show');
+  // 1) Habla el enemigo (portrait enemigo visible)
   cineName.textContent='Enemigo';
-  state.cineTypingComplete=false; cineHint.style.opacity=1;
-  typeIntoCine('El enemigo te lanza una piedra.', ()=>{
+  typeIntoCine('Soy tu enemigo. Te vas a enterar con este golpe.', ()=>{
+    // 2) Animación de ataque enemigo (mantener portrait del enemigo visible)
     doLungeLong(imgEnemy,'right'); lockInput(2000);
     setTimeout(()=>{
+      // 3) Juan recibe (Juan siempre visible); narrador sin speaker
       doShakeLong(imgJuan); hpJuan-=20; updateHud();
-      state.cineTypingComplete=true;
-      setTimeout(()=>{ // abrir opciones tras fin de bloqueo
-        state.pendingChoices=true;
-        openChoicesNow([
-          {label:'Puñetazo',         next:'juanAttack1'},
-          {label:'Patada giratoria', next:'juanAttack1'}
-        ]);
-      }, 2000);
+      setTimeout(()=>{
+        narrate('El enemigo te golpeó con fuerza. Es tu turno.', ()=>{
+          narrate('¿Cómo vas a contraatacar?', ()=>{
+            openChoicesNow([
+              {label:'Puñetazo',         next:'juanAttack1'},
+              {label:'Patada giratoria', next:'juanAttack1'}
+            ]);
+          });
+        });
+      }, 100); // pequeñísimo respiro
     }, 1500);
   });
 }
 
-/* Turno 2 enemigo — polvo (arreglado) */
 function enemyTurn2(){
-  pEnemy.classList.add('show'); pJuan.classList.remove('show');
   cineName.textContent='Enemigo';
-  state.cineTypingComplete=false; cineHint.style.opacity=1;
-  typeIntoCine('El enemigo te arroja polvo a los ojos.', ()=>{
+  typeIntoCine('No has tenido suficiente. ¡Toma polvo a los ojos!', ()=>{
     doLungeLong(imgEnemy,'right'); lockInput(2000);
     setTimeout(()=>{
       doShakeLong(imgJuan); hpJuan-=15; updateHud();
-      state.cineTypingComplete=true;
-      setTimeout(()=>{ // abrir opciones justo al liberar input
-        state.pendingChoices=true;
-        openChoicesNow([
-          {label:'Golpe final', next:'juanFinish'},
-          {label:'Uppercut',    next:'juanFinish'}
-        ]);
-      }, 2000);
+      setTimeout(()=>{
+        narrate('El enemigo te cegó con polvo. Es tu turno.', ()=>{
+          narrate('¿Cómo vas a contraatacar?', ()=>{
+            openChoicesNow([
+              {label:'Golpe final', next:'juanFinish'},
+              {label:'Uppercut',    next:'juanFinish'}
+            ]);
+          });
+        });
+      }, 100);
     }, 1500);
   });
 }
 
 const FIGHT_ACTIONS={
   juanAttack1: ()=>{
-    pJuan.classList.add('show'); pEnemy.classList.remove('show');
+    // 4) Ataca Juan (ambos en escena, lunge de Juan)
     cineName.textContent='Juan';
-    typeIntoCine('¡Juan ataca!', ()=>{
+    typeIntoCine('¡Allá voy!', ()=>{
       doLungeLong(imgJuan,'left'); lockInput(2000);
       setTimeout(()=>{
+        // 5) Enemigo recibe (tiembla)
         doShakeLong(imgEnemy); hpEnemy=50; updateHud();
-        setTimeout(()=>enemyTurn2(), 400);
+        setTimeout(()=> enemyTurn2(), 500);
       }, 1500);
     });
   },
   juanFinish: ()=>{
-    pJuan.classList.add('show'); pEnemy.classList.remove('show');
     cineName.textContent='Juan';
-    typeIntoCine('¡Ataque definitivo!', ()=>{
+    typeIntoCine('¡Esto se acaba!', ()=>{
       doLungeLong(imgJuan,'left'); lockInput(2000);
       setTimeout(()=>{
         doShakeLong(imgEnemy); hpEnemy=0; updateHud();
         setTimeout(()=>{
-          pEnemy.classList.add('show'); doFallLong(imgEnemy);
+          // 6) Muerte del enemigo: desliza hacia abajo
+          pEnemy.classList.add('show'); // asegurar visible antes de caer
+          doFallLong(imgEnemy);
           setTimeout(()=>{
-            cineName.textContent='Enemigo';
-            typeIntoCine('¡Me las pagarás...!', ()=>{
+            // 7) Juan declara victoria dentro de la cinemática
+            cineName.textContent='Juan';
+            typeIntoCine('¡He ganado!', ()=>{
               state.enemyDefeated=true; enemy1.alive=false;
-              setTimeout(()=> endCinematic('enemy1'), 260);
+              setTimeout(()=> endCinematic('enemy1'), 500);
             });
-          }, 800);
-        }, 600);
+          }, 900);
+        }, 400);
       }, 1500);
     });
   }
