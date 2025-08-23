@@ -135,7 +135,7 @@
   .hpwrap.right{ right:8px; }
   .hplabel{
     position:absolute; top:-10px; font-family:'Press Start 2P', system-ui; font-size:8px; letter-spacing:0.5px; color:#9cf;
-    text-shadow:0 1px 0 #000;
+    text-shadow: 0 1px 0 #000;
   }
   .hpwrap.left .hplabel{ left:0; }
   .hpwrap.right .hplabel{ right:0; }
@@ -373,7 +373,6 @@ function update(dt){
 }
 
 function draw(){
-  const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(!bgImg) return;
 
@@ -414,7 +413,7 @@ const state={
   mode:'play',
   interactingWith:null,           // "gandalf" | "enemy1" | null
   inChoices:false, pendingChoices:false, cineTypingComplete:false,
-  metGandalf:false, gandalfCineDone:false, quickDialog:false,
+  metGandalf:false, quickDialog:false,
   metEnemy1:false, enemyDefeated:false, enemyIntro:false, enemyQuick:false,
   lockUntil: 0
 };
@@ -422,7 +421,7 @@ const state={
 function lockInput(ms){ state.lockUntil = performance.now() + ms; }
 function inputLocked(){ return state.lockUntil && performance.now() < state.lockUntil; }
 
-/* ===== SELECCIÓN DE INTERACCIÓN (prioriza el más cercano) ===== */
+/* ===== SELECCIÓN DE INTERACCIÓN ===== */
 function getClosestInteractable(){
   const candidates=[];
   if(isNear(gandalf)) candidates.push({id:'gandalf', d:dist(player,gandalf)});
@@ -489,8 +488,6 @@ function onAction(){
   if(state.mode==='play'){
     const target = getClosestInteractable();
     if(!target) return;
-
-    // Fija foco y abre interacción correspondiente
     state.interactingWith = target;
 
     if(target==='gandalf'){
@@ -522,7 +519,7 @@ function onAction(){
 /* ======== GANDALF ========= */
 function startGandalfIntro(){
   state.mode='dialog';
-  state.metGandalf=false; state.quickDialog=false;
+  state.quickDialog=false;
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent='???';
   dialogHint.style.opacity=0;
@@ -544,7 +541,6 @@ function advanceGandalfDialog(){
     state.interactingWith=null;
     return;
   }
-  // Pasar a cinemática SOLO la primera vez
   dialogEl.classList.remove('show','ready');
   startCinematicGandalf();
 }
@@ -730,13 +726,23 @@ function positionChoices(){
   panel.style.right=''; panel.style.bottom=''; panel.style.visibility='';
 }
 function openChoicesNow(list){ if(!state.cineTypingComplete) return; buildChoices(list); state.pendingChoices=false; state.inChoices=true; positionChoices(); }
+
+/* ✅ confirmChoice sirve para Gandalf y para combate */
 function confirmChoice(){
   if(!state.inChoices||!currentChoices) return;
-  const key = currentChoices[choiceIndex].next;
+  const nextKey = currentChoices[choiceIndex].next;
   state.inChoices=false; choicePanel.classList.remove('show');
-  if(FIGHT_ACTIONS[key]){ FIGHT_ACTIONS[key](); return; }
+
+  if(state.interactingWith==='gandalf'){
+    if(NODES[nextKey]){ currentId=nextKey; showCineNodeGandalf(NODES[currentId]); return; }
+    endCinematic('gandalf'); return;
+  }
+  if(state.interactingWith==='enemy1'){
+    if(FIGHT_ACTIONS[nextKey]){ FIGHT_ACTIONS[nextKey](); return; }
+  }
 }
 
+/* Turno 1 enemigo */
 function enemyTurn1(){
   pEnemy.classList.add('show'); pJuan.classList.remove('show');
   cineName.textContent='Enemigo';
@@ -746,15 +752,18 @@ function enemyTurn1(){
     setTimeout(()=>{
       doShakeLong(imgJuan); hpJuan-=20; updateHud();
       state.cineTypingComplete=true;
-      state.pendingChoices=true;
-      currentChoices=[
-        {label:'Puñetazo',           next:'juanAttack1'},
-        {label:'Patada giratoria',   next:'juanAttack1'}
-      ];
-      openChoicesNow(currentChoices);
+      setTimeout(()=>{ // abrir opciones tras fin de bloqueo
+        state.pendingChoices=true;
+        openChoicesNow([
+          {label:'Puñetazo',         next:'juanAttack1'},
+          {label:'Patada giratoria', next:'juanAttack1'}
+        ]);
+      }, 2000);
     }, 1500);
   });
 }
+
+/* Turno 2 enemigo — polvo (arreglado) */
 function enemyTurn2(){
   pEnemy.classList.add('show'); pJuan.classList.remove('show');
   cineName.textContent='Enemigo';
@@ -764,15 +773,17 @@ function enemyTurn2(){
     setTimeout(()=>{
       doShakeLong(imgJuan); hpJuan-=15; updateHud();
       state.cineTypingComplete=true;
-      state.pendingChoices=true;
-      currentChoices=[
-        {label:'Golpe final', next:'juanFinish'},
-        {label:'Uppercut',    next:'juanFinish'}
-      ];
-      openChoicesNow(currentChoices);
+      setTimeout(()=>{ // abrir opciones justo al liberar input
+        state.pendingChoices=true;
+        openChoicesNow([
+          {label:'Golpe final', next:'juanFinish'},
+          {label:'Uppercut',    next:'juanFinish'}
+        ]);
+      }, 2000);
     }, 1500);
   });
 }
+
 const FIGHT_ACTIONS={
   juanAttack1: ()=>{
     pJuan.classList.add('show'); pEnemy.classList.remove('show');
@@ -807,19 +818,15 @@ const FIGHT_ACTIONS={
   }
 };
 
-/* ===== FIN DE CINEMÁTICA (con limpieza de foco) ===== */
+/* ===== FIN DE CINEMÁTICA ===== */
 function endCinematic(who){
   cineVisible=false;
   cineEl.classList.remove('show'); cineDialogEl.classList.remove('show');
   choicePanel.classList.remove('show'); hudEl.classList.remove('show');
   cineEl.style.setProperty('--blur','0px'); cineEl.style.setProperty('--dim','0');
   state.mode='play';
-
-  if(who==='gandalf'){
-    state.metGandalf = true;
-    state.gandalfCineDone = true;
-  }
-  state.interactingWith=null; // limpiar foco SIEMPRE
+  if(who==='gandalf'){ state.metGandalf = true; }
+  state.interactingWith=null;
 }
 
 /* ===== LOOP & INIT ===== */
