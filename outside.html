@@ -2,223 +2,117 @@
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Juansin 30th birthday - outside (escenas aisladas + combate con speaker)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum=1, user-scalable=no" />
+<title>Juansin - escenas aisladas + combate con speaker (solo dpad + click NPC)</title>
 
-<!-- Pixel fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 
 <style>
-  html, body { height: 100%; margin: 0; background: #111; display: flex; justify-content: center; align-items: center; }
-  .gameboy { width: 100%; max-width: 500px; height: 100%; background: #000; display: flex; flex-direction: column;
-    padding: 12px; box-sizing: border-box; border-radius: 20px; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
-  .screen-container { flex: 1; display: flex; justify-content: center; align-items: center; background: #0B0A21; border-radius: 12px; padding: 10px; }
-  .screen { aspect-ratio: 1/1; width: 100%; background: #0B0A21; display: flex; justify-content: center; align-items: center;
-    border-radius: 8px; overflow: hidden; position: relative; box-shadow: inset 0 0 20px rgba(0,0,0,0.6); }
-  canvas { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; background: black; }
+  html, body { height:100%; margin:0; background:#111; display:flex; justify-content:center; align-items:center; }
+  .gameboy { width:100%; max-width:500px; height:100%; background:#000; display:flex; flex-direction:column; padding:12px; box-sizing:border-box; border-radius:20px; box-shadow:0 0 40px rgba(0,0,0,.6); }
+  .screen-container { flex:1; display:flex; justify-content:center; align-items:center; background:#0B0A21; border-radius:12px; padding:10px; }
+  .screen { aspect-ratio:1/1; width:100%; background:#0B0A21; display:flex; justify-content:center; align-items:center; border-radius:8px; overflow:hidden; position:relative; box-shadow:inset 0 0 20px rgba(0,0,0,.6); }
+  canvas { width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges; background:black; }
 
-  .controls { height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px; box-sizing: border-box; }
-  .dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px); gap: 0; justify-content: center; margin-left: 12px; align-content: center; overflow: visible; }
-  .img-btn, .img-act { border: none; outline: none; padding: 0; background: transparent; cursor: pointer; transition: transform 0.06s ease, filter 0.06s ease; -webkit-tap-highlight-color: transparent; }
-  .img-btn { width: 64px; height: 64px; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.85)); }
-  .img-btn.arrow::before { content: ""; display: block; width: 100%; height: 100%; background: url("assets/ui/arrow.PNG") center/contain no-repeat; image-rendering: pixelated; transform: rotate(var(--rot, 0deg)) scale(1.28); transform-origin: center center; }
+  .controls { height:40%; background:#0B0A21; display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:14px; box-sizing:border-box; }
+  .dpad { display:grid; grid-template-columns:repeat(3,64px); grid-template-rows:repeat(3,64px); gap:0; justify-content:center; margin-left:12px; align-content:center; }
+  .img-btn,.img-act{ border:none; outline:none; padding:0; background:transparent; cursor:pointer; transition:transform .06s ease, filter .06s ease; -webkit-tap-highlight-color:transparent; }
+  .img-btn{ width:64px; height:64px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.85)); }
+  .img-btn.arrow::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/arrow.PNG") center/contain no-repeat; image-rendering:pixelated; transform:rotate(var(--rot,0deg)) scale(1.28); transform-origin:center; }
   .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
-  .img-act{ width: 120px; height: 120px; filter: drop-shadow(0 5px 6px rgba(0,0,0,0.85)); margin-top: 45px; justify-self: center; }
-  .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering: pixelated; transform: scale(1.02); }
-  .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform: scale(0.95); filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7)) brightness(0.9); }
+  .img-act{ width:120px; height:120px; filter:drop-shadow(0 5px 6px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; }
+  .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
+  .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
 
-  .toast{ position:absolute; top:19px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease; white-space: nowrap; pointer-events:none; z-index:5; }
-  .toast.show{ opacity:1; }
-
-  /* ===== Diálogo ===== */
-  .dialog {
-    position: absolute;
-    left: 50%;
-    bottom: 10px;
-    transform: translateX(-50%) scaleX(0);
-    transform-origin: center bottom;
-    width: calc(100% - 24px);
-    max-width: 460px;
-    min-height: 20px;
-    box-sizing: border-box;
-    padding: 12px 16px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-radius: 10px;
-    image-rendering: pixelated;
-    z-index: 60;
-    transition: transform .22s ease;
-    background: rgba(12,12,24,0.9);
-    border: none;
-    border-top: 2px solid #3cf;
-    align-items: flex-start;
-    flex-direction: column;
-    text-align: left;
-  }
-  .dialog.show { transform: translateX(-50%) scaleX(1); }
-  .dialog-name{
-    font-family: 'Press Start 2P', system-ui;
-    font-size: 10px;
-    color:#8df;
-    margin-bottom: 4px;
-    text-shadow: 0 1px 0 #000;
-  }
-  .dialog-name:empty{ display:none; } /* narrador */
-  .dialog-text{
-    font-family: 'VT323', monospace;
-    font-size: 18px;
-    letter-spacing: 1px;
-    line-height: 1.15;
-    color: #E6F6FF;
-    min-height: 2.2em;
-  }
-  .dialog-hint{
-    margin-left:auto; border:none !important; color:#B8D7FF;
-    font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-    opacity:0; transition:opacity .18s ease;
-  }
+  /* diálogo */
+  .dialog{ position:absolute; left:50%; bottom:10px; transform:translateX(-50%) scaleX(0); transform-origin:center bottom;
+    width:calc(100% - 24px); max-width:460px; box-sizing:border-box; padding:12px 16px 16px; display:flex; gap:10px; border-radius:10px;
+    image-rendering:pixelated; z-index:60; transition:transform .22s ease; background:rgba(12,12,24,.9); border-top:2px solid #3cf; flex-direction:column; text-align:left; }
+  .dialog.show{ transform:translateX(-50%) scaleX(1); }
+  .dialog-name{ font-family:'Press Start 2P',system-ui; font-size:10px; color:#8df; margin-bottom:4px; text-shadow:0 1px 0 #000; }
+  .dialog-name:empty{ display:none; }
+  .dialog-text{ font-family:'VT323',monospace; font-size:18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
+  .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
   .dialog.ready .dialog-hint{ opacity:.9; }
 
-  /* ===== Cinemática ===== */
-  .cine{
-    position:absolute; inset:0; z-index:50; display:none;
-    --blur: 0px; --dim: 0;
-    backdrop-filter: blur(var(--blur));
-    background: rgba(0,0,0,var(--dim));
-    transition: backdrop-filter .22s ease, background .22s ease;
-  }
+  /* cine */
+  .cine{ position:absolute; inset:0; z-index:50; display:none; --blur:0px; --dim:0; backdrop-filter:blur(var(--blur)); background:rgba(0,0,0,var(--dim)); transition:backdrop-filter .22s ease, background .22s ease; }
   .cine.show{ display:block; }
-
   .cine-portraits{ position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; pointer-events:none; }
   .portrait{ width:50%; max-width:500px; position:relative; display:flex; justify-content:center; align-items:flex-end; padding:0 8px 0; }
-  .portrait img{
-    height:auto; width:auto; max-width:none; image-rendering:pixelated;
-    opacity:0; transform: translateX(var(--tx,0)); transition: transform .26s ease, opacity .26s ease, filter .18s ease;
-    margin-bottom: -60px;
-    filter: drop-shadow(0 0 18px rgba(0,0,0,.9));
-  }
-  .portrait.left  img{ --tx:-12%; margin-left: 40px;}
-  .portrait.right img{ --tx: 12%; margin-right: 40px;}
+  .portrait img{ height:auto; width:auto; max-width:none; image-rendering:pixelated; opacity:0; transform:translateX(var(--tx,0)); transition:transform .26s ease, opacity .26s ease, filter .18s ease; margin-bottom:-60px; filter:drop-shadow(0 0 18px rgba(0,0,0,.9)); }
+  .portrait.left img{ --tx:-12%; margin-left:40px; }
+  .portrait.right img{ --tx:12%; margin-right:40px; }
   .portrait.show img{ opacity:1; transform:translateX(0); }
-  /* Atenuar no hablante en combate */
-  .portrait.inactive img{ opacity:.38; filter: grayscale(40%) drop-shadow(0 0 12px rgba(0,0,0,.7)); }
+  .portrait.inactive img{ opacity:.38; filter:grayscale(40%) drop-shadow(0 0 12px rgba(0,0,0,.7)); }
 
-  /* Opciones */
-  .choice-panel{
-    position:absolute; background: rgba(12,12,24,0.95);
-    border:1px solid #3cf; border-radius:8px; z-index:70; display:none;
-    min-width:110px; padding:6px; box-shadow:0 6px 14px rgba(0,0,0,.45);
-  }
+  .choice-panel{ position:absolute; background:rgba(12,12,24,.95); border:1px solid #3cf; border-radius:8px; z-index:70; display:none; min-width:110px; padding:6px; box-shadow:0 6px 14px rgba(0,0,0,.45); }
   .choice-panel.show{ display:block; }
   .choices{ display:flex; flex-direction:column; gap:6px; }
-  .choice{
-    font-family:'VT323', monospace; font-size:16px; color:#E6F6FF;
-    padding:4px 8px; text-align:left; border:1px solid transparent; background:transparent; border-radius:4px;
-  }
-  .choice.selected{ border-color:#8df; background: rgba(60,120,255,.18); }
+  .choice{ font-family:'VT323',monospace; font-size:16px; color:#E6F6FF; padding:4px 8px; text-align:left; border:1px solid transparent; background:transparent; border-radius:4px; }
+  .choice.selected{ border-color:#8df; background:rgba(60,120,255,.18); }
 
-  /* HUD combate */
   .hud{ position:absolute; top:6px; left:0; right:0; z-index:65; pointer-events:none; display:none; }
   .hud.show{ display:block; }
-  .hpwrap{
-    position:absolute; top:0; width:45%; height:14px;
-    border-top:2px solid #444; border-bottom:2px solid #222; border-left:2px solid #222; border-right:2px solid #444;
-    background:#111; box-shadow: inset 0 0 0 2px #000;
-  }
-  .hpwrap.left{ left:8px; }
-  .hpwrap.right{ right:8px; }
-  .hplabel{
-    position:absolute; top:-10px; font-family:'Press Start 2P', system-ui; font-size:8px; letter-spacing:0.5px; color:#9cf;
-    text-shadow: 0 1px 0 #000;
-  }
-  .hpwrap.left .hplabel{ left:0; }
-  .hpwrap.right .hplabel{ right:0; }
+  .hpwrap{ position:absolute; top:0; width:45%; height:14px; border-top:2px solid #444; border-bottom:2px solid #222; border-left:2px solid #222; border-right:2px solid #444; background:#111; box-shadow:inset 0 0 0 2px #000; }
+  .hpwrap.left{ left:8px; } .hpwrap.right{ right:8px; }
+  .hplabel{ position:absolute; top:-10px; font-family:'Press Start 2P',system-ui; font-size:8px; color:#9cf; text-shadow:0 1px 0 #000; }
+  .hpwrap.left .hplabel{ left:0; } .hpwrap.right .hplabel{ right:0; }
   .hpbar{ height:100%; width:100%; position:relative; transform-origin:left center; }
   .hpwrap.right .hpbar{ transform-origin:right center; }
   .hpbar::after{ content:""; position:absolute; inset:1px; opacity:.9; }
-  .hpbar.red::after{ background:#d33; }
-  .hpbar.blue::after{ background:#29f; }
-  .hptext{ position:absolute; top:16px; font-family:'VT323', monospace; font-size:16px; color:#E6F6FF; }
-  .hpwrap.left .hptext{ left:0; }
-  .hpwrap.right .hptext{ right:0; }
+  .hpbar.red::after{ background:#d33; } .hpbar.blue::after{ background:#29f; }
+  .hptext{ position:absolute; top:16px; font-family:'VT323',monospace; font-size:16px; color:#E6F6FF; }
+  .hpwrap.left .hptext{ left:0; } .hpwrap.right .hptext{ right:0; }
 
-  /* Animaciones */
-  @keyframes shake2s {
-    0%,100% { transform: translate(0,0); }
-    10% { transform: translate(-3px,1px); }
-    20% { transform: translate(3px,-2px); }
-    30% { transform: translate(-2px,2px); }
-    40% { transform: translate(2px,-1px); }
-    50% { transform: translate(-2px,1px); }
-    60% { transform: translate(2px,2px); }
-    70% { transform: translate(-3px,-1px); }
-    80% { transform: translate(3px,1px); }
-    90% { transform: translate(-1px,0); }
-  }
-  .shaking-long { animation: shake2s 2s steps(2,end) 1; }
+  /* anims */
+  @keyframes shake2s{ 0%,100%{transform:translate(0,0)} 10%{transform:translate(-3px,1px)} 20%{translate:3px -2px} 30%{transform:translate(-2px,2px)} 40%{transform:translate(2px,-1px)} 50%{transform:translate(-2px,1px)} 60%{transform:translate(2px,2px)} 70%{transform:translate(-3px,-1px)} 80%{transform:translate(3px,1px)} 90%{transform:translate(-1px,0)} }
+  .shaking-long{ animation:shake2s 2s steps(2,end) 1; }
+  @keyframes lungeLeftLong{ from{transform:translateX(0)} to{transform:translateX(-20px)} }
+  @keyframes lungeRightLong{ from{transform:translateX(0)} to{transform:translateX(20px)} }
+  .lunge-left-long{ animation:lungeLeftLong 1.5s steps(4,end) 1; }
+  .lunge-right-long{ animation:lungeRightLong 1.5s steps(4,end) 1; }
+  @keyframes fallDownLong{ to{ transform:translateY(60px) rotate(3deg); opacity:0 } }
+  .fall-long{ animation:fallDownLong 1.5s ease forwards; }
 
-  @keyframes lungeLeftLong { from{ transform:translateX(0) } to{ transform:translateX(-20px) } }
-  @keyframes lungeRightLong{ from{ transform:translateX(0) } to{ transform:translateX(20px) } }
-  .lunge-left-long{ animation: lungeLeftLong 1.5s steps(4,end) 1; }
-  .lunge-right-long{ animation: lungeRightLong 1.5s steps(4,end) 1; }
-
-  @keyframes fallDownLong { to{ transform: translateY(60px) rotate(3deg); opacity:0 } }
-  .fall-long { animation: fallDownLong 1.5s ease forwards; }
-
-  .boot-mask{ position:absolute; inset:0; background:#000; z-index:1000; opacity:1; transition: opacity .25s ease;}
+  .boot-mask{ position:absolute; inset:0; background:#000; z-index:1000; opacity:1; transition:opacity .25s ease; }
   .boot-mask.hidden{ opacity:0; pointer-events:none; }
 </style>
 </head>
 <body>
-
 <div class="gameboy">
   <div class="screen-container">
     <div class="screen">
       <div id="bootMask" class="boot-mask"></div>
       <canvas id="game"></canvas>
 
-      <!-- Diálogo in-world -->
+      <!-- diálogo in-world -->
       <div id="dialog" class="dialog" aria-live="polite">
         <div id="dialogName" class="dialog-name"></div>
         <div id="dialogText" class="dialog-text"></div>
         <div id="dialogHint" class="dialog-hint">→</div>
       </div>
 
-      <!-- CINEMÁTICA -->
+      <!-- cine -->
       <div id="cine" class="cine">
         <div class="cine-portraits">
           <div id="pOld"   class="portrait left"><img id="imgOld"   alt="Viejo"></div>
           <div id="pJuan"  class="portrait right"><img id="imgJuan"  alt="Juan"></div>
           <div id="pEnemy" class="portrait left"><img id="imgEnemy" alt="Enemigo"></div>
         </div>
-
         <div id="cineDialog" class="dialog" style="bottom:12px;">
           <div id="cineName" class="dialog-name"></div>
           <div id="cineText" class="dialog-text"></div>
           <div id="cineHint" class="dialog-hint">→</div>
         </div>
 
-        <!-- HUD combate -->
         <div id="hud" class="hud">
-          <div id="hpEnemyWrap" class="hpwrap left" aria-label="HP Enemigo">
-            <div class="hplabel">ENEMIGO</div>
-            <div id="hpEnemyBar" class="hpbar red"></div>
-            <div id="hpEnemyTxt" class="hptext"></div>
-          </div>
-          <div id="hpJuanWrap" class="hpwrap right" aria-label="HP Juan">
-            <div class="hplabel">JUAN</div>
-            <div id="hpJuanBar" class="hpbar blue"></div>
-            <div id="hpJuanTxt" class="hptext"></div>
-          </div>
+          <div id="hpEnemyWrap" class="hpwrap left"><div class="hplabel">ENEMIGO</div><div id="hpEnemyBar" class="hpbar red"></div><div id="hpEnemyTxt" class="hptext"></div></div>
+          <div id="hpJuanWrap" class="hpwrap right"><div class="hplabel">JUAN</div><div id="hpJuanBar" class="hpbar blue"></div><div id="hpJuanTxt" class="hptext"></div></div>
         </div>
 
-        <!-- Opciones -->
-        <div id="choicePanel" class="choice-panel">
-          <div id="choices" class="choices"></div>
-        </div>
+        <div id="choicePanel" class="choice-panel"><div id="choices" class="choices"></div></div>
       </div>
     </div>
   </div>
@@ -241,87 +135,66 @@
 </div>
 
 <script>
-/* ====== ASSETS ====== */
-const BACKGROUND = "assets/locations/outside.PNG";
-const SPRITES_JUAN = {
-  size: { w: 36, h: 40 }, scale: 0.9,
-  idle: { down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
-  walk: { down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
+/* ===== ASSETS ===== */
+const BACKGROUND="assets/locations/outside.PNG";
+const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
+  idle:{ down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
+  walk:{ down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
-const NPC_GANDALF_IMG = "assets/characters/gandalf.PNG";
-const ENEMY_IMG       = "assets/characters/enemy1.PNG";
-const PORTRAIT_OLD         = "assets/characters/gandalf_big.PNG";
-const PORTRAIT_JUAN        = "assets/characters/juansin_big.PNG";
-const PORTRAIT_JUAN_FIGHT  = "assets/characters/juansin_big_fight.PNG";
-const PORTRAIT_ENEMY_FIGHT = "assets/characters/enemy1_big.PNG";
+const NPC_GANDALF_IMG="assets/characters/gandalf.PNG";
+const ENEMY_IMG="assets/characters/enemy1.PNG";
+const PORTRAIT_OLD="assets/characters/gandalf_big.PNG";
+const PORTRAIT_JUAN="assets/characters/juansin_big.PNG";
+const PORTRAIT_JUAN_FIGHT="assets/characters/juansin_big_fight.PNG";
+const PORTRAIT_ENEMY_FIGHT="assets/characters/enemy1_big.PNG";
 
-/* ====== AUDIO ====== */
-const bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.35;
+/* ===== CANVAS ===== */
+const roomOriginal={w:512,h:350};
+const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
+let bgRect={dx:0,dy:0,dw:0,dh:0}, bgImg=null, sprites=null, npcGandalfImg=null, enemyImg=null;
 
-/* ====== CANVAS ====== */
-const roomOriginal = { w: 512, h: 350 };
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+const player={x:0,y:0,speed:230,dir:'down',moving:false,frame:0,frameTime:0};
+const gandalf={x:0,y:0}; const enemy1={x:0,y:0,alive:true};
 
-let bgRect={dx:0,dy:0,dw:0,dh:0};
-let bgImg=null, sprites=null, npcGandalfImg=null, enemyImg=null;
-
-const player={ x:0, y:0, speed:230, dir:'down', moving:false, frame:0, frameTime:0 };
-const gandalf={ x:0, y:0 };
-const enemy1 ={ x:0, y:0, alive:true };
-
-/* ====== INPUT ====== */
-const keys={ up:false,down:false,left:false,right:false };
-const mapKey={ ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down', ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right' };
-window.addEventListener('keydown', e=>{ const d=mapKey[e.code]; if(d){ keys[d]=true; e.preventDefault(); }});
-window.addEventListener('keyup',   e=>{ const d=mapKey[e.code]; if(d){ keys[d]=false; e.preventDefault(); }});
-
-function bindHold(btn,on,off){
-  const start=e=>{ e.preventDefault(); on(); };
-  const end  =e=>{ e.preventDefault(); off(); };
-  btn.addEventListener('touchstart', start, {passive:false});
-  btn.addEventListener('touchend', end, {passive:false});
-  btn.addEventListener('touchcancel', end, {passive:false});
-  btn.addEventListener('mousedown', start);
-  window.addEventListener('mouseup', end);
-}
-bindHold(document.getElementById('btn-up'),    ()=>keys.up=true,    ()=>keys.up=false);
-bindHold(document.getElementById('btn-down'),  ()=>keys.down=true,  ()=>keys.down=false);
-bindHold(document.getElementById('btn-left'),  ()=>keys.left=true,  ()=>keys.left=false);
-bindHold(document.getElementById('btn-right'), ()=>keys.right=true, ()=>keys.right=false);
-
+/* ===== INPUT (SOLO D-PAD Y BOTÓN) ===== */
+const keys={up:false,down:false,left:false,right:false};
+function bindHold(btn,on,off){ const start=e=>{e.preventDefault();on();}; const end=e=>{e.preventDefault();off();}; btn.addEventListener('touchstart',start,{passive:false}); btn.addEventListener('touchend',end,{passive:false}); btn.addEventListener('touchcancel',end,{passive:false}); btn.addEventListener('mousedown',start); window.addEventListener('mouseup',end);}
+bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
+bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
+bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
+bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
 const btnAct=document.getElementById('btn-act');
-btnAct.addEventListener('click', e=>{ e.preventDefault(); onAction(); });
-btnAct.addEventListener('touchstart', e=>{ e.preventDefault(); onAction(); }, {passive:false});
+btnAct.addEventListener('click', e=>{e.preventDefault(); onAction();});
+btnAct.addEventListener('touchstart', e=>{e.preventDefault(); onAction();},{passive:false});
 
-/* ====== UTIL ====== */
-const loadImage = (src)=>new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; });
-async function preloadSprites(map){
-  const out={ idle:{}, walk:{}, size:map.size, scale:map.scale };
-  for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage));
-  return out;
-}
-function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
-function isNear(obj, rad=28){ return dist(player,obj)<rad; }
+/* ==== CLICK EN NPCS (canvas) ==== */
+canvas.addEventListener('click', (e)=>{
+  if(Scene.state!=='free') return; // solo desde juego libre
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  const near=(obj,radPx)=>{ const dx=(x-obj.x), dy=(y-obj.y); return Math.hypot(dx,dy) < radPx; };
+  // radio en píxeles de pantalla (aprox el sprite)
+  const r=32;
+  if(enemy1.alive && near(enemy1,r)){ startEnemyIntro(); return; }
+  if(near(gandalf,r)){ startGandalfDialog(); return; }
+});
 
-/* ====== DRAW ====== */
+/* ===== UTIL ===== */
+const loadImage=src=>new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; });
+async function preloadSprites(map){ const out={idle:{},walk:{},size:map.size,scale:map.scale}; for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage)); return out; }
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+function isNear(obj,rad=34){ return dist(player,obj)<rad; } // pelín más laxo
+
+/* ===== DRAW ===== */
 function resizeCanvas(){
   const screen=document.querySelector('.screen');
   canvas.width=screen.clientWidth; canvas.height=screen.clientHeight;
-
   if(bgImg){
-    const scaleFactor = Math.min(canvas.width/roomOriginal.w, canvas.height/roomOriginal.h);
-    bgRect.dw = roomOriginal.w*scaleFactor; bgRect.dh = roomOriginal.h*scaleFactor;
-    bgRect.dx = (canvas.width - bgRect.dw)/2; bgRect.dy = (canvas.height - bgRect.dh)/2;
-
-    player.x = bgRect.dx + bgRect.dw*0.5;
-    player.y = bgRect.dy + bgRect.dh*0.80;
-
-    gandalf.x = bgRect.dx + bgRect.dw*0.52;
-    gandalf.y = bgRect.dy + bgRect.dh*0.35;
-
-    enemy1.x  = bgRect.dx + bgRect.dw*0.30;
-    enemy1.y  = bgRect.dy + bgRect.dh*0.58;
+    const k=Math.min(canvas.width/roomOriginal.w, canvas.height/roomOriginal.h);
+    bgRect.dw=roomOriginal.w*k; bgRect.dh=roomOriginal.h*k; bgRect.dx=(canvas.width-bgRect.dw)/2; bgRect.dy=(canvas.height-bgRect.dh)/2;
+    player.x=bgRect.dx+bgRect.dw*0.5; player.y=bgRect.dy+bgRect.dh*0.80;
+    gandalf.x=bgRect.dx+bgRect.dw*0.52; gandalf.y=bgRect.dy+bgRect.dh*0.35;
+    enemy1.x =bgRect.dx+bgRect.dw*0.30; enemy1.y =bgRect.dy+bgRect.dh*0.58;
   }
   if(Scene.cineVisible) sizePortraitsToBackground();
   if(choicePanel.classList.contains('show')) positionChoices();
@@ -332,433 +205,251 @@ function update(dt){
   if(Scene.state!=='free') return;
   const vx=(keys.left?-1:0)+(keys.right?1:0);
   const vy=(keys.up?-1:0)+(keys.down?1:0);
-  player.moving=(vx!==0||vy!==0);
-
+  player.moving=(vx||vy);
   if(player.moving){
-    player.dir = Math.abs(vx) > Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
-    const len = Math.hypot(vx,vy)||1;
-    player.x += (vx/len)*player.speed*dt;
-    player.y += (vy/len)*player.speed*dt;
-
-    const halfW=Math.round(sprites.size.w*sprites.scale)/2;
-    const halfH=Math.round(sprites.size.h*sprites.scale)/2;
+    player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
+    const len=Math.hypot(vx,vy)||1;
+    player.x+=(vx/len)*player.speed*dt; player.y+=(vy/len)*player.speed*dt;
+    const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
+    const halfW=Math.round(sw*s)/2, halfH=Math.round(sh*s)/2;
     const minX=bgRect.dx+halfW, maxX=bgRect.dx+bgRect.dw-halfW;
     const minY=bgRect.dy+halfH, maxY=bgRect.dy+bgRect.dh-halfH;
-    player.x=Math.max(minX,Math.min(maxX,player.x));
-    player.y=Math.max(minY,Math.min(maxY,player.y));
-
-    player.frameTime+=dt;
-    if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
+    player.x=Math.max(minX,Math.min(maxX,player.x)); player.y=Math.max(minY,Math.min(maxY,player.y));
+    player.frameTime+=dt; if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else player.frame=0;
 }
-
 function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(!bgImg) return;
-
-  ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
-
-  const things=[];
-  if(enemy1.alive){
-    things.push({ y:enemy1.y, draw:()=>{
-      const w=36,h=40,s=0.9; const dw=Math.round(w*s), dh=Math.round(h*s);
-      ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath();
-      ctx.ellipse(Math.round(enemy1.x), Math.round(enemy1.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
-      ctx.drawImage(enemyImg, Math.round(enemy1.x-dw/2), Math.round(enemy1.y-dh/2), dw, dh);
-    }});
-  }
-  things.push({ y:gandalf.y, draw:()=>{
-    const w=36,h=40,s=0.9; const dw=Math.round(w*s), dh=Math.round(h*s);
-    ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath();
-    ctx.ellipse(Math.round(gandalf.x), Math.round(gandalf.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
-    ctx.drawImage(npcGandalfImg, Math.round(gandalf.x-dw/2), Math.round(gandalf.y-dh/2), dw, dh);
-  }});
-  things.push({ y:player.y, draw:()=>{
-    const sw=sprites.size.w, sh=sprites.size.h;
-    const dw=Math.round(sw*sprites.scale), dh=Math.round(sh*sprites.scale);
-    const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
-    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath();
-    ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
-    ctx.drawImage(img, 0,0,sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2), dw, dh);
-  }});
-  things.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
+  ctx.clearRect(0,0,canvas.width,canvas.height); if(!bgImg) return;
+  ctx.drawImage(bgImg,bgRect.dx,bgRect.dy,bgRect.dw,bgRect.dh);
+  const items=[];
+  if(enemy1.alive){ items.push({y:enemy1.y,draw:()=>{ const w=36,h=40,s=0.9; const dw=Math.round(w*s), dh=Math.round(h*s);
+    ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(Math.round(enemy1.x), Math.round(enemy1.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.drawImage(enemyImg, Math.round(enemy1.x-dw/2), Math.round(enemy1.y-dh/2), dw, dh); }}); }
+  items.push({y:gandalf.y,draw:()=>{ const w=36,h=40,s=0.9; const dw=Math.round(w*s), dh=Math.round(h*s);
+    ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(Math.round(gandalf.x), Math.round(gandalf.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.drawImage(npcGandalfImg, Math.round(gandalf.x-dw/2), Math.round(gandalf.y-dh/2), dw, dh); }});
+  items.push({y:player.y,draw:()=>{ const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
+    const dw=Math.round(sw*s), dh=Math.round(sh*s); const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
+    ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.drawImage(img,0,0,sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2), dw, dh); }});
+  items.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 }
 
-/* ====== UI refs ====== */
-const dialogEl = document.getElementById('dialog');
-const dialogName = document.getElementById('dialogName');
-const dialogText = document.getElementById('dialogText');
-const dialogHint = document.getElementById('dialogHint');
-
-const cineEl=document.getElementById('cine');
-const cineDialogEl=document.getElementById('cineDialog');
-const cineName=document.getElementById('cineName');
-const cineText=document.getElementById('cineText');
-const cineHint=document.getElementById('cineHint');
-
+/* ===== UI refs ===== */
+const dialogEl=document.getElementById('dialog'), dialogName=document.getElementById('dialogName'), dialogText=document.getElementById('dialogText'), dialogHint=document.getElementById('dialogHint');
+const cineEl=document.getElementById('cine'), cineDialogEl=document.getElementById('cineDialog'), cineName=document.getElementById('cineName'), cineText=document.getElementById('cineText'), cineHint=document.getElementById('cineHint');
 const pOld=document.getElementById('pOld'), imgOld=document.getElementById('imgOld');
 const pJuan=document.getElementById('pJuan'), imgJuan=document.getElementById('imgJuan');
 const pEnemy=document.getElementById('pEnemy'), imgEnemy=document.getElementById('imgEnemy');
+const choicePanel=document.getElementById('choicePanel'), choicesEl=document.getElementById('choices');
+const hudEl=document.getElementById('hud'); const hpEnemyBar=document.getElementById('hpEnemyBar'); const hpJuanBar=document.getElementById('hpJuanBar'); const hpEnemyTxt=document.getElementById('hpEnemyTxt'); const hpJuanTxt=document.getElementById('hpJuanTxt');
 
-const choicePanel=document.getElementById('choicePanel');
-const choicesEl=document.getElementById('choices');
-
-const hudEl=document.getElementById('hud');
-const hpEnemyBar=document.getElementById('hpEnemyBar');
-const hpJuanBar =document.getElementById('hpJuanBar');
-const hpEnemyTxt=document.getElementById('hpEnemyTxt');
-const hpJuanTxt =document.getElementById('hpJuanTxt');
-
-/* ====== TYPER (compartido) ====== */
+/* ===== typer ===== */
 let typingTimer=null, typingSpeed=22, isTyping=false, currentFullText=null;
-function typeInto(el,text,done){
-  stopTyping();
-  el.textContent=''; currentFullText=text; isTyping=true; let i=0;
-  typingTimer=setInterval(()=>{
-    if(i<text.length){ el.textContent += text[i++]; }
-    else{ stopTyping(); el.parentElement.classList.add('ready'); if(done)done(); }
-  }, typingSpeed);
-}
+function typeInto(el,text,done){ stopTyping(); el.textContent=''; currentFullText=text; isTyping=true; let i=0; typingTimer=setInterval(()=>{ if(i<text.length){ el.textContent+=text[i++]; } else { stopTyping(); el.parentElement.classList.add('ready'); if(done)done(); } }, typingSpeed); }
 function stopTyping(){ if(typingTimer){ clearInterval(typingTimer); typingTimer=null; } isTyping=false; }
 function completeTyping(el){ stopTyping(); if(currentFullText!=null){ el.textContent=currentFullText; el.parentElement.classList.add('ready'); } }
 
-/* ====== TIMERS SAFE ====== */
-let activeTimers=[];
-function setT(fn,ms){ const id=setTimeout(fn,ms); activeTimers.push(id); return id; }
-function clearAllTimers(){ activeTimers.forEach(id=>clearTimeout(id)); activeTimers=[]; }
+/* ===== timers ===== */
+let activeTimers=[]; function setT(fn,ms){ const id=setTimeout(fn,ms); activeTimers.push(id); return id; }
+function clearAllTimers(){ activeTimers.forEach(clearTimeout); activeTimers=[]; }
 
-/* ====== ANIM HELPERS ====== */
-function forceAnim(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+/* ===== anim helpers ===== */
+function forceAnim(el,cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function doShakeLong(el){ forceAnim(el,'shaking-long'); }
-function doLungeLong(el, dir){ forceAnim(el, dir==='left'?'lunge-left-long':'lunge-right-long'); }
+function doLungeLong(el,dir){ forceAnim(el,dir==='left'?'lunge-left-long':'lunge-right-long'); }
 function doFallLong(el){ forceAnim(el,'fall-long'); }
 
-/* ====== SCENE MANAGER ====== */
-const Scene={
-  state:'free',        // 'free' | 'gandalf_dialog' | 'gandalf_cine' | 'enemy_intro' | 'enemy_fight'
-  cineVisible:false,
-  lockUntil:0,
-  set(s){
-    // salida segura de escena anterior
-    stopTyping(); clearAllTimers();
-    dialogEl.classList.remove('show','ready');
-    cineDialogEl.classList.remove('ready');
-    cineName.textContent=''; cineText.textContent='';
-    choicePanel.classList.remove('show');
-    hudEl.classList.remove('show');
-    // retratos
-    [pOld,pJuan,pEnemy].forEach(p=>{ p.classList.remove('show','inactive'); });
-    // overlay cine
+/* ===== Scene Manager ===== */
+const Scene={ state:'free', cineVisible:false, lockUntil:0,
+  set(s){ stopTyping(); clearAllTimers();
+    dialogEl.classList.remove('show','ready'); cineDialogEl.classList.remove('ready');
+    cineName.textContent=''; cineText.textContent=''; choicePanel.classList.remove('show'); hudEl.classList.remove('show');
+    [pOld,pJuan,pEnemy].forEach(p=>p.classList.remove('show','inactive'));
     if(s==='free'){ cineEl.classList.remove('show'); this.cineVisible=false; cineEl.style.setProperty('--blur','0px'); cineEl.style.setProperty('--dim','0'); }
     this.state=s;
   },
   lock(ms){ this.lockUntil=performance.now()+ms; },
   locked(){ return performance.now()<this.lockUntil; }
 };
+function showCineOverlay(){ cineEl.style.setProperty('--blur','2px'); cineEl.style.setProperty('--dim','0.18'); cineEl.classList.add('show'); Scene.cineVisible=true; requestAnimationFrame(()=>{ cineEl.style.setProperty('--blur','4px'); cineEl.style.setProperty('--dim','0.25'); }); }
+function sizePortraitsToBackground(){ const h=Math.round(bgRect.dh*1.5); [imgOld,imgJuan,imgEnemy].forEach(i=>{ if(i) i.style.height=h+'px'; }); }
+function setSpeaker(whom){ pEnemy.classList.add('show'); pJuan.classList.add('show'); pOld.classList.remove('show'); pEnemy.classList.toggle('inactive', !(whom==='enemy')); pJuan.classList.toggle('inactive', !(whom==='juan')); }
 
-function showCineOverlay(){
-  cineEl.style.setProperty('--blur','2px');
-  cineEl.style.setProperty('--dim','0.18');
-  cineEl.classList.add('show');
-  Scene.cineVisible=true;
-  requestAnimationFrame(()=>{
-    cineEl.style.setProperty('--blur','4px');
-    cineEl.style.setProperty('--dim','0.25');
-  });
-}
-function sizePortraitsToBackground(){
-  const h = Math.round(bgRect.dh * 1.5);
-  [imgOld, imgJuan, imgEnemy].forEach(i=>{ if(i) i.style.height = h+'px'; });
-}
-function setSpeaker(whom){ // 'enemy' | 'juan' | null
-  // ambos en escena, uno atenuado
-  pEnemy.classList.add('show'); pJuan.classList.add('show');
-  pOld.classList.remove('show');
-  pEnemy.classList.toggle('inactive', !(whom==='enemy'));
-  pJuan.classList.toggle('inactive', !(whom==='juan'));
-}
-
-/* ====== ACTION ROUTER ====== */
+/* ===== Acción ===== */
 function onAction(){
   if(Scene.locked()) return;
 
   if(Scene.state==='free'){
-    const target = getClosestInteractable();
-    if(!target) return;
-    if(target==='gandalf'){
-      startGandalfDialog();
-    } else if(target==='enemy'){
-      startEnemyIntro();
-    }
+    // cercanía o nada
+    if(enemy1.alive && isNear(enemy1)){ startEnemyIntro(); return; }
+    if(isNear(gandalf)){ startGandalfDialog(); return; }
     return;
   }
 
   if(Scene.state==='gandalf_dialog'){
     if(isTyping){ completeTyping(dialogText); return; }
-    advanceGandalfDialog();
-    return;
+    advanceGandalfDialog(); return;
   }
 
   if(Scene.state==='gandalf_cine'){
     if(isTyping){ completeTyping(cineText); return; }
-    Gandalf.advance();
-    return;
+    Gandalf.advance(); return;
   }
 
   if(Scene.state==='enemy_intro'){
     if(isTyping){ completeTyping(dialogText); return; }
-    // cerrar intro y saltar a combate
     dialogEl.classList.remove('show','ready');
-    startEnemyFight();
-    return;
+    startEnemyFight(); return;
   }
 
   if(Scene.state==='enemy_fight'){
     if(isTyping){ completeTyping(cineText); return; }
-    // si hay opciones abiertas, confirmar
     if(Fight.inChoices){ Fight.confirmChoice(); return; }
-    // si no, avanzar turno según script
     Fight.advance();
   }
 }
 
-/* ====== GANDALF SCENE ====== */
+/* ===== Gandalf ===== */
 const Gandalf={
   nodes:{
-    start1:{who:'???', show:'old',  talk:'Qué bueno que te he encontrado.', next:'start2'},
+    start1:{who:'???', show:'old', talk:'Qué bueno que te he encontrado.', next:'start2'},
     start2:{who:'Juan', show:'juan', talk:'¿Quién eres??', next:'start3'},
     start3:{who:'Gandalf', show:'old', talk:'Puedes llamarme Gandalf.', next:'choice1'},
     choice1:{who:'Gandalf', show:'old', talk:'¿Quieres que te guíe o prefieres explorar?',
-             choices:[{label:'Guíame', next:'guide1'},{label:'Prefiero explorar', next:'explore1'}]},
+      choices:[{label:'Guíame',next:'guide1'},{label:'Prefiero explorar',next:'explore1'}]},
     guide1:{who:'Gandalf', show:'old', talk:'Entonces sígueme, pero pisa donde yo pise.', next:null},
     explore1:{who:'Gandalf', show:'old', talk:'Como quieras. El norte guarda respuestas.', next:null}
   },
   id:null,
   showNode(nd){
-    pEnemy.classList.remove('show','inactive'); // asegurar combate fuera
-    if(nd.show==='old'){ pOld.classList.add('show'); pJuan.classList.remove('show'); }
-    else { pJuan.classList.add('show'); pOld.classList.remove('show'); }
-    cineName.textContent=nd.who||'';
-    cineDialogEl.classList.add('show'); cineDialogEl.classList.remove('ready');
-    cineHint.style.opacity=0;
+    pEnemy.classList.remove('show','inactive');
+    if(nd.show==='old'){ pOld.classList.add('show'); pJuan.classList.remove('show'); } else { pJuan.classList.add('show'); pOld.classList.remove('show'); }
+    cineName.textContent=nd.who||''; cineDialogEl.classList.add('show'); cineDialogEl.classList.remove('ready'); cineHint.style.opacity=0;
     typeInto(cineText, nd.talk, ()=>{ cineHint.style.opacity=1; });
-    // opciones
     if(nd.choices){ Fight.buildChoices(nd.choices); Fight.openChoices(); } else { Fight.closeChoices(); }
   },
   advance(){
     const nd=this.nodes[this.id];
-    if(nd && nd.choices) return; // se eligen con confirmChoice()
+    if(nd && nd.choices) return; // se decide con Acción (confirmChoice)
     if(nd && nd.next){ this.id=nd.next; this.showNode(this.nodes[this.id]); }
-    else{ // fin
-      Scene.set('free'); player.dir='down';
-      State.metGandalf = true;
-    }
+    else{ Scene.set('free'); State.metGandalf=true; }
   }
 };
-const State={ metGandalf:false, metEnemy:false, enemyDefeated:false };
+const State={ metGandalf:false, enemyDefeated:false };
 
 function startGandalfDialog(){
   Scene.set('gandalf_dialog');
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent= State.metGandalf ? 'Gandalf' : '???';
   dialogHint.style.opacity=0;
-  const line = State.metGandalf ? 'Ya sabes lo que tienes que hacer.' : 'Hola, chico...';
-  typeInto(dialogText, line, ()=> dialogHint.style.opacity=1);
+  typeInto(dialogText, State.metGandalf ? 'Ya sabes lo que tienes que hacer.' : 'Hola, chico...', ()=> dialogHint.style.opacity=1);
 }
 function advanceGandalfDialog(){
-  const wasMet = State.metGandalf;
+  const wasMet=State.metGandalf;
   dialogEl.classList.remove('show','ready');
-  if(wasMet){
-    Scene.set('free');
-  }else{
-    // pasar a cine
-    startGandalfCine();
-  }
+  if(wasMet){ Scene.set('free'); }
+  else { startGandalfCine(); }
 }
 async function startGandalfCine(){
   Scene.set('gandalf_cine'); showCineOverlay();
-  const [oldB, juanB] = await Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
+  const [oldB,juanB]=await Promise.all([loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN)]);
   imgOld.src=oldB.src; imgJuan.src=juanB.src; sizePortraitsToBackground();
-  pEnemy.classList.remove('show','inactive');
-  pOld.classList.add('show'); pJuan.classList.remove('show');
-  hudEl.classList.remove('show');
-  Gandalf.id='start1';
-  Gandalf.showNode(Gandalf.nodes[Gandalf.id]);
+  pOld.classList.add('show'); pJuan.classList.remove('show'); hudEl.classList.remove('show');
+  Gandalf.id='start1'; Gandalf.showNode(Gandalf.nodes[Gandalf.id]);
 }
 
-/* ====== FIGHT SCENE ====== */
+/* ===== Fight ===== */
 const Fight={
-  hpEnemy:100, hpJuan:100,
-  step:0, // 0: pre, 1: enemyTurn1 done -> wait choice, 2: enemyTurn2 done -> wait choice, 3: finished
-  inChoices:false, currentChoices:null, choiceIndex:0,
-
-  updateHud(){
-    this.hpEnemy=Math.max(0,Math.min(100,this.hpEnemy));
-    this.hpJuan =Math.max(0,Math.min(100,this.hpJuan));
-    hpEnemyBar.style.transform=`scaleX(${this.hpEnemy/100})`;
-    hpJuanBar .style.transform=`scaleX(${this.hpJuan/100})`;
-    hpEnemyTxt.textContent=`${this.hpEnemy}|100`;
-    hpJuanTxt .textContent=`${this.hpJuan}|100`;
-  },
-
-  /* choices UI */
-  buildChoices(list){
-    this.currentChoices=list; this.choiceIndex=0;
-    choicesEl.innerHTML='';
-    list.forEach((c,i)=>{ const div=document.createElement('div'); div.className='choice'+(i===0?' selected':''); div.textContent=c.label; choicesEl.appendChild(div); });
-  },
-  openChoices(){
-    if(!this.currentChoices) return;
-    this.inChoices=true; positionChoices(); choicePanel.classList.add('show');
-  },
+  hpEnemy:100, hpJuan:100, step:0, inChoices:false, currentChoices:null, choiceIndex:0,
+  updateHud(){ this.hpEnemy=Math.max(0,Math.min(100,this.hpEnemy)); this.hpJuan=Math.max(0,Math.min(100,this.hpJuan));
+    hpEnemyBar.style.transform=`scaleX(${this.hpEnemy/100})`; hpJuanBar.style.transform=`scaleX(${this.hpJuan/100})`;
+    hpEnemyTxt.textContent=`${this.hpEnemy}|100`; hpJuanTxt.textContent=`${this.hpJuan}|100`; },
+  buildChoices(list){ this.currentChoices=list; this.choiceIndex=0; choicesEl.innerHTML=''; list.forEach((c,i)=>{ const d=document.createElement('div'); d.className='choice'+(i===0?' selected':''); d.textContent=c.label; choicesEl.appendChild(d); }); },
+  openChoices(){ if(!this.currentChoices) return; this.inChoices=true; positionChoices(); choicePanel.classList.add('show'); },
   closeChoices(){ this.inChoices=false; choicePanel.classList.remove('show'); },
-  moveChoice(dir){
-    if(!this.inChoices||!this.currentChoices) return;
-    const n=this.currentChoices.length;
-    if(dir==='up') this.choiceIndex=(this.choiceIndex-1+n)%n;
-    if(dir==='down') this.choiceIndex=(this.choiceIndex+1)%n;
-    [...choicesEl.children].forEach((el,i)=>el.classList.toggle('selected', i===this.choiceIndex));
-  },
-  confirmChoice(){
-    if(!this.inChoices||!this.currentChoices) return;
-    const key = this.currentChoices[this.choiceIndex].next;
-    this.closeChoices();
-    if(key==='juanAttack1') this.juanAttack1();
-    else if(key==='juanFinish') this.juanFinish();
-  },
-
-  /* flow */
-  start(){
-    this.hpEnemy=100; this.hpJuan=100; this.updateHud();
-    this.step=0; this.closeChoices();
-    cineDialogEl.classList.add('show'); hudEl.classList.add('show');
-    setSpeaker('enemy'); // empieza enemigo hablando
-    cineName.textContent='Enemigo';
-    typeInto(cineText,'Soy tu enemigo. Te vas a enterar con este golpe.', ()=>{
-      doLungeLong(imgEnemy,'right'); Scene.lock(2000);
-      setT(()=>{
-        setSpeaker('juan'); doShakeLong(imgJuan); this.hpJuan-=20; this.updateHud();
-        setT(()=>{
-          cineName.textContent=''; typeInto(cineText,'El enemigo te golpeó con fuerza. Es tu turno.\n¿Cómo vas a contraatacar?', ()=>{
-            this.buildChoices([{label:'Puñetazo', next:'juanAttack1'},{label:'Patada giratoria', next:'juanAttack1'}]);
-            this.openChoices();
-            this.step=1;
-          });
-        },120);
-      },1500);
-    });
-  },
-
-  enemyTurn2(){
-    setSpeaker('enemy'); cineName.textContent='Enemigo';
-    typeInto(cineText,'No has tenido suficiente. ¡Toma polvo a los ojos!', ()=>{
-      doLungeLong(imgEnemy,'right'); Scene.lock(2000);
-      setT(()=>{
-        setSpeaker('juan'); doShakeLong(imgJuan); this.hpJuan-=15; this.updateHud();
-        setT(()=>{
-          cineName.textContent=''; typeInto(cineText,'El enemigo te cegó con polvo. Es tu turno.\n¿Cómo vas a contraatacar?', ()=>{
-            this.buildChoices([{label:'Golpe final', next:'juanFinish'},{label:'Uppercut', next:'juanFinish'}]);
-            this.openChoices(); this.step=2;
-          });
-        },120);
-      },1500);
-    });
-  },
-
-  juanAttack1(){
-    setSpeaker('juan'); cineName.textContent='Juan';
-    typeInto(cineText,'¡Allá voy!', ()=>{
-      doLungeLong(imgJuan,'left'); Scene.lock(2000);
-      setT(()=>{
-        setSpeaker('enemy'); doShakeLong(imgEnemy); this.hpEnemy=50; this.updateHud();
-        setT(()=> this.enemyTurn2(), 500);
-      },1500);
-    });
-  },
-
-  juanFinish(){
-    setSpeaker('juan'); cineName.textContent='Juan';
-    typeInto(cineText,'¡Esto se acaba!', ()=>{
-      doLungeLong(imgJuan,'left'); Scene.lock(2000);
-      setT(()=>{
-        setSpeaker('enemy'); doShakeLong(imgEnemy); this.hpEnemy=0; this.updateHud();
-        setT(()=>{
-          doFallLong(imgEnemy);
-          setT(()=>{
-            setSpeaker('juan'); cineName.textContent='Juan';
-            typeInto(cineText,'¡He ganado!', ()=>{
-              State.enemyDefeated=true; enemy1.alive=false;
-              setT(()=> Scene.set('free'), 420);
-            });
-          },900);
-        },400);
-      },1500);
-    });
-  },
-
-  advance(){
-    // si no hay choices y toca avanzar: nada que hacer, el flujo ya encadena con timeouts
-  }
+  moveChoice(dir){ if(!this.inChoices||!this.currentChoices) return; const n=this.currentChoices.length; this.choiceIndex=(this.choiceIndex+(dir==='up'?-1:1)+n)%n; [...choicesEl.children].forEach((el,i)=>el.classList.toggle('selected', i===this.choiceIndex)); },
+  confirmChoice(){ if(!this.inChoices||!this.currentChoices) return; const key=this.currentChoices[this.choiceIndex].next; this.closeChoices(); if(key==='juanAttack1') this.juanAttack1(); else if(key==='juanFinish') this.juanFinish(); },
+  advance(){ /* flujo encadenado por timeouts */ }
 };
-
 function positionChoices(){
-  const screen=document.querySelector('.screen').getBoundingClientRect();
-  const dlg=cineDialogEl.getBoundingClientRect();
-  const panel=choicePanel;
-  panel.style.visibility='hidden'; panel.classList.add('show');
-  const pr=panel.getBoundingClientRect(); const gap=6;
-  const top=(dlg.top - screen.top) - pr.height - gap;
-  const left=(dlg.right - screen.left) - pr.width;
-  panel.style.top=Math.max(0, top)+'px'; panel.style.left=Math.max(0, left)+'px';
-  panel.style.right=''; panel.style.bottom=''; panel.style.visibility='';
+  const screen=document.querySelector('.screen').getBoundingClientRect(); const dlg=cineDialogEl.getBoundingClientRect(); const panel=choicePanel;
+  panel.style.visibility='hidden'; panel.classList.add('show'); const pr=panel.getBoundingClientRect(); const gap=6;
+  const top=(dlg.top-screen.top)-pr.height-gap; const left=(dlg.right-screen.left)-pr.width;
+  panel.style.top=Math.max(0,top)+'px'; panel.style.left=Math.max(0,left)+'px'; panel.style.right=''; panel.style.bottom=''; panel.style.visibility='';
 }
 ['click','touchstart'].forEach(evt=>{
-  document.getElementById('btn-up').addEventListener(evt, e=>{ if(Scene.state==='enemy_fight' && Fight.inChoices){ e.preventDefault(); Fight.moveChoice('up'); } }, {passive:false});
-  document.getElementById('btn-down').addEventListener(evt, e=>{ if(Scene.state==='enemy_fight' && Fight.inChoices){ e.preventDefault(); Fight.moveChoice('down'); } }, {passive:false});
+  document.getElementById('btn-up').addEventListener(evt, e=>{ if(Scene.state==='gandalf_cine' && Gandalf.nodes[Gandalf.id]?.choices) { e.preventDefault(); Fight.moveChoice('up'); }
+                                                               if(Scene.state==='enemy_fight' && Fight.inChoices){ e.preventDefault(); Fight.moveChoice('up'); } }, {passive:false});
+  document.getElementById('btn-down').addEventListener(evt, e=>{ if(Scene.state==='gandalf_cine' && Gandalf.nodes[Gandalf.id]?.choices) { e.preventDefault(); Fight.moveChoice('down'); }
+                                                                 if(Scene.state==='enemy_fight' && Fight.inChoices){ e.preventDefault(); Fight.moveChoice('down'); } }, {passive:false});
 });
 
-/* ====== STARTERS ====== */
+/* narrativa combate */
 function startEnemyIntro(){
   Scene.set('enemy_intro');
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
-  dialogName.textContent='???';
-  dialogHint.style.opacity=0;
-  typeInto(dialogText, '¡Ajá!', ()=> dialogHint.style.opacity=1);
+  dialogName.textContent='???'; dialogHint.style.opacity=0;
+  typeInto(dialogText,'¡Ajá!', ()=> dialogHint.style.opacity=1);
 }
 async function startEnemyFight(){
   Scene.set('enemy_fight'); showCineOverlay();
-  const [juanB, enemyB] = await Promise.all([ loadImage(PORTRAIT_JUAN_FIGHT), loadImage(PORTRAIT_ENEMY_FIGHT) ]);
+  const [juanB, enemyB]=await Promise.all([loadImage(PORTRAIT_JUAN_FIGHT), loadImage(PORTRAIT_ENEMY_FIGHT)]);
   imgJuan.src=juanB.src; imgEnemy.src=enemyB.src; sizePortraitsToBackground();
-  pOld.classList.remove('show','inactive');
-  setSpeaker('enemy'); // muestra ambos y atenúa al no hablante (Juan)
-  Fight.start();
+  cineDialogEl.classList.add('show'); hudEl.classList.add('show');
+  Fight.hpEnemy=100; Fight.hpJuan=100; Fight.updateHud();
+  // Turno enemigo 1
+  setSpeaker('enemy'); cineName.textContent='Enemigo';
+  typeInto(cineText,'Soy tu enemigo. Te vas a enterar con este golpe.', ()=>{
+    doLungeLong(imgEnemy,'right'); Scene.lock(2000);
+    setT(()=>{ setSpeaker('juan'); doShakeLong(imgJuan); Fight.hpJuan-=20; Fight.updateHud();
+      setT(()=>{ cineName.textContent=''; typeInto(cineText,'El enemigo te golpeó con fuerza. Es tu turno.\n¿Cómo vas a contraatacar?', ()=>{
+        Fight.buildChoices([{label:'Puñetazo',next:'juanAttack1'},{label:'Patada giratoria',next:'juanAttack1'}]); Fight.openChoices();
+      }); },120);
+    },1500);
+  });
 }
-
-/* ====== LOOP & INIT ====== */
-function loop(now){
-  if(!loop.last) loop.last=now;
-  const dt=Math.min(1/30,(now-loop.last)/1000);
-  loop.last=now;
-  update(dt); draw();
-  requestAnimationFrame(loop);
+function enemyTurn2(){
+  setSpeaker('enemy'); cineName.textContent='Enemigo';
+  typeInto(cineText,'No has tenido suficiente. ¡Toma polvo a los ojos!', ()=>{
+    doLungeLong(imgEnemy,'right'); Scene.lock(2000);
+    setT(()=>{ setSpeaker('juan'); doShakeLong(imgJuan); Fight.hpJuan-=15; Fight.updateHud();
+      setT(()=>{ cineName.textContent=''; typeInto(cineText,'El enemigo te cegó con polvo. Es tu turno.\n¿Cómo vas a contraatacar?', ()=>{
+        Fight.buildChoices([{label:'Golpe final',next:'juanFinish'},{label:'Uppercut',next:'juanFinish'}]); Fight.openChoices();
+      }); },120);
+    },1500);
+  });
 }
+Fight.juanAttack1=function(){
+  setSpeaker('juan'); cineName.textContent='Juan';
+  typeInto(cineText,'¡Allá voy!', ()=>{
+    doLungeLong(imgJuan,'left'); Scene.lock(2000);
+    setT(()=>{ setSpeaker('enemy'); doShakeLong(imgEnemy); Fight.hpEnemy=50; Fight.updateHud();
+      setT(()=> enemyTurn2(), 500);
+    },1500);
+  });
+};
+Fight.juanFinish=function(){
+  setSpeaker('juan'); cineName.textContent='Juan';
+  typeInto(cineText,'¡Esto se acaba!', ()=>{
+    doLungeLong(imgJuan,'left'); Scene.lock(2000);
+    setT(()=>{ setSpeaker('enemy'); doShakeLong(imgEnemy); Fight.hpEnemy=0; Fight.updateHud();
+      setT(()=>{ doFallLong(imgEnemy);
+        setT(()=>{ setSpeaker('juan'); cineName.textContent='Juan'; typeInto(cineText,'¡He ganado!', ()=>{
+          State.enemyDefeated=true; enemy1.alive=false; setT(()=> Scene.set('free'), 420);
+        }); },900);
+      },400);
+    },1500);
+  });
+};
 
+/* ===== LOOP & INIT ===== */
+function loop(now){ if(!loop.last) loop.last=now; const dt=Math.min(1/30,(now-loop.last)/1000); loop.last=now; update(dt); draw(); requestAnimationFrame(loop); }
 async function init(){
-  const [bg, spr, gandalfPng, enemyPng] = await Promise.all([
-    loadImage(BACKGROUND),
-    preloadSprites(SPRITES_JUAN),
-    loadImage(NPC_GANDALF_IMG),
-    loadImage(ENEMY_IMG)
-  ]);
-  bgImg=bg; sprites=spr; npcGandalfImg=gandalfPng; enemyImg=enemyPng;
-
-  const screen=document.querySelector('.screen');
-  canvas.width=screen.clientWidth; canvas.height=screen.clientHeight;
-  resizeCanvas();
-
-  try{ bgMusic.play().catch(()=>{});}catch(e){}
-  document.getElementById('bootMask').classList.add('hidden');
-  requestAnimationFrame(loop);
+  const [bg,spr,gImg,eImg]=await Promise.all([loadImage(BACKGROUND), preloadSprites(SPRITES_JUAN), loadImage(NPC_GANDALF_IMG), loadImage(ENEMY_IMG)]);
+  bgImg=bg; sprites=spr; npcGandalfImg=gImg; enemyImg=eImg;
+  const screen=document.querySelector('.screen'); canvas.width=screen.clientWidth; canvas.height=screen.clientHeight; resizeCanvas();
+  document.getElementById('bootMask').classList.add('hidden'); requestAnimationFrame(loop);
 }
 init();
 </script>
