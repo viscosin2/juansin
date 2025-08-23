@@ -541,7 +541,7 @@ const Fight={
       doLungeLong(imgJuan,'left'); Scene.lock(2000);
       setT(()=>{ showSpeaker('enemy'); doShakeLong(imgEnemy); this.hpEnemy=0; this.updateHud();
         setT(()=>{ doFallLong(imgEnemy);
-          setT(()=>{ this.step=5; this.waitingInput=true; }, 900);
+          setT(()=>{ this.step=5; this.waitingInput=true; enemy1.alive=false; State.enemyDefeated = true; }, 900);
         }, 300);
       },1500);
     });
