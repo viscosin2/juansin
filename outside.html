@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Juansin 30th birthday - outside (cinemática)</title>
+<title>Juansin 30th birthday - outside (cinemática + combate)</title>
 
 <!-- Pixel fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -126,6 +126,57 @@
 
   .boot-mask{ position:absolute; inset:0; background:#000; z-index:1000; opacity:1; transition: opacity .25s ease;}
   .boot-mask.hidden{ opacity:0; pointer-events:none; }
+
+  /* ===== HUD Combate retro ===== */
+  .hud{
+    position:absolute; top:6px; left:0; right:0; z-index:27; pointer-events:none; display:none;
+  }
+  .hud.show{ display:block; }
+  .hpwrap{
+    position:absolute; top:0; width:45%; height:14px;
+    border-top:2px solid #444; border-bottom:2px solid #222; border-left:2px solid #222; border-right:2px solid #444;
+    background: #111; box-shadow: inset 0 0 0 2px #000;
+  }
+  .hpwrap.left{ left:8px; }
+  .hpwrap.right{ right:8px; }
+  .hplabel{
+    position:absolute; top:-10px; font-family:'Press Start 2P', system-ui; font-size:8px; letter-spacing:0.5px; color:#9cf;
+    text-shadow:0 1px 0 #000;
+  }
+  .hpwrap.left .hplabel{ left:0; }
+  .hpwrap.right .hplabel{ right:0; }
+  .hpbar{
+    height:100%; width:100%; transform-origin:left center; image-rendering:pixelated;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 4px, transparent 4px 8px);
+    position:relative;
+  }
+  .hpbar::after{
+    content:""; position:absolute; inset:1px; background:currentColor; opacity:.8;
+  }
+  .hpbar.red{ color:#b33; }
+  .hpbar.blue{ color:#2c6; } /* azul verdoso retro */
+  .hptext{
+    position:absolute; top:16px; font-family:'VT323', monospace; font-size:16px; color:#E6F6FF;
+  }
+  .hpwrap.left .hptext{ left:0; }
+  .hpwrap.right .hptext{ right:0; }
+
+  /* Pequeñas animaciones retro */
+  @keyframes shake {
+    0%,100% { transform: translate(0,0); }
+    25% { transform: translate(-3px,1px); }
+    50% { transform: translate(3px,-2px); }
+    75% { transform: translate(-2px,2px); }
+  }
+  .shaking { animation: shake 0.18s steps(2,end) 2; }
+
+  @keyframes lungeLeft { from{ transform:translateX(0) } to{ transform:translateX(-18px) } }
+  @keyframes lungeRight{ from{ transform:translateX(0) } to{ transform:translateX(18px) } }
+  .lunge-left{ animation: lungeLeft .12s steps(2,end); }
+  .lunge-right{ animation: lungeRight .12s steps(2,end); }
+
+  @keyframes fallDown { to{ transform: translateY(40px) rotate(2deg); opacity:.0 } }
+  .fall { animation: fallDown .45s ease forwards; }
 </style>
 </head>
 <body>
@@ -149,13 +200,29 @@
       <!-- CINEMÁTICA -->
       <div id="cine" class="cine">
         <div class="cine-portraits">
-          <div id="pOld"  class="portrait left"><img id="imgOld"  alt="Viejo"></div>
-          <div id="pJuan" class="portrait right"><img id="imgJuan" alt="Juan"></div>
+          <div id="pOld"   class="portrait left"><img id="imgOld"   alt="Viejo"></div>
+          <div id="pJuan"  class="portrait right"><img id="imgJuan"  alt="Juan"></div>
+          <div id="pEnemy" class="portrait left"><img id="imgEnemy" alt="Enemigo"></div>
         </div>
+
         <div id="cineDialog" class="dialog" style="z-index:25; bottom:12px;">
           <div id="cineName" class="dialog-name"></div>
           <div id="cineText" class="dialog-text"></div>
           <div id="cineHint" class="dialog-hint">→</div>
+        </div>
+
+        <!-- HUD combate -->
+        <div id="hud" class="hud">
+          <div id="hpEnemyWrap" class="hpwrap left" aria-label="HP Enemigo">
+            <div class="hplabel">ENEMIGO</div>
+            <div id="hpEnemyBar" class="hpbar red"></div>
+            <div id="hpEnemyTxt" class="hptext"></div>
+          </div>
+          <div id="hpJuanWrap" class="hpwrap right" aria-label="HP Juan">
+            <div class="hplabel">JUAN</div>
+            <div id="hpJuanBar" class="hpbar blue"></div>
+            <div id="hpJuanTxt" class="hptext"></div>
+          </div>
         </div>
 
         <!-- Opciones (sin título) -->
@@ -193,11 +260,16 @@ const SPRITES_JUAN = {
   idle: { down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
   walk: { down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
-/* NPC frontal */
-const NPC_IMG = "assets/characters/gandalf.PNG";
-/* Retratos grandes */
-const PORTRAIT_OLD  = "assets/characters/gandalf_big.PNG";
-const PORTRAIT_JUAN = "assets/characters/juansin_big.PNG";
+/* NPCs */
+const NPC_GANDALF_IMG = "assets/characters/gandalf.PNG";
+const ENEMY_IMG       = "assets/characters/enemy1.PNG";
+
+/* Retratos grandes conversación */
+const PORTRAIT_OLD   = "assets/characters/gandalf_big.PNG";
+const PORTRAIT_JUAN  = "assets/characters/juansin_big.PNG";
+/* Retratos de combate */
+const PORTRAIT_JUAN_FIGHT  = "assets/characters/juansin_big_fight.PNG";   // como pediste
+const PORTRAIT_ENEMY_FIGHT = "assets/characters/enemy1_big.PNG";           // su pareja
 
 /* Audio */
 const bgMusic = new Audio("assets/sounds/ambient1.mp3"); bgMusic.loop = true; bgMusic.volume = 0.35;
@@ -208,10 +280,13 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
 
 let bgRect={dx:0,dy:0,dw:0,dh:0}, scaleFactor=1;
-let bgImg=null, npcImg=null, sprites=null;
+let bgImg=null, sprites=null, npcGandalfImg=null, enemyImg=null;
 
 const player={ x:0, y:0, speed:230, dir:'down', moving:false, frame:0, frameTime:0 };
-const npc={ x:0, y:0 };
+
+/* NPC positions */
+const gandalf={ x:0, y:0 };
+const enemy1 ={ x:0, y:0, alive:true };
 
 /* ===== INPUT mover (teclas y dpad). Acción SOLO botón/touch ===== */
 const keys={ up:false,down:false,left:false,right:false };
@@ -266,8 +341,13 @@ function resizeCanvas(){
 
     player.x = bgRect.dx + bgRect.dw*0.5;
     player.y = bgRect.dy + bgRect.dh*0.80;
-    npc.x = bgRect.dx + bgRect.dw*0.52;
-    npc.y = bgRect.dy + bgRect.dh*0.35;
+
+    /* colocación NPCs */
+    gandalf.x = bgRect.dx + bgRect.dw*0.52;
+    gandalf.y = bgRect.dy + bgRect.dh*0.35;
+
+    enemy1.x  = bgRect.dx + bgRect.dw*0.30;  /* otro rincón del mapa */
+    enemy1.y  = bgRect.dy + bgRect.dh*0.58;
   }
   if(cineVisible) sizePortraitsToBackground();
   if(choicePanel.classList.contains('show')) positionChoices();
@@ -305,12 +385,24 @@ function draw(){
   ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
 
   const things=[];
-  things.push({ y:npc.y, draw:()=>{
+
+  /* NPCs con sombras */
+  if(enemy1.alive){
+    things.push({ y:enemy1.y, draw:()=>{
+      const w=36,h=40,s=0.9; const dw=Math.round(w*s), dh=Math.round(h*s);
+      ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath();
+      ctx.ellipse(Math.round(enemy1.x), Math.round(enemy1.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
+      ctx.drawImage(enemyImg, Math.round(enemy1.x-dw/2), Math.round(enemy1.y-dh/2), dw, dh);
+    }});
+  }
+
+  things.push({ y:gandalf.y, draw:()=>{
     const w=36,h=40,s=0.9; const dw=Math.round(w*s), dh=Math.round(h*s);
     ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.beginPath();
-    ctx.ellipse(Math.round(npc.x), Math.round(npc.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
-    ctx.drawImage(npcImg, Math.round(npc.x-dw/2), Math.round(npc.y-dh/2), dw, dh);
+    ctx.ellipse(Math.round(gandalf.x), Math.round(gandalf.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.drawImage(npcGandalfImg, Math.round(gandalf.x-dw/2), Math.round(gandalf.y-dh/2), dw, dh);
   }});
+
   things.push({ y:player.y, draw:()=>{
     const sw=sprites.size.w, sh=sprites.size.h;
     const dw=Math.round(sw*sprites.scale), dh=Math.round(sh*sprites.scale);
@@ -319,17 +411,26 @@ function draw(){
     ctx.ellipse(Math.round(player.x), Math.round(player.y+dh/2-4), dw/2.5, dh/6, 0, 0, Math.PI*2); ctx.fill();
     ctx.drawImage(img, 0,0,sw,sh, Math.round(player.x-dw/2), Math.round(player.y-dh/2), dw, dh);
   }});
+
   things.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 }
 
 /* ===== PROX & ACCIÓN ===== */
-function isNearNPC(){ const dx=player.x-npc.x, dy=player.y-npc.y; return Math.hypot(dx,dy)<28; }
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+function isNear(obj, rad=28){ return dist(player,obj)<rad; }
 
 function onAction(){
   if(state.mode==='play'){
-    if(isNearNPC()){
+    if(isNear(gandalf)){
       if(!state.metGandalf){ startIntroDialogue(); }
       else { startNPCRepeatDialogue(); }
+      return;
+    }
+    if(enemy1.alive && isNear(enemy1)){
+      if(!state.metEnemy1){ startEnemyIntro(); }       // “Ajá!”
+      else if(!state.enemyDefeated){ startEnemyCine(); } // reintentar pelea
+      else{ startEnemyAfterDefeat(); }                 // frase corta
+      return;
     }
     return;
   }
@@ -376,7 +477,8 @@ function typeInto(el,text,done){
 function completeTypingNow(){
   clearInterval(typingTimer); isTyping=false;
   if(state.mode==='dialog'){
-    const full = state.quickDialog ? 'Ya sabes lo que tienes que hacer.' : 'Hola, chico...';
+    const full = state.quickDialog ? (state.enemyQuick? 'Sigue tu camino, ya no molesto.' : 'Ya sabes lo que tienes que hacer.')
+                                  : (state.enemyIntro? '¡Ajá!' : 'Hola, chico...');
     dialogText.textContent = full;
     dialogEl.classList.add('ready'); dialogHint.style.opacity=1;
   } else if(state.mode==='cine'){
@@ -387,37 +489,63 @@ function completeTypingNow(){
   }
 }
 
-/* Primer contacto (previo a cine) */
+/* Primer contacto (Gandalf) */
 function startIntroDialogue(){
   state.mode='dialog';
   state.quickDialog=false;
+  state.enemyIntro=false; state.enemyQuick=false;
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent='???';
   dialogHint.style.opacity=0;
   typeInto(dialogText, 'Hola, chico...', ()=>{ dialogHint.style.opacity=1; });
 }
-/* Repetición tras haber hablado ya (sin cine) */
+/* Repetición Gandalf (sin cine) */
 function startNPCRepeatDialogue(){
   state.mode='dialog';
   state.quickDialog=true;
+  state.enemyQuick=false;
   dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
   dialogName.textContent='Gandalf';
   dialogHint.style.opacity=0;
   typeInto(dialogText, 'Ya sabes lo que tienes que hacer.', ()=>{ dialogHint.style.opacity=1; });
 }
 
+/* Intro enemigo: Ajá! */
+function startEnemyIntro(){
+  state.mode='dialog';
+  state.quickDialog=false; state.enemyIntro=true; state.enemyQuick=false;
+  dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
+  dialogName.textContent='???';
+  dialogHint.style.opacity=0;
+  typeInto(dialogText, '¡Ajá!', ()=>{ dialogHint.style.opacity=1; });
+}
+
+function startEnemyAfterDefeat(){
+  state.mode='dialog';
+  state.quickDialog=true; state.enemyQuick=true;
+  dialogEl.classList.add('show'); dialogEl.classList.remove('ready');
+  dialogName.textContent='Enemigo';
+  dialogHint.style.opacity=0;
+  typeInto(dialogText, 'Sigue tu camino, ya no molesto.', ()=>{ dialogHint.style.opacity=1; });
+}
+
 function advanceDialog(){
   if(isTyping){ completeTypingNow(); return; }
-  // Si es el diálogo rápido de repetición, cerrar y volver a jugar
+  if(state.enemyIntro){
+    dialogEl.classList.remove('show','ready');
+    state.metEnemy1=true;
+    startEnemyCine();
+    return;
+  }
   if(state.quickDialog){
     dialogEl.classList.remove('show','ready');
     state.quickDialog=false;
     state.mode='play';
     return;
   }
-  // Si era el intro “Hola, chico...”, pasar a cine
+  // “Hola chico...” del viejo -> cine
   dialogEl.classList.remove('show','ready');
-  startCinematic();
+  startCinematic(); // Gandalf
 }
 
 /* ===== CINEMÁTICA ===== */
@@ -428,10 +556,18 @@ const cineText=document.getElementById('cineText');
 const cineHint=document.getElementById('cineHint');
 const pOld=document.getElementById('pOld'), imgOld=document.getElementById('imgOld');
 const pJuan=document.getElementById('pJuan'), imgJuan=document.getElementById('imgJuan');
+const pEnemy=document.getElementById('pEnemy'), imgEnemy=document.getElementById('imgEnemy');
 const choicePanel=document.getElementById('choicePanel');
 const choicesEl=document.getElementById('choices');
 
+const hudEl=document.getElementById('hud');
+const hpEnemyBar=document.getElementById('hpEnemyBar');
+const hpJuanBar =document.getElementById('hpJuanBar');
+const hpEnemyTxt=document.getElementById('hpEnemyTxt');
+const hpJuanTxt =document.getElementById('hpJuanTxt');
+
 const NODES={
+  /* GANDALF */
   start1:{ who:'???',     show:'old',  talk:'Qué bueno que te he encontrado.', next:'start2' },
   start2:{ who:'Juan',    show:'juan', talk:'¿Quién eres??',                   next:'start3' },
   start3:{ who:'Gandalf', show:'old',  talk:'Puedes llamarme Gandalf.',        next:'choice1', rename:true },
@@ -442,24 +578,10 @@ const NODES={
 };
 let currentId=null, cineVisible=false;
 
+/* ======== GANDALF CINEMÁTICA ======== */
 async function startCinematic(){
-  // Mostrar overlay con blur/dim YA para que se note actividad
-  cineEl.style.setProperty('--blur','2px');
-  cineEl.style.setProperty('--dim','0.18');
-  cineEl.classList.add('show');
-  cineVisible=true;
-
-  // Cargar retratos mientras suavizamos
-  const portraitsPromise = Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
-  requestAnimationFrame(()=>{
-    cineEl.style.setProperty('--blur','4px');
-    cineEl.style.setProperty('--dim','0.25');
-  });
-
-  const [oldBig, juanBig] = await portraitsPromise;
-  imgOld.src=oldBig.src; imgJuan.src=juanBig.src;
-
-  sizePortraitsToBackground();
+  await showCineOverlay();
+  await loadConversationPortraits();
 
   // Mostrar diálogo + retrato sincronizados
   state.mode='cine';
@@ -467,22 +589,39 @@ async function startCinematic(){
   state.inChoices=false; state.pendingChoices=false; state.cineTypingComplete=false;
   choicePanel.classList.remove('show');
 
-  pOld.classList.add('show'); pJuan.classList.remove('show');
+  pOld.classList.add('show'); pJuan.classList.remove('show'); pEnemy.classList.remove('show');
   cineDialogEl.classList.add('show');
   showCineNode(NODES[currentId]);
 }
 
-/* retratos = 90% de alto del fondo */
+async function showCineOverlay(){
+  cineEl.style.setProperty('--blur','2px');
+  cineEl.style.setProperty('--dim','0.18');
+  cineEl.classList.add('show');
+  cineVisible=true;
+  requestAnimationFrame(()=>{
+    cineEl.style.setProperty('--blur','4px');
+    cineEl.style.setProperty('--dim','0.25');
+  });
+}
+async function loadConversationPortraits(){
+  const [oldBig, juanBig] = await Promise.all([ loadImage(PORTRAIT_OLD), loadImage(PORTRAIT_JUAN) ]);
+  imgOld.src=oldBig.src; imgJuan.src=juanBig.src;
+  sizePortraitsToBackground();
+}
+
+/* retratos = 150% del alto del fondo para efecto dramático */
 function sizePortraitsToBackground(){
   const h = Math.round(bgRect.dh * 1.5);
-  imgOld.style.height = h+'px';
-  imgJuan.style.height = h+'px';
+  [imgOld, imgJuan, imgEnemy].forEach(i=>{ if(i) i.style.height = h+'px'; });
 }
 
 function showCineNode(node){
   // retrato
-  pOld.classList.remove('show'); pJuan.classList.remove('show');
-  if(node.show==='old') pOld.classList.add('show'); else if(node.show==='juan') pJuan.classList.add('show');
+  pOld.classList.remove('show'); pJuan.classList.remove('show'); pEnemy.classList.remove('show');
+  if(node.show==='old') pOld.classList.add('show');
+  else if(node.show==='juan') pJuan.classList.add('show');
+  else if(node.show==='enemy') pEnemy.classList.add('show');
 
   // texto
   cineName.textContent=node.who;
@@ -494,32 +633,26 @@ function showCineNode(node){
     state.cineTypingComplete=true;
   });
 
-  // si hay opciones: NO mostrar nada aún, esperar a Acción posterior
   if(node.choices){
-    state.pendingChoices=true;
-    state.inChoices=false;
-    choicePanel.classList.remove('show'); // evita flashes
-  } else {
-    state.pendingChoices=false;
-    state.inChoices=false;
-    choicePanel.classList.remove('show');
-  }
+    state.pendingChoices=true; state.inChoices=false; choicePanel.classList.remove('show');
+  } else { state.pendingChoices=false; state.inChoices=false; choicePanel.classList.remove('show'); }
 }
 
 function advanceCine(){
   const node=NODES[currentId];
   if(isTyping){ completeTypingNow(); return; }
-  if(node.choices) return; // choices se abren solo cuando el jugador pulsa Acción tras completar
+  if(node.choices) return;
   if(node.next){ currentId=node.next; showCineNode(NODES[currentId]); }
-  else{ endCinematic(true); } // terminó una primera charla válida
+  else{ endCinematic(true); }
 }
 
 function endCinematic(markMet=false){
-  if(markMet) state.metGandalf = true; // <<<<< marca que ya habló (solo en esta partida)
+  if(markMet) state.metGandalf = true;
   cineVisible=false;
   cineEl.classList.remove('show');
   cineDialogEl.classList.remove('show');
   choicePanel.classList.remove('show');
+  hudEl.classList.remove('show');
   cineEl.style.setProperty('--blur','0px');
   cineEl.style.setProperty('--dim','0');
   state.mode='play';
@@ -532,7 +665,7 @@ function positionChoices(){
   const panel=choicePanel;
 
   panel.style.visibility='hidden';
-  panel.classList.add('show'); // solo aquí lo mostramos por primera vez
+  panel.classList.add('show');
   const pr=panel.getBoundingClientRect();
   const gap=6;
 
@@ -572,19 +705,217 @@ function confirmChoice(){
   state.inChoices=false;
   choicePanel.classList.remove('show');
   currentId=nextId;
-  // si el next no tiene más diálogos, al acabar endCinematic() marcará met
-  showCineNode(NODES[currentId]);
+  showCineNode(FIGHT_NODES[currentId] || NODES[currentId]);
 }
 function openChoicesNow(list){
-  if(!state.cineTypingComplete) return; // seguridad extra: solo si texto ya completo
+  if(!state.cineTypingComplete) return;
   buildChoices(list);
   state.pendingChoices=false;
   state.inChoices=true;
   positionChoices();
 }
 
+/* ====== COMBATE ENEMIGO ====== */
+const FIGHT_NODES={
+  pre1:{ who:'Enemigo', show:'enemy', talk:'Voy a acabar contigo, mocoso.', next:'pre2' },
+  pre2:{ who:'Juan',    show:'juan',  talk:'¡Prueba, si te atreves!',       next:'startFight' }
+};
+
+let hpEnemy=100, hpJuan=100, fightStep=0;
+
+async function startEnemyCine(){
+  await showCineOverlay();
+  // Cargar retratos de combate
+  const [juanB, enemyB] = await Promise.all([ loadImage(PORTRAIT_JUAN_FIGHT), loadImage(PORTRAIT_ENEMY_FIGHT) ]);
+  imgJuan.src=juanB.src; imgEnemy.src=enemyB.src;
+  sizePortraitsToBackground();
+
+  state.mode='cine';
+  state.inChoices=false; state.pendingChoices=false; state.cineTypingComplete=false;
+  choicePanel.classList.remove('show');
+
+  pEnemy.classList.add('show'); pJuan.classList.remove('show'); pOld.classList.remove('show');
+  cineDialogEl.classList.add('show');
+
+  // reset HUD
+  hpEnemy=100; hpJuan=100; fightStep=0; updateHud(); hudEl.classList.remove('show');
+
+  // Arranque conversacional previo
+  currentId='pre1';
+  showCineNode(FIGHT_NODES[currentId]);
+}
+
+function updateHud(){
+  hpEnemy = Math.max(0, Math.min(100, hpEnemy));
+  hpJuan  = Math.max(0, Math.min(100, hpJuan));
+  hpEnemyBar.style.transform = `scaleX(${hpEnemy/100})`;
+  hpJuanBar .style.transform = `scaleX(${hpJuan/100})`;
+  hpEnemyTxt.textContent = `${hpEnemy}|100`;
+  hpJuanTxt .textContent = `${hpJuan}|100`;
+}
+
+function doShake(el){ el.classList.remove('shaking'); void el.offsetWidth; el.classList.add('shaking'); }
+function doLunge(el, dir){ el.classList.remove('lunge-left','lunge-right'); void el.offsetWidth; el.classList.add(dir==='left'?'lunge-left':'lunge-right'); }
+function doFall(el){ el.classList.add('fall'); }
+
+function proceedFightFrom(nodeKey){
+  if(nodeKey==='startFight'){
+    hudEl.classList.add('show');
+    enemyTurn1();
+    return;
+  }
+}
+
+/* Secuencia pedida:
+   1) Turno enemigo: ataque leve -> Juan tiembla
+   2) Turno Juan: desplegable (2 ataques) -> enemigo a mitad de vida
+   3) Turno enemigo: otro ataque
+   4) Turno Juan: desplegable final -> derrota enemigo con caída “¡Me las pagarás!” */
+function enemyTurn1(){
+  pEnemy.classList.add('show'); pJuan.classList.remove('show');
+  cineName.textContent='Enemigo';
+  state.cineTypingComplete=false; cineHint.style.opacity=1; // permitimos avanzar con Acción al final del texto
+  typeInto(cineText, 'El enemigo te lanza una piedra.', ()=>{
+    // animación
+    doLunge(imgEnemy,'right');
+    setTimeout(()=>{
+      doShake(imgJuan);
+      hpJuan-=20; updateHud();
+      state.cineTypingComplete=true;
+    }, 140);
+  });
+  // al pulsar Acción, abrimos el turno de Juan
+  state.pendingChoices=true;
+  currentChoices=[
+    {label:'Puñetazo', next:'juanAttack1'},
+    {label:'Patada giratoria', next:'juanAttack1'}
+  ];
+  // pero el panel solo sale cuando el texto está completo o completes con toque
+}
+function enemyTurn2(){
+  pEnemy.classList.add('show'); pJuan.classList.remove('show');
+  cineName.textContent='Enemigo';
+  state.cineTypingComplete=false; cineHint.style.opacity=1;
+  typeInto(cineText, 'El enemigo te arroja polvo a los ojos.', ()=>{
+    doLunge(imgEnemy,'right');
+    setTimeout(()=>{
+      doShake(imgJuan);
+      hpJuan-=15; updateHud();
+      state.cineTypingComplete=true;
+      // preparar último turno de Juan
+      state.pendingChoices=true;
+      currentChoices=[
+        {label:'Golpe final', next:'juanFinish'},
+        {label:'Uppercut',    next:'juanFinish'}
+      ];
+    }, 140);
+  });
+}
+
+/* Tabla de nodos solo para callbacks seleccionados en combate */
+const FIGHT_ACTIONS={
+  juanAttack1: ()=>{
+    pJuan.classList.add('show'); pEnemy.classList.remove('show');
+    cineName.textContent='Juan';
+    typeInto(cineText, '¡Juan ataca!', ()=>{
+      doLunge(imgJuan,'left');
+      setTimeout(()=>{
+        doShake(imgEnemy);
+        hpEnemy=50; updateHud();
+        // tras el ataque, turno enemigo 2
+        setTimeout(()=>enemyTurn2(), 220);
+      }, 140);
+    });
+  },
+  juanFinish: ()=>{
+    pJuan.classList.add('show'); pEnemy.classList.remove('show');
+    cineName.textContent='Juan';
+    typeInto(cineText, '¡Ataque definitivo!', ()=>{
+      doLunge(imgJuan,'left');
+      setTimeout(()=>{
+        doShake(imgEnemy);
+        hpEnemy=0; updateHud();
+        setTimeout(()=>{
+          pEnemy.classList.add('show'); // lo mostramos para ver la caída
+          doFall(imgEnemy);
+          setTimeout(()=>{
+            cineName.textContent='Enemigo';
+            typeInto(cineText, '¡Me las pagarás...!', ()=>{
+              // fin de combate
+              state.enemyDefeated=true;
+              enemy1.alive=false; // lo quitamos del mapa
+              setTimeout(()=> endCinematic(false), 260);
+            });
+          }, 280);
+        }, 140);
+      }, 140);
+    });
+  }
+};
+
+/* Hookear avance dentro de la cinemática del combate */
+const _origShowCineNode = showCineNode;
+showCineNode = function(node){
+  // Si el node pertenece al bloque de combate (FIGHT_NODES)
+  if(FIGHT_NODES[node]){
+    _origShowCineNode(FIGHT_NODES[node]);
+    if(node==='startFight' || FIGHT_NODES[node].next==='startFight'){
+      proceedFightFrom('startFight');
+    }
+    return;
+  }
+  // Si es un objeto ya (no clave)
+  if(node && node.talk){
+    // Detectar transición a 'startFight'
+    if(node.next==='startFight'){
+      _origShowCineNode(node);
+      // cuando el jugador pulse Acción tras este texto, arrancamos combate
+      const waitStart = ()=>{
+        // protegido por onAction/advance: aquí nos limitamos a cambiar el currentId y lanzar
+      };
+      return;
+    }
+    _origShowCineNode(node);
+    return;
+  }
+  _origShowCineNode(node);
+};
+
+/* Interceptar advance durante la fase de combate de prefacio */
+const _origAdvanceCine = advanceCine;
+advanceCine = function(){
+  // Si estamos en los prefacios del combate
+  if(currentId && FIGHT_NODES[currentId]){
+    if(isTyping){ completeTypingNow(); return; }
+    const node=FIGHT_NODES[currentId];
+    if(node.next==='startFight'){
+      currentId='startFight';
+      // lanzar turno enemigo 1
+      enemyTurn1();
+      return;
+    }
+    if(node.next){
+      currentId=node.next;
+      showCineNode(FIGHT_NODES[currentId]);
+      return;
+    }
+    return;
+  }
+  // Si hay elecciones en combate (estado pendingChoices) y se pulsa Acción con el texto completo:
+  if(state.mode==='cine' && state.pendingChoices && state.cineTypingComplete && !state.inChoices){
+    openChoicesNow(currentChoices||[]);
+    return;
+  }
+  _origAdvanceCine();
+};
+
 /* ===== STATE & LOOP ===== */
-const state={ mode:'play', inChoices:false, pendingChoices:false, cineTypingComplete:false, metGandalf:false, quickDialog:false };
+const state={
+  mode:'play',
+  inChoices:false, pendingChoices:false, cineTypingComplete:false,
+  metGandalf:false, quickDialog:false,
+  metEnemy1:false, enemyDefeated:false, enemyIntro:false, enemyQuick:false
+};
 
 function loop(now){
   if(!loop.last) loop.last=now;
@@ -596,12 +927,13 @@ function loop(now){
 
 /* ===== INIT ===== */
 async function init(){
-  const [bg, spr, npcPng] = await Promise.all([
+  const [bg, spr, gandalfPng, enemyPng] = await Promise.all([
     loadImage(BACKGROUND),
     preloadSprites(SPRITES_JUAN),
-    loadImage(NPC_IMG)
+    loadImage(NPC_GANDALF_IMG),
+    loadImage(ENEMY_IMG)
   ]);
-  bgImg=bg; sprites=spr; npcImg=npcPng;
+  bgImg=bg; sprites=spr; npcGandalfImg=gandalfPng; enemyImg=enemyPng;
 
   const screen=document.querySelector('.screen');
   canvas.width=screen.clientWidth; canvas.height=screen.clientHeight;
@@ -612,6 +944,28 @@ async function init(){
   requestAnimationFrame(loop);
 }
 init();
+
+/* Acceso rápido a acciones de combate desde confirmar elección */
+const _origConfirmChoice = confirmChoice;
+confirmChoice = function(){
+  if(!state.inChoices||!currentChoices) return;
+  const key = currentChoices[choiceIndex].next;
+  state.inChoices=false;
+  choicePanel.classList.remove('show');
+  // Si es una acción de combate conocida:
+  if(FIGHT_ACTIONS[key]){
+    FIGHT_ACTIONS[key]();
+    return;
+  }
+  // Si es un nodo normal o de prefacio combate:
+  if(FIGHT_NODES[key]){
+    currentId=key;
+    showCineNode(FIGHT_NODES[currentId]);
+    return;
+  }
+  _origConfirmChoice();
+};
+
 </script>
 </body>
 </html>
