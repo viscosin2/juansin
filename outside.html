@@ -293,9 +293,27 @@ function clearAllTimers(){ activeTimers.forEach(clearTimeout); activeTimers=[]; 
 
 /* ===== anim helpers ===== */
 function forceAnim(el,cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
-function doShakeLong(el){ forceAnim(el,'shaking-long'); }
-function doLungeLong(el,dir){ forceAnim(el,dir==='left'?'lunge-left-long':'lunge-right-long'); }
-function doFallLong(el){ forceAnim(el,'fall-long'); }
+/* ===== anim helpers (FIX reseteo) ===== */
+function resetAnims(el){
+  el.classList.remove('shaking-long','lunge-left-long','lunge-right-long','fall-long');
+  // forzamos reflow para que pueda volver a arrancar la anim
+  void el.offsetWidth;
+}
+
+function doShakeLong(el){
+  resetAnims(el);
+  el.classList.add('shaking-long');
+}
+
+function doLungeLong(el,dir){
+  resetAnims(el);
+  el.classList.add(dir==='left' ? 'lunge-left-long' : 'lunge-right-long');
+}
+
+function doFallLong(el){
+  resetAnims(el);
+  el.classList.add('fall-long');
+}
 
 /* ===== Scene Manager ===== */
 const Scene={ state:'free', cineVisible:false, lockUntil:0,
