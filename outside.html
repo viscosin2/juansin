@@ -24,16 +24,12 @@
   .img-act{ width:120px; height:120px; filter:drop-shadow(0 5px 6px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; }
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
-
-  .boot-mask{ position:absolute; inset:0; background:#000; z-index:1000; opacity:1; transition:opacity .25s ease; }
-  .boot-mask.hidden{ opacity:0; pointer-events:none; }
 </style>
 </head>
 <body>
 <div class="gameboy">
   <div class="screen-container">
     <div class="screen">
-      <div id="bootMask" class="boot-mask"></div>
       <canvas id="game"></canvas>
     </div>
   </div>
@@ -62,24 +58,26 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
   idle:{ down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
   walk:{ down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
-const roomOriginal={w:512,h:350};
-const ZOOM=2;
-const PLAYER_SPEED=220;
+
+/* ===== VIEWPORT ===== */
+const roomOriginal={w:512,h:350}; // tu tamaño lógico
+const ZOOM=2.0;                    // ampliación dentro del visor
+const PLAYER_SPEED=220;            // px/s (en coords de imagen original)
 const STEP_FRAME=0.14;
 
-/* ===== CANVAS ===== */
-const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
+const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d',{alpha:false}); ctx.imageSmoothingEnabled=false;
 
-/* ===== INPUT ===== */
+/* ===== INPUT: solo D-pad ===== */
 const keys={up:false,down:false,left:false,right:false};
-function bindHold(btn,on,off){const start=e=>{e.preventDefault();on();btn.classList.add('pressed');}; const end=e=>{e.preventDefault();off();btn.classList.remove('pressed');}; btn.addEventListener('touchstart',start,{passive:false}); btn.addEventListener('touchend',end,{passive:false}); btn.addEventListener('touchcancel',end,{passive:false}); btn.addEventListener('mousedown',start); window.addEventListener('mouseup',end);}
-bindHold(document.getElementById('btn-up'),()=>keys.up=true,()=>keys.up=false);
-bindHold(document.getElementById('btn-down'),()=>keys.down=true,()=>keys.down=false);
-bindHold(document.getElementById('btn-left'),()=>keys.left=true,()=>keys.left=false);
+function bindHold(btn,on,off){ const start=e=>{e.preventDefault();on();btn.classList.add('pressed');}; const end=e=>{e.preventDefault();off();btn.classList.remove('pressed');}; btn.addEventListener('touchstart',start,{passive:false}); btn.addEventListener('touchend',end,{passive:false}); btn.addEventListener('touchcancel',end,{passive:false}); btn.addEventListener('mousedown',start); window.addEventListener('mouseup',end); }
+bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
+bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
+bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
 
-const loadImage=src=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});
-async function preloadSprites(map){const out={idle:{},walk:{},size:map.size,scale:map.scale};for(const s of ['idle','walk'])for(const d of Object.keys(map[s]))out[s][d]=await Promise.all(map[s][d].map(loadImage));return out;}
+/* ===== CARGA ===== */
+const loadImage=src=>new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; });
+async function preloadSprites(map){ const out={idle:{},walk:{},size:map.size,scale:map.scale}; for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage)); return out; }
 
 let sprites=null; const world={img:null,w:0,h:0};
 const player={x:0,y:0,dir:'down',moving:false,frame:0,t:0};
@@ -88,16 +86,17 @@ const player={x:0,y:0,dir:'down',moving:false,frame:0,t:0};
   const [bg,spr]=await Promise.all([loadImage(BACKGROUND_SRC),preloadSprites(SPRITES_JUAN)]);
   world.img=bg; world.w=bg.naturalWidth; world.h=bg.naturalHeight; sprites=spr;
 
-  const halfW = roomOriginal.w/ZOOM/2;
-  const halfH = roomOriginal.h/ZOOM/2;
-  player.x = halfW;        // lo más a la izquierda permitido
-  player.y = world.h-halfH; // lo más abajo permitido
-  player.dir = 'up';        // cómo mirará al empezar (ej: hacia arriba)
+  // ejemplo: arrancar abajo-izquierda (ajústalo si quieres)
+  const viewW = roomOriginal.w/ZOOM, viewH = roomOriginal.h/ZOOM;
+  player.x = 0 + 8;             // 8px dentro del mundo (izquierda)
+  player.y = world.h - 8;       // 8px dentro desde abajo
+  player.dir = 'up';
 
-  resizeCanvas(); document.getElementById('bootMask').classList.add('hidden');
+  resizeCanvas();
   requestAnimationFrame(loop);
 })();
 
+/* ===== LETTERBOX ===== */
 let vp={dx:0,dy:0,dw:0,dh:0,k:1};
 function resizeCanvas(){
   const screen=document.querySelector('.screen');
@@ -111,46 +110,70 @@ function resizeCanvas(){
 }
 window.addEventListener('resize',resizeCanvas);
 
+/* ===== LOOP ===== */
 let last=0;
-function loop(now){if(!last)last=now; const dt=Math.min(1/30,(now-last)/1000); last=now; update(dt); draw(); requestAnimationFrame(loop);}
+function loop(now){ if(!last) last=now; const dt=Math.min(1/30,(now-last)/1000); last=now; update(dt); draw(); requestAnimationFrame(loop); }
+
+/* === 🔧 UPDATE: Juan se clampa a TODO el mundo (no al half-view) === */
 function update(dt){
   let vx=(keys.left?-1:0)+(keys.right?1:0);
   let vy=(keys.up?-1:0)+(keys.down?1:0);
   player.moving=!!(vx||vy);
   if(player.moving){
-    player.dir=Math.abs(vx)>Math.abs(vy)?(vx<0?'left':'right'):(vy<0?'up':'down');
-    if(vx&&vy){const inv=1/Math.sqrt(2);vx*=inv;vy*=inv;}
+    player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
+    if(vx&&vy){ const inv=1/Math.sqrt(2); vx*=inv; vy*=inv; }
     player.x+=vx*PLAYER_SPEED*dt; player.y+=vy*PLAYER_SPEED*dt;
   }
-  const halfW=roomOriginal.w/ZOOM/2, halfH=roomOriginal.h/ZOOM/2;
-  player.x=Math.max(halfW,Math.min(world.w-halfW,player.x));
-  player.y=Math.max(halfH,Math.min(world.h-halfH,player.y));
-  if(player.moving){player.t+=dt;if(player.t>=STEP_FRAME){player.t=0;player.frame=(player.frame+1)%2;}} else{player.frame=0;player.t=0;}
+
+  // ⛳️ Limitar al borde REAL de la imagen (permite que Juan llegue a la orilla)
+  player.x = clamp(player.x, 0, world.w);
+  player.y = clamp(player.y, 0, world.h);
+
+  // anim caminar
+  if(player.moving){ player.t+=dt; if(player.t>=STEP_FRAME){ player.t=0; player.frame=(player.frame+1)%2; } }
+  else { player.frame=0; player.t=0; }
 }
+
+/* === 🎥 DRAW: cámara sigue a Juan, pero se clampa a los bordes del mundo === */
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(!world.img||!sprites) return;
-  let sx=player.x-(roomOriginal.w/ZOOM)/2;
-  let sy=player.y-(roomOriginal.h/ZOOM)/2;
-  const sw=roomOriginal.w/ZOOM, sh=roomOriginal.h/ZOOM;
-  sx=Math.max(0,Math.min(world.w-sw,sx));
-  sy=Math.max(0,Math.min(world.h-sh,sy));
-  ctx.drawImage(world.img,sx,sy,sw,sh,vp.dx,vp.dy,vp.dw,vp.dh);
 
+  const viewW = roomOriginal.w/ZOOM;
+  const viewH = roomOriginal.h/ZOOM;
+
+  // cámara ideal centrada en Juan
+  let camX = player.x - viewW/2;
+  let camY = player.y - viewH/2;
+
+  // clamp de cámara a los bordes de la imagen
+  camX = clamp(camX, 0, Math.max(0, world.w - viewW));
+  camY = clamp(camY, 0, Math.max(0, world.h - viewH));
+
+  // dibujar fondo
+  ctx.drawImage(world.img, camX, camY, viewW, viewH, vp.dx, vp.dy, vp.dw, vp.dh);
+
+  // posición de Juan en pantalla (si cámara tocó borde, Juan se acerca al borde de la pantalla)
   const swp=sprites.size.w, shp=sprites.size.h, s=sprites.scale;
-  const dw=Math.round(swp*s);
+  const dw=Math.round(swp*s);   // tamaño EXACTO como en tu script
   const dh=Math.round(shp*s);
-  const px=vp.dx+Math.round((player.x-sx)*ZOOM*vp.k);
-  const py=vp.dy+Math.round((player.y-sy)*ZOOM*vp.k);
 
+  const px = vp.dx + Math.round((player.x - camX) * ZOOM * vp.k);
+  const py = vp.dy + Math.round((player.y - camY) * ZOOM * vp.k);
+
+  // sombra
   ctx.fillStyle='rgba(0,0,0,.3)';
   ctx.beginPath();
-  ctx.ellipse(px,py+dh/2-4,dw/2.5,dh/6,0,0,Math.PI*2);
+  ctx.ellipse(px, py + dh/2 - 4, Math.round(dw/2.5), Math.round(dh/6), 0, 0, Math.PI*2);
   ctx.fill();
 
-  const img=player.moving?sprites.walk[player.dir][player.frame]:sprites.idle[player.dir][0];
-  ctx.drawImage(img,0,0,swp,shp,px-dw/2,py-dh/2,dw,dh);
+  // sprite
+  const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
+  ctx.drawImage(img, 0,0, swp,shp, Math.round(px-dw/2), Math.round(py-dh/2), dw,dh);
 }
+
+/* ===== UTILS ===== */
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 </script>
 </body>
 </html>
