@@ -87,7 +87,13 @@ const player={x:0,y:0,dir:'down',moving:false,frame:0,t:0};
 (async function init(){
   const [bg,spr]=await Promise.all([loadImage(BACKGROUND_SRC),preloadSprites(SPRITES_JUAN)]);
   world.img=bg; world.w=bg.naturalWidth; world.h=bg.naturalHeight; sprites=spr;
-  player.x=world.w/2; player.y=world.h/2;
+
+  const halfW = roomOriginal.w/ZOOM/2;
+  const halfH = roomOriginal.h/ZOOM/2;
+  player.x = halfW;        // lo más a la izquierda permitido
+  player.y = world.h-halfH; // lo más abajo permitido
+  player.dir = 'up';        // cómo mirará al empezar (ej: hacia arriba)
+
   resizeCanvas(); document.getElementById('bootMask').classList.add('hidden');
   requestAnimationFrame(loop);
 })();
