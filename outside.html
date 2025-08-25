@@ -16,13 +16,14 @@
   canvas { width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges; background:black; }
 
   .controls { height:40%; background:#0B0A21; display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:14px; box-sizing:border-box; }
-  .dpad { display:grid; grid-template-columns:repeat(3,64px); grid-template-rows:repeat(3,64px); justify-content:center; margin-left:12px; align-content:center; }
-  .img-btn{ border:none; outline:none; padding:0; background:transparent; cursor:pointer; width:64px; height:64px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.85)); -webkit-tap-highlight-color:transparent; }
-  .img-btn.arrow::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/arrow.PNG") center/contain no-repeat; image-rendering:pixelated; transform:rotate(var(--rot,0deg)) scale(1.28); }
+  .dpad { display:grid; grid-template-columns:repeat(3,64px); grid-template-rows:repeat(3,64px); gap:0; justify-content:center; margin-left:12px; align-content:center; }
+  .img-btn,.img-act{ border:none; outline:none; padding:0; background:transparent; cursor:pointer; transition:transform .06s ease, filter .06s ease; -webkit-tap-highlight-color:transparent; }
+  .img-btn{ width:64px; height:64px; filter:drop-shadow(0 3px 4px rgba(0,0,0,.85)); }
+  .img-btn.arrow::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/arrow.PNG") center/contain no-repeat; image-rendering:pixelated; transform:rotate(var(--rot,0deg)) scale(1.28); transform-origin:center; }
   .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
-  .img-act{ width:120px; height:120px; margin-top:45px; justify-self:center; opacity:.35; pointer-events:none; }
-  .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; }
-  .img-btn:active{ transform:scale(.95); filter:brightness(.9); }
+  .img-act{ width:120px; height:120px; filter:drop-shadow(0 5px 6px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; opacity:.45; pointer-events:none; }
+  .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
+  .img-btn:active,.img-btn.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
 
   .boot-mask{ position:absolute; inset:0; background:#000; z-index:1000; opacity:1; transition:opacity .25s ease; }
   .boot-mask.hidden{ opacity:0; pointer-events:none; }
@@ -37,60 +38,74 @@
     </div>
   </div>
 
+  <!-- Dialpad EXACTO -->
   <div class="controls">
     <div class="dpad">
       <div></div>
-      <button id="btn-up" class="img-btn arrow btn-up"></button>
+      <button id="btn-up" class="img-btn arrow btn-up" aria-label="Arriba"></button>
       <div></div>
-      <button id="btn-left" class="img-btn arrow btn-left"></button>
+      <button id="btn-left" class="img-btn arrow btn-left" aria-label="Izquierda"></button>
       <div></div>
-      <button id="btn-right" class="img-btn arrow btn-right"></button>
+      <button id="btn-right" class="img-btn arrow btn-right" aria-label="Derecha"></button>
       <div></div>
-      <button id="btn-down" class="img-btn arrow btn-down"></button>
+      <button id="btn-down" class="img-btn arrow btn-down" aria-label="Abajo"></button>
       <div></div>
     </div>
-    <button id="btn-act" class="img-act"></button>
+    <button id="btn-act" class="img-act" aria-label="Acción (off)"></button>
   </div>
 </div>
 
 <script>
-const BACKGROUND_SRC = "assets/locations/outside.png";
-const roomOriginal   = { w:512, h:350 };
-const ZOOM           = 2.0;
-const PLAYER_SPEED   = 220;
-const PLAYER_SIZE    = 16;
+/* ===== ASSETS ===== */
+const BACKGROUND_SRC="assets/locations/outside.png"; // tu fondo grande
+const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
+  idle:{ down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
+  walk:{ down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"], up:["assets/juan_character/walk_up_0_shoes.png","assets/juan_character/walk_up_1_shoes.png"], left:["assets/juan_character/walk_left_0_shoes.png","assets/juan_character/walk_left_1_shoes.png"], right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
+};
 
-const canvas = document.getElementById('game');
-const ctx    = canvas.getContext('2d',{alpha:false});
-ctx.imageSmoothingEnabled = false;
+/* ===== VIEWPORT LÓGICO (tu tamaño de siempre) ===== */
+const roomOriginal={w:512,h:350};
 
-const keys = { up:false, down:false, left:false, right:false };
-function bindHold(btn, on, off){
-  const start=e=>{e.preventDefault();on();btn.classList.add('pressed');};
-  const end  =e=>{e.preventDefault();off();btn.classList.remove('pressed');};
-  btn.addEventListener('touchstart',start,{passive:false});
-  btn.addEventListener('touchend',end,{passive:false});
-  btn.addEventListener('touchcancel',end,{passive:false});
-  btn.addEventListener('mousedown',start);
-  window.addEventListener('mouseup',end);
-}
+/* ===== CONFIG MOVIMIENTO/CÁMARA ===== */
+const ZOOM=2.0;           // cuánto “amplías” dentro del visor
+const PLAYER_SPEED=220;   // px/seg (en coords de imagen original)
+const STEP_FRAME=0.14;    // tiempo por frame caminando
+
+/* ===== CANVAS ===== */
+const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d',{alpha:false}); ctx.imageSmoothingEnabled=false;
+
+/* ===== ESTADO INPUT: SOLO D-PAD ===== */
+const keys={up:false,down:false,left:false,right:false};
+function bindHold(btn,on,off){ const start=e=>{e.preventDefault();on();btn.classList.add('pressed');}; const end=e=>{e.preventDefault();off();btn.classList.remove('pressed');}; btn.addEventListener('touchstart',start,{passive:false}); btn.addEventListener('touchend',end,{passive:false}); btn.addEventListener('touchcancel',end,{passive:false}); btn.addEventListener('mousedown',start); window.addEventListener('mouseup',end);}
 bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
 bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
+// (sin teclado a propósito)
 
+/* ===== CARGA DE IMÁGENES ===== */
+const loadImage=src=>new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; });
+async function preloadSprites(map){
+  const out={idle:{},walk:{},size:map.size,scale:map.scale};
+  for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage));
+  return out;
+}
+
+/* ===== MUNDO ===== */
 const world={img:null,w:0,h:0};
-const player={x:0,y:0};
+const player={ x:0, y:0, dir:'down', moving:false, frame:0, t:0 }; // coords en imagen ORIGINAL
+let sprites=null;
 
-const bgImg=new Image();
-bgImg.onload=()=>{
-  world.img=bgImg; world.w=bgImg.naturalWidth; world.h=bgImg.naturalHeight;
+(async function init(){
+  const [bg,spr]=await Promise.all([loadImage(BACKGROUND_SRC), preloadSprites(SPRITES_JUAN)]);
+  world.img=bg; world.w=bg.naturalWidth; world.h=bg.naturalHeight; sprites=spr;
+  // start middle
   player.x=world.w/2; player.y=world.h/2;
   document.getElementById('bootMask').classList.add('hidden');
   resizeCanvas(); requestAnimationFrame(loop);
-};
-bgImg.src=BACKGROUND_SRC;
+})();
 
+/* ===== LETTERBOX COMO TU PLANTILLA ===== */
 let vp={dx:0,dy:0,dw:0,dh:0,k:1};
 function resizeCanvas(){
   const screen=document.querySelector('.screen');
@@ -104,38 +119,72 @@ function resizeCanvas(){
 }
 window.addEventListener('resize',resizeCanvas);
 
+/* ===== LOOP ===== */
 let last=0;
-function loop(t){
-  if(!last) last=t; const dt=Math.min(1/30,(t-last)/1000); last=t;
+function loop(now){
+  if(!last) last=now; const dt=Math.min(1/30,(now-last)/1000); last=now;
   update(dt); draw(); requestAnimationFrame(loop);
 }
+
 function update(dt){
+  // dirección desde D-pad
   let vx=(keys.left?-1:0)+(keys.right?1:0);
   let vy=(keys.up?-1:0)+(keys.down?1:0);
-  if(vx&&vy){const inv=1/Math.sqrt(2);vx*=inv;vy*=inv;}
-  player.x+=vx*PLAYER_SPEED*dt; player.y+=vy*PLAYER_SPEED*dt;
+  player.moving=!!(vx||vy);
+  if(player.moving){
+    // dir dominante
+    player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
+    // normalizar diagonal
+    if(vx&&vy){ const inv=1/Math.sqrt(2); vx*=inv; vy*=inv; }
+    // avanzar en coords de **imagen original**
+    player.x+=vx*PLAYER_SPEED*dt; player.y+=vy*PLAYER_SPEED*dt;
+  }
+  // límites para que la cámara pueda centrarse
   const halfW=roomOriginal.w/ZOOM/2, halfH=roomOriginal.h/ZOOM/2;
-  player.x=Math.max(halfW,Math.min(world.w-halfW,player.x));
-  player.y=Math.max(halfH,Math.min(world.h-halfH,player.y));
+  player.x=clamp(player.x, halfW, world.w-halfW);
+  player.y=clamp(player.y, halfH, world.h-halfH);
+
+  // anim caminar
+  if(player.moving){ player.t+=dt; if(player.t>=STEP_FRAME){ player.t=0; player.frame=(player.frame+1)%2; } }
+  else { player.frame=0; player.t=0; }
 }
+
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  if(!world.img) return;
-  let sx=player.x-roomOriginal.w/ZOOM/2;
-  let sy=player.y-roomOriginal.h/ZOOM/2;
+  if(!world.img || !sprites) return;
+
+  // ventana que “mira” la lupa (en coords de imagen original)
+  let sx=player.x - (roomOriginal.w/ZOOM)/2;
+  let sy=player.y - (roomOriginal.h/ZOOM)/2;
   const sw=roomOriginal.w/ZOOM, sh=roomOriginal.h/ZOOM;
-  sx=Math.max(0,Math.min(world.w-sw,sx));
-  sy=Math.max(0,Math.min(world.h-sh,sy));
-  ctx.drawImage(world.img,sx,sy,sw,sh,vp.dx,vp.dy,vp.dw,vp.dh);
-  const px=vp.dx+Math.round((player.x-sx)*ZOOM*vp.k);
-  const py=vp.dy+Math.round((player.y-sy)*ZOOM*vp.k);
-  const r=Math.max(2,Math.round((PLAYER_SIZE/2)*vp.k));
-  ctx.fillStyle='#ffd400'; ctx.strokeStyle='#222'; ctx.lineWidth=Math.max(1,Math.round(2*vp.k));
-  ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath();
-  ctx.ellipse(px,py+r/2,Math.round(r*0.8),Math.round(r*0.3),0,0,Math.PI*2);
+  sx=clamp(sx,0,Math.max(0,world.w-sw));
+  sy=clamp(sy,0,Math.max(0,world.h-sh));
+
+  // fondo dentro del marco letterboxed
+  ctx.drawImage(world.img, sx,sy,sw,sh, vp.dx,vp.dy,vp.dw,vp.dh);
+
+  // dibujar Juansin (usa sprites de tu repo)
+  const swp=sprites.size.w, shp=sprites.size.h, s=sprites.scale;
+  const dw=Math.round(swp*s*vp.k*ZOOM); // sprite se escala como el contenido (ZOOM) y el letterbox (k)
+  const dh=Math.round(shp*s*vp.k*ZOOM);
+
+  // posición en pantalla
+  const px = vp.dx + Math.round((player.x - sx) * ZOOM * vp.k);
+  const py = vp.dy + Math.round((player.y - sy) * ZOOM * vp.k);
+
+  // sombra
+  ctx.fillStyle='rgba(0,0,0,.30)';
+  ctx.beginPath();
+  ctx.ellipse(px, py + Math.round(dh/2) - Math.round(4*vp.k), Math.round(dw/2.5), Math.round(dh/6), 0, 0, Math.PI*2);
   ctx.fill();
+
+  // frame actual
+  const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
+  ctx.drawImage(img, 0,0, swp,shp, Math.round(px-dw/2), Math.round(py-dh/2), dw,dh);
 }
+
+/* ===== UTILS ===== */
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 </script>
 </body>
 </html>
