@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum=1, user-scalable=no" />
-<title>Juansin - visor con lupa (rectángulos-barrera + cámara)</title>
+<title>Juansin - visor con lupa (obstáculos sólidos, cámara sin saltos)</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -60,36 +60,32 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
 };
 
 /* ===== VIEWPORT/CÁMARA ===== */
-const roomOriginal={w:512,h:350};
-const ZOOM=2.0;               // cuánto ves dentro del visor
+const roomOriginal={w:512,h:350}; // tu "pantalla" lógica
+const ZOOM=2.0;                   // cuánto ves en la lupa
 const PLAYER_SPEED=220;
 const STEP_FRAME=0.14;
 
-/* ===== ZONAS PROHIBIDAS (RECTS) =====
-   Cada rect es {x,y,w,h} en coords de la IMAGEN. Ni Juan ni la cámara pueden entrar.
+/* ===== ZONAS PROHIBIDAS (rectángulos) =====
+   Ni Juan ni la cámara pueden entrar.
+   Cada rect = {x,y,w,h} en coordenadas de la IMAGEN.
 */
 const OBSTACLES = [
-  // EJEMPLO como tu dibujo: un rectángulo “rojo” hacia abajo-centrado
-  { x: 500, y: 500, w: 260, h: 360 }
+  // EJEMPLO: pon aquí tu “cubo rojo”
+  // { x: 1000, y: 1200, w: 260, h: 360 }
 ];
 
-/* ===== DEBUG ===== */
-const DEBUG = { show: true, font: "12px 'VT323', monospace" };
+/* ===== DEBUG (arranca apagado) ===== */
+const DEBUG = { show:false, font:"12px 'VT323', monospace" };
 
-/* ===== CANVAS ===== */
+/* ===== CANVAS + INPUT (solo D-pad) ===== */
 const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d',{alpha:false}); ctx.imageSmoothingEnabled=false;
-
-/* ===== INPUT: solo D-pad ===== */
 const keys={up:false,down:false,left:false,right:false};
 function bindHold(btn,on,off){ const start=e=>{e.preventDefault();on();btn.classList.add('pressed');}; const end=e=>{e.preventDefault();off();btn.classList.remove('pressed');}; btn.addEventListener('touchstart',start,{passive:false}); btn.addEventListener('touchend',end,{passive:false}); btn.addEventListener('touchcancel',end,{passive:false}); btn.addEventListener('mousedown',start); window.addEventListener('mouseup',end); }
 bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
 bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
-
-// Acción: toggle DEBUG
-document.getElementById('btn-act').addEventListener('click',e=>{e.preventDefault();DEBUG.show=!DEBUG.show;});
-document.getElementById('btn-act').addEventListener('touchstart',e=>{e.preventDefault();DEBUG.show=!DEBUG.show;},{passive:false});
+['click','touchstart'].forEach(evt=>document.getElementById('btn-act').addEventListener(evt,e=>{e.preventDefault();DEBUG.show=!DEBUG.show;}));
 
 /* ===== LOAD ===== */
 const loadImage=src=>new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; });
@@ -140,23 +136,20 @@ function update(dt){
   const halfW=(SPRITES_JUAN.size.w*SPRITES_JUAN.scale)/2;
   const halfH=(SPRITES_JUAN.size.h*SPRITES_JUAN.scale)/2;
 
-  // Probar X por separado (slide)
+  // Resolver X
   let nx = player.x + vx*PLAYER_SPEED*dt;
   let ny = player.y;
-
   for(const r of OBSTACLES){
     if(aabbOverlap(nx-halfW, ny-halfH, halfW*2, halfH*2, r.x, r.y, r.w, r.h)){
-      // empujar a borde del rectángulo según el lado del que venía
       if(player.x < r.x) nx = r.x - halfW;
       else if(player.x > r.x + r.w) nx = r.x + r.w + halfW;
-      else nx = player.x; // dentro en X: cancela X
+      else nx = player.x;
     }
   }
   player.x = clamp(nx, halfW, world.w - halfW);
 
-  // Probar Y por separado
-  nx = player.x;
-  ny = player.y + vy*PLAYER_SPEED*dt;
+  // Resolver Y
+  nx = player.x; ny = player.y + vy*PLAYER_SPEED*dt;
   for(const r of OBSTACLES){
     if(aabbOverlap(nx-halfW, ny-halfH, halfW*2, halfH*2, r.x, r.y, r.w, r.h)){
       if(player.y < r.y) ny = r.y - halfH;
@@ -172,73 +165,55 @@ function update(dt){
   } else { player.frame=0; player.t=0; }
 }
 
-/* ===== DIBUJO + CÁMARA QUE NO ENTRA EN OBSTÁCULOS ===== */
+/* ===== DIBUJO + CÁMARA SIN SALTOS ===== */
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(!world.img||!sprites) return;
 
   const viewW=roomOriginal.w/ZOOM, viewH=roomOriginal.h/ZOOM;
 
-  // Cámara ideal centrada en Juan y clampeada al mundo
+  // 1) cámara ideal centrada y clampeada a bordes del mundo
   let camX = clamp(player.x - viewW/2, 0, Math.max(0, world.w - viewW));
   let camY = clamp(player.y - viewH/2, 0, Math.max(0, world.h - viewH));
 
-  // Empujar cámara FUERA de cada obstáculo (no muestra su interior)
-  for(const r of OBSTACLES){
-    if(aabbOverlap(camX, camY, viewW, viewH, r.x, r.y, r.w, r.h)){
-      // decide el lado según dónde está Juan respecto al rectángulo
-      const cx = r.x + r.w/2, cy = r.y + r.h/2;
-      const dx = player.x - cx, dy = player.y - cy;
-      if(Math.abs(dx) > Math.abs(dy)){
-        // empujar en X
-        if(dx < 0) camX = Math.min(camX, r.x - viewW);      // Juan a la izquierda -> cámara a la izquierda
-        else       camX = Math.max(camX, r.x + r.w);         // Juan a la derecha -> cámara a la derecha
-      }else{
-        // empujar en Y
-        if(dy < 0) camY = Math.min(camY, r.y - viewH);      // Juan arriba -> cámara arriba
-        else       camY = Math.max(camY, r.y + r.h);         // Juan abajo -> cámara abajo
-      }
-    }
-  }
+  // 2) resolver cámara contra TODOS los obstáculos con MTV (sin “tirones”)
+  [camX, camY] = resolveCameraAgainstRects(camX, camY, viewW, viewH, OBSTACLES, 6);
 
-  // Fondo recortado al visor
+  // fondo
   ctx.drawImage(world.img, camX, camY, viewW, viewH, vp.dx, vp.dy, vp.dw, vp.dh);
 
-  // ===== DEBUG =====
+  // DEBUG (solo si lo activas con Acción)
   if(DEBUG.show){
-    // pasar a coords de mundo dentro del visor
     ctx.save();
     ctx.translate(vp.dx, vp.dy);
     ctx.scale(vp.k*ZOOM, vp.k*ZOOM);
     ctx.translate(-camX, -camY);
 
-    // obstáculo(s) en rojo translúcido
-    ctx.fillStyle='rgba(255,60,60,0.25)';
-    ctx.strokeStyle='rgba(255,60,60,0.9)';
+    // obstáculos (rojo)
+    ctx.fillStyle='rgba(255,60,60,.25)';
+    ctx.strokeStyle='rgba(255,60,60,.9)';
     ctx.lineWidth = Math.max(1/(vp.k*ZOOM), 0.5);
-    for(const r of OBSTACLES){
-      ctx.fillRect(r.x, r.y, r.w, r.h);
-      ctx.strokeRect(r.x, r.y, r.w, r.h);
-    }
+    for(const r of OBSTACLES){ ctx.fillRect(r.x,r.y,r.w,r.h); ctx.strokeRect(r.x,r.y,r.w,r.h); }
 
-    // caja de colisión de Juan en verde
+    // caja de Juan (verde)
     const halfW=(SPRITES_JUAN.size.w*SPRITES_JUAN.scale)/2;
     const halfH=(SPRITES_JUAN.size.h*SPRITES_JUAN.scale)/2;
-    ctx.strokeStyle='#7CFC00';
-    ctx.strokeRect(player.x-halfW, player.y-halfH, halfW*2, halfH*2);
+    ctx.strokeStyle='#7CFC00'; ctx.strokeRect(player.x-halfW, player.y-halfH, halfW*2, halfH*2);
 
+    // marco de la vista
+    ctx.strokeStyle='cyan'; ctx.strokeRect(camX, camY, viewW, viewH);
     ctx.restore();
 
     // HUD
     ctx.save();
-    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(vp.dx+6, vp.dy+6, 240, 54);
+    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(vp.dx+6, vp.dy+6, 250, 50);
     ctx.font=DEBUG.font; ctx.fillStyle='#E6F6FF';
     ctx.fillText(`cam: ${camX|0}, ${camY|0}  view: ${viewW|0}x${viewH|0}`, vp.dx+12, vp.dy+24);
-    ctx.fillText(`player: ${player.x|0}, ${player.y|0}  DEBUG:${DEBUG.show?'ON':'OFF'}`, vp.dx+12, vp.dy+42);
+    ctx.fillText(`player: ${player.x|0}, ${player.y|0}`, vp.dx+12, vp.dy+42);
     ctx.restore();
   }
 
-  // ===== JUANSIN (tamaño exacto) =====
+  // Juansin (tamaño exacto como tu script)
   const swp=sprites.size.w, shp=sprites.size.h, s=sprites.scale;
   const dw=Math.round(swp*s), dh=Math.round(shp*s);
   const px = vp.dx + Math.round((player.x - camX) * ZOOM * vp.k);
@@ -252,6 +227,41 @@ function draw(){
 
   const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
   ctx.drawImage(img, 0,0, swp,shp, Math.round(px-dw/2), Math.round(py-dh/2), dw,dh);
+}
+
+/* ===== RESOLVER CÁMARA CONTRA RECTÁNGULOS (MTV) ===== */
+function resolveCameraAgainstRects(camX, camY, vw, vh, rects, maxIters=5){
+  const eps = 1e-3;
+  let ax = camX, ay = camY;
+  for(let k=0; k<maxIters; k++){
+    let moved = false;
+    for(const r of rects){
+      // comprobar solape
+      if(!aabbOverlap(ax,ay,vw,vh, r.x,r.y,r.w,r.h)) continue;
+
+      // distancias para salir por cada lado
+      const moveLeft  = (ax+vw) - r.x;        // mover A hacia la izquierda
+      const moveRight = (r.x+r.w) - ax;       // mover A hacia la derecha
+      const moveUp    = (ay+vh) - r.y;        // mover A hacia arriba
+      const moveDown  = (r.y+r.h) - ay;       // mover A hacia abajo
+
+      // elegir el desplazamiento mínimo que saca fuera
+      const xPush = (moveLeft < moveRight) ? -moveLeft : moveRight;
+      const yPush = (moveUp   < moveDown)  ? -moveUp   : moveDown;
+
+      if(Math.abs(xPush) < Math.abs(yPush)){
+        ax += xPush + Math.sign(xPush)*eps;
+      }else{
+        ay += yPush + Math.sign(yPush)*eps;
+      }
+      moved = true;
+    }
+    if(!moved) break;
+    // clamp a bordes del mundo tras los empujes
+    ax = clamp(ax, 0, Math.max(0, world.w - vw));
+    ay = clamp(ay, 0, Math.max(0, world.h - vh));
+  }
+  return [ax, ay];
 }
 
 /* ===== UTILS ===== */
