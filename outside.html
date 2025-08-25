@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum=1, user-scalable=no" />
-<title>Juansin - visor con lupa (vallas + cámara limitada)</title>
+<title>Juansin - visor con lupa (vallas + cámara limitada + DEBUG)</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start 2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 
 <style>
@@ -47,7 +47,7 @@
       <button id="btn-down" class="img-btn arrow btn-down" aria-label="Abajo"></button>
       <div></div>
     </div>
-    <button id="btn-act" class="img-act" aria-label="Acción"></button>
+    <button id="btn-act" class="img-act" aria-label="Acción (toggle DEBUG)"></button>
   </div>
 </div>
 
@@ -61,20 +61,27 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
 
 /* ===== VIEWPORT/CÁMARA ===== */
 const roomOriginal={w:512,h:350};
-const ZOOM=2.0;                 // cuánto ves dentro del visor
+const ZOOM=2.0;
 const PLAYER_SPEED=220;
 const STEP_FRAME=0.14;
 
 /* ===== VALLAS (en coords de la imagen) =====
-   type: 'vertical'  -> línea en x, activa entre y1..y2
-         'horizontal'-> línea en y, activa entre x1..x2
+   type: 'vertical'   -> línea en x, activa entre y1..y2
+         'horizontal' -> línea en y, activa entre x1..x2
 */
 const FENCES = [
-  // EJEMPLOS: edítalos o añade más
+  // EJEMPLOS (cámbialos por los tuyos):
   { type:'vertical',   x: 1200, y1: 200, y2: 900 },
   { type:'horizontal', y: 700,  x1: 300, x2: 1100 }
 ];
-const DEBUG_FENCES = true; // pon false para ocultarlas
+
+/* ===== DEBUG ===== */
+const DEBUG = {
+  show: true,    // arranca con debug visible
+  grid: true,    // muestra rejilla en el mundo
+  gridStep: 200, // cada 200px
+  font: "12px 'VT323', monospace"
+};
 
 /* ===== CANVAS ===== */
 const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d',{alpha:false}); ctx.imageSmoothingEnabled=false;
@@ -87,6 +94,12 @@ bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
 
+// Acción: toggle DEBUG
+const btnAct=document.getElementById('btn-act');
+['click','touchstart'].forEach(evt=>{
+  btnAct.addEventListener(evt, e=>{ e.preventDefault(); DEBUG.show=!DEBUG.show; });
+});
+
 /* ===== LOAD ===== */
 const loadImage=src=>new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; });
 async function preloadSprites(map){ const out={idle:{},walk:{},size:map.size,scale:map.scale}; for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage)); return out; }
@@ -98,10 +111,11 @@ const player={x:0,y:0,dir:'down',moving:false,frame:0,t:0};
   const [bg,spr]=await Promise.all([loadImage(BACKGROUND_SRC),preloadSprites(SPRITES_JUAN)]);
   world.img=bg; world.w=bg.naturalWidth; world.h=bg.naturalHeight; sprites=spr;
 
-  // arranque (debajo-izquierda, ajusta si quieres)
-  player.x = Math.max(0, (roomOriginal.w/ZOOM)/2);
-  player.y = Math.min(world.h, world.h - (roomOriginal.h/ZOOM)/2);
-  player.dir = 'up';
+  // arranque: abajo-izquierda (ajústalo si quieres)
+  const viewW=roomOriginal.w/ZOOM, viewH=roomOriginal.h/ZOOM;
+  player.x = Math.max(viewW*0.5, 8);
+  player.y = Math.min(world.h - 8, world.h - viewH*0.5);
+  player.dir='up';
 
   resizeCanvas();
   requestAnimationFrame(loop);
@@ -125,7 +139,7 @@ window.addEventListener('resize',resizeCanvas);
 let last=0;
 function loop(now){ if(!last) last=now; const dt=Math.min(1/30,(now-last)/1000); last=now; update(dt); draw(); requestAnimationFrame(loop); }
 
-/* ===== MOVIMIENTO con colisión contra vallas ===== */
+/* ===== MOVIMIENTO + COLISIÓN VALLAS ===== */
 function update(dt){
   let vx=(keys.left?-1:0)+(keys.right?1:0);
   let vy=(keys.up?-1:0)+(keys.down?1:0);
@@ -135,105 +149,140 @@ function update(dt){
   const nextX = player.x + vx*PLAYER_SPEED*dt;
   const nextY = player.y + vy*PLAYER_SPEED*dt;
 
-  // margen del “cuerpo” de Juan para las colisiones con líneas
-  const halfW = (SPRITES_JUAN.size.w * SPRITES_JUAN.scale)/2;
-  const halfH = (SPRITES_JUAN.size.h * SPRITES_JUAN.scale)/2;
+  const halfW=(SPRITES_JUAN.size.w*SPRITES_JUAN.scale)/2;
+  const halfH=(SPRITES_JUAN.size.h*SPRITES_JUAN.scale)/2;
 
-  // --- resolver por ejes para deslizarse por paredes ---
+  // Resolver por ejes para "deslizarse" por paredes
   let nx = nextX, ny = player.y;
-  // chocar con vallas verticales
   for(const f of FENCES){
-    if(f.type!=='vertical') continue;
-    // ¿pasa por el tramo activo?
-    const withinY = (ny >= f.y1 - halfH) && (ny <= f.y2 + halfH);
-    if(!withinY) continue;
-    // cruzar de izquierda->derecha
-    if(player.x < f.x - halfW && nx >= f.x - halfW){ nx = f.x - halfW; }
-    // cruzar de derecha->izquierda
-    if(player.x > f.x + halfW && nx <= f.x + halfW){ nx = f.x + halfW; }
+    if(f.type==='vertical'){
+      const withinY = (ny >= f.y1 - halfH) && (ny <= f.y2 + halfH);
+      if(!withinY) continue;
+      if(player.x < f.x - halfW && nx >= f.x - halfW){ nx = f.x - halfW; }
+      if(player.x > f.x + halfW && nx <= f.x + halfW){ nx = f.x + halfW; }
+    }
   }
-  player.x = clamp(nx, 0 + halfW, world.w - halfW);
+  player.x = clamp(nx, halfW, world.w - halfW);
 
   ny = nextY;
-  // chocar con vallas horizontales
   for(const f of FENCES){
-    if(f.type!=='horizontal') continue;
-    const withinX = (player.x >= f.x1 - halfW) && (player.x <= f.x2 + halfW);
-    if(!withinX) continue;
-    // cruzar de arriba->abajo
-    if(player.y < f.y - halfH && ny >= f.y - halfH){ ny = f.y - halfH; }
-    // cruzar de abajo->arriba
-    if(player.y > f.y + halfH && ny <= f.y + halfH){ ny = f.y + halfH; }
+    if(f.type==='horizontal'){
+      const withinX = (player.x >= f.x1 - halfW) && (player.x <= f.x2 + halfW);
+      if(!withinX) continue;
+      if(player.y < f.y - halfH && ny >= f.y - halfH){ ny = f.y - halfH; }
+      if(player.y > f.y + halfH && ny <= f.y + halfH){ ny = f.y + halfH; }
+    }
   }
-  player.y = clamp(ny, 0 + halfH, world.h - halfH);
+  player.y = clamp(ny, halfH, world.h - halfH);
 
-  // dirección visual
   if(player.moving){
     player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
     player.t+=dt; if(player.t>=STEP_FRAME){ player.t=0; player.frame=(player.frame+1)%2; }
   } else { player.frame=0; player.t=0; }
 }
 
-/* ===== CÁMARA: clampa a bordes del mundo y a vallas ===== */
+/* ===== DIBUJO + CÁMARA CLAMPEADA A VALLAS ===== */
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   if(!world.img||!sprites) return;
 
-  const viewW = roomOriginal.w/ZOOM;
-  const viewH = roomOriginal.h/ZOOM;
+  const viewW=roomOriginal.w/ZOOM, viewH=roomOriginal.h/ZOOM;
 
-  // cámara ideal centrada
-  let camX = player.x - viewW/2;
-  let camY = player.y - viewH/2;
+  // Cámara ideal centrada
+  let camX = clamp(player.x - viewW/2, 0, Math.max(0, world.w - viewW));
+  let camY = clamp(player.y - viewH/2, 0, Math.max(0, world.h - viewH));
 
-  // 1) clamp a bordes del mundo
-  camX = clamp(camX, 0, Math.max(0, world.w - viewW));
-  camY = clamp(camY, 0, Math.max(0, world.h - viewH));
-
-  // 2) clamp extra por vallas (como si fueran nuevos “bordes”)
+  // Clamp adicional a vallas (como bordes)
   for(const f of FENCES){
-    if(f.type==='vertical'){
-      // si estoy a la IZQUIERDA de la valla, mi ventana no puede mostrar a la derecha de x
-      if(player.x <= f.x && overlapsY(camY, viewH, f.y1, f.y2)){
-        camX = Math.min(camX, f.x - viewW);
-      }
-      // si estoy a la DERECHA, mi ventana no puede mostrar a la izquierda de x
-      if(player.x >= f.x && overlapsY(camY, viewH, f.y1, f.y2)){
-        camX = Math.max(camX, f.x);
-      }
-    } else { // horizontal
-      if(player.y <= f.y && overlapsX(camX, viewW, f.x1, f.x2)){
-        camY = Math.min(camY, f.y - viewH);
-      }
-      if(player.y >= f.y && overlapsX(camX, viewW, f.x1, f.x2)){
-        camY = Math.max(camY, f.y);
-      }
+    if(f.type==='vertical' && overlapsY(camY,viewH,f.y1,f.y2)){
+      if(player.x <= f.x) camX = Math.min(camX, f.x - viewW);
+      if(player.x >= f.x) camX = Math.max(camX, f.x);
+    }else
+    if(f.type==='horizontal' && overlapsX(camX,viewW,f.x1,f.x2)){
+      if(player.y <= f.y) camY = Math.min(camY, f.y - viewH);
+      if(player.y >= f.y) camY = Math.max(camY, f.y);
     }
   }
 
-  // fondo
+  // Fondo
   ctx.drawImage(world.img, camX, camY, viewW, viewH, vp.dx, vp.dy, vp.dw, vp.dh);
 
-  // DEBUG de vallas
-  if(DEBUG_FENCES){
+  // ===== DEBUG OVERLAY =====
+  if(DEBUG.show){
+    // Marco del visor
+    ctx.save();
+    ctx.strokeStyle='rgba(0,255,255,.8)'; ctx.lineWidth=2;
+    ctx.strokeRect(vp.dx-1, vp.dy-1, vp.dw+2, vp.dh+2);
+    ctx.restore();
+
+    // Transformación mundo->pantalla (dentro del visor)
     ctx.save();
     ctx.translate(vp.dx, vp.dy);
-    ctx.scale(vp.k*ZOOM, vp.k*ZOOM); // pasamos de mundo a pantalla dentro del visor
+    ctx.scale(vp.k*ZOOM, vp.k*ZOOM);
     ctx.translate(-camX, -camY);
-    ctx.strokeStyle='red'; ctx.lineWidth=1/Math.max(1, (vp.k*ZOOM));
-    for(const f of FENCES){
-      if(f.type==='vertical'){
-        ctx.beginPath(); ctx.moveTo(f.x, f.y1); ctx.lineTo(f.x, f.y2); ctx.stroke();
-      }else{
-        ctx.beginPath(); ctx.moveTo(f.x1, f.y); ctx.lineTo(f.x2, f.y); ctx.stroke();
+
+    // Rejilla
+    if(DEBUG.grid){
+      const step = DEBUG.gridStep;
+      ctx.strokeStyle='rgba(255,255,255,.18)';
+      ctx.lineWidth = 1/(vp.k*ZOOM);
+      let startX = Math.floor(camX/step)*step;
+      let endX = camX + viewW;
+      for(let x=startX; x<=endX; x+=step){
+        ctx.beginPath(); ctx.moveTo(x, camY); ctx.lineTo(x, camY+viewH); ctx.stroke();
+      }
+      let startY = Math.floor(camY/step)*step;
+      let endY = camY + viewH;
+      for(let y=startY; y<=endY; y+=step){
+        ctx.beginPath(); ctx.moveTo(camX, y); ctx.lineTo(camX+viewW, y); ctx.stroke();
       }
     }
+
+    // Vallas
+    ctx.strokeStyle='#ff5252';
+    ctx.lineWidth = Math.max(1/(vp.k*ZOOM), 0.5);
+    for(const f of FENCES){
+      ctx.beginPath();
+      if(f.type==='vertical'){
+        ctx.moveTo(f.x, f.y1); ctx.lineTo(f.x, f.y2);
+      }else{
+        ctx.moveTo(f.x1, f.y); ctx.lineTo(f.x2, f.y);
+      }
+      ctx.stroke();
+    }
+
+    // Caja de colisión de Juan
+    const halfW=(SPRITES_JUAN.size.w*SPRITES_JUAN.scale)/2;
+    const halfH=(SPRITES_JUAN.size.h*SPRITES_JUAN.scale)/2;
+    ctx.strokeStyle='#7CFC00'; // verde
+    ctx.lineWidth = Math.max(1/(vp.k*ZOOM), 0.75);
+    ctx.strokeRect(player.x-halfW, player.y-halfH, halfW*2, halfH*2);
+
+    // Cruz en el centro del player
+    ctx.beginPath();
+    ctx.moveTo(player.x-6, player.y); ctx.lineTo(player.x+6, player.y);
+    ctx.moveTo(player.x, player.y-6); ctx.lineTo(player.x, player.y+6);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // HUD de coordenadas
+    ctx.save();
+    ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillRect(vp.dx+6, vp.dy+6, 210, 64);
+    ctx.font=DEBUG.font; ctx.fillStyle='#E6F6FF';
+    const txt=[
+      `DEBUG: ${DEBUG.show?'ON':'OFF'}  (Acción para toggle)`,
+      `cam: ${camX|0}, ${camY|0}  view: ${viewW|0}x${viewH|0}`,
+      `player: ${player.x|0}, ${player.y|0}`
+    ];
+    let y=vp.dy+22;
+    for(const line of txt){ ctx.fillText(line, vp.dx+12, y); y+=16; }
     ctx.restore();
   }
 
-  // Juansin (tamaño exacto como tu script)
+  // ===== JUANSIN =====
   const swp=sprites.size.w, shp=sprites.size.h, s=sprites.scale;
-  const dw=Math.round(swp*s), dh=Math.round(shp*s);
+  const dw=Math.round(swp*s), dh=Math.round(shp*s); // tamaño EXACTO como tu script
   const px = vp.dx + Math.round((player.x - camX) * ZOOM * vp.k);
   const py = vp.dy + Math.round((player.y - camY) * ZOOM * vp.k);
 
