@@ -69,6 +69,13 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
          right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
 
+// === CONFIG INICIAL ===
+// Posición inicial: modo "percent" (sobre el tamaño real del fondo) o "pixel"
+const START = { mode: 'percent', x: 50, y: 80 }; // 50% ancho, 80% alto (como tenías)
+
+// Zoom de la “lupa”: 1 = 512×350; 2 = duplica zoom (recorte 256×175); 3 = aún más zoom
+let ZOOM = 2.0;
+
 /* ===== CANVAS / LAYOUT ===== */
 const roomOriginal={w:512,h:350}; // para bandas negras
 const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
@@ -126,9 +133,9 @@ function resizeCanvas(){
   bgRect.dh=roomOriginal.h*k;
   bgRect.dx=(canvas.width-bgRect.dw)/2;
   bgRect.dy=(canvas.height-bgRect.dh)/2;
+  
+  applyZoom();
 
-  mapScaleX=bgRect.dw/cam.w;
-  mapScaleY=bgRect.dh/cam.h;
 }
 window.addEventListener('resize', resizeCanvas);
 
@@ -183,6 +190,16 @@ function update(dt){
   // cámara: calcula target y avanza suavemente
   updateCameraTargets();
   updateCamera(dt);
+}
+
+function applyZoom(){
+  // cámara/lupa se define a partir de roomOriginal y del factor ZOOM
+  cam.w = Math.max(64, Math.round(roomOriginal.w / ZOOM));
+  cam.h = Math.max(64, Math.round(roomOriginal.h / ZOOM));
+
+  // Recalcula el mapeo mundo->pantalla dentro del rect visible con bandas
+  mapScaleX = bgRect.dw / cam.w;
+  mapScaleY = bgRect.dh / cam.h;
 }
 
 /* ===== DRAW ===== */
