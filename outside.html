@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum=1, user-scalable=no" />
-<title>Juansin – cámara instantánea + obstáculos (debug)</title>
+<title>Juansin – props por capas + colisiones (easy)</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -25,7 +25,6 @@
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
 
-  /* Viñeta sutil */
   .vignette::after{
     content:""; position:absolute; inset:0; pointer-events:none;
     background:radial-gradient(ellipse at center, rgba(0,0,0,0) 65%, rgba(0,0,0,.22) 100%);
@@ -60,7 +59,7 @@
 
 <script>
 /* ===== ASSETS ===== */
-const BACKGROUND="assets/locations/outside.png"; // tu fondo grande
+const BACKGROUND="assets/locations/outside.png"; // fondo grande
 const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
   idle:{ down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
   walk:{ down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"],
@@ -70,9 +69,10 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
 };
 
 // === CONFIG INICIAL ===
-const START = { mode:'percent', x:5, y:90 };   // posición inicial
-let ZOOM = 2.5;                                  // más zoom como pediste
-let DEBUG_OBS = true;                            // mostrar obstáculos en pantalla
+const START   = { mode:'percent', x:5, y:90 }; // posición inicial
+let   ZOOM    = 2.5;                            // zoom de la lupa
+let   DEBUG_OBS   = true;                       // overlay de obstáculos
+let   DEBUG_PROPS = true;                       // overlay de colliders de props
 
 /* ===== CANVAS / LAYOUT ===== */
 const roomOriginal={w:512,h:350}; // mantiene bandas negras
@@ -119,18 +119,12 @@ async function preloadSprites(map){
 }
 function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 
-/* ===== OBSTÁCULOS =====
-   Puedes definir en porcentaje (del tamaño del mapa) o en píxeles absolutos.
-   rectP(x%, y%, w%, h%)  | rect(x, y, w, h)
-*/
+/* ===== OBSTÁCULOS AD-HOC (siguen existiendo) ===== */
 const OBSTACLE_DEFS = [
-  // --- ejemplos en PORCENTAJE ---
-  {type:'percent', x:50, y:80, w:30, h:50, name:'valla central izq'},
-
-  // --- ejemplo en PÍXELES (se ajusta a tu mapa real) ---
-  // {type:'pixel', x: 300, y: 600, w: 180, h: 40, name:'bloque en px'},
+  // ejemplo en porcentaje (ajústalo a tu mapa real)
+  {type:'percent', x:50, y:80, w:30, h:50, name:'zona bloqueada'},
 ];
-let OBSTACLES = []; // aquí quedarán convertidos a píxeles del mundo
+let OBSTACLES = []; // obstáculos en píxeles
 
 function rectP(px, py, pw, ph){
   return { x: Math.round(world.w*(px/100)),
@@ -138,17 +132,120 @@ function rectP(px, py, pw, ph){
            w: Math.round(world.w*(pw/100)),
            h: Math.round(world.h*(ph/100)) };
 }
-function buildObstacles(){
-  OBSTACLES = OBSTACLE_DEFS.map(o=>{
+function buildObstaclesFromDefs(){
+  const extra = OBSTACLE_DEFS.map(o=>{
     const r = (o.type==='percent') ? rectP(o.x,o.y,o.w,o.h) : {x:o.x,y:o.y,w:o.w,h:o.h};
-    return {...r, name:o.name||''};
+    return {...r, name:o.name||'ad-hoc'};
   });
+  OBSTACLES.push(...extra);
 }
 function toggleDebug(){ DEBUG_OBS=!DEBUG_OBS; }
-window.toggleDebug = toggleDebug; // en consola: toggleDebug()
+window.toggleDebug = toggleDebug;
 
-/* Colisión “círculo vs rect” con radio de pies (en píxeles de mundo) */
-const FEET_RADIUS = 10; // ajusta si quieres más/menos “gordo”
+/* ===== CATALOGO DE PROPS (sprites por tipo con collider base) =====
+   - anchor bottom-center: (x,y) es el PIE del sprite
+   - collider: rect relativo al pie (en px de la imagen dibujada SIN ESCALA).
+     Lo escalamos con 'prop.scale' al construir y luego con mapScale al pintar.
+*/
+const CATALOG = {
+  tree:   { src:'assets/props/tree.png',    scale:1.0, collider:{ x:-14, y:-28, w:28, h:20 } },  // tronco
+  bush:   { src:'assets/props/bush.png',    scale:1.0, collider:{ x:-16, y:-16, w:32, h:16 } },
+  rock:   { src:'assets/props/rock.png',    scale:1.0, collider:{ x:-12, y:-10, w:24, h:10 } },
+  fence:  { src:'assets/props/fence.png',   scale:1.0, collider:{ x:-16, y:-10, w:32, h:10 } },
+  house:  { src:'assets/props/house.png',   scale:1.0, collider:{ x:-40, y:-24, w:80, h:24 } }, // base de pared
+  bridge: { src:'assets/props/bridge.png',  scale:1.0, collider:null }, // quizá sin colisión o solo bordes luego
+};
+
+/* ===== LISTA DE PROPS COLOCADOS =====
+   - Por tipo, con posiciones en % o px. (fácil de editar)
+*/
+const PLACED = {
+  tree: [
+    {type:'percent', x:18, y:62},
+    {type:'percent', x:22, y:64},
+    {type:'percent', x:30, y:58},
+  ],
+  house: [
+    {type:'percent', x:70, y:55},
+  ],
+  bush: [
+    {type:'percent', x:45, y:78},
+    {type:'percent', x:48, y:79},
+  ],
+  fence: [
+    {type:'percent', x:40, y:82},
+    {type:'percent', x:42, y:82},
+    {type:'percent', x:44, y:82},
+    {type:'percent', x:46, y:82},
+  ],
+  rock: [
+    {type:'percent', x:60, y:72},
+  ],
+  bridge: [
+    {type:'percent', x:55, y:65},
+  ],
+};
+
+let PROP_IMAGES = {}; // imágenes por tipo
+let PROPS = [];       // props colocados en píxeles del mundo + collider en mundo
+
+async function preloadCatalog(){
+  const entries = Object.entries(CATALOG);
+  const loaded = await Promise.all(entries.map(([k,v])=>loadImage(v.src).then(img=>[k,img])));
+  loaded.forEach(([k,img])=>{ PROP_IMAGES[k]=img; });
+}
+
+function placeToWorld(p){
+  if(p.type==='percent'){
+    return { x: Math.round(world.w*(p.x/100)), y: Math.round(world.h*(p.y/100)) };
+  }
+  return { x: p.x, y: p.y };
+}
+
+function buildProps(){
+  PROPS = [];
+  for(const [type, list] of Object.entries(PLACED)){
+    const spec = CATALOG[type];
+    if(!spec) continue;
+    const img = PROP_IMAGES[type];
+    const baseScale = spec.scale || 1;
+
+    for(const p of list){
+      const pos = placeToWorld(p);
+      // tamaño natural del sprite (sin escala)
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+
+      const prop = {
+        type, img,
+        x: pos.x, y: pos.y,       // (x,y) es el pie (anchor bottom-center)
+        iw, ih, scale: baseScale, // escala interna del prop
+      };
+
+      // collider en coordenadas de mundo (si existe)
+      if(spec.collider){
+        const c = spec.collider; // relativo al pie en px de imagen SIN escala
+        const sx = c.x * baseScale;
+        const sy = c.y * baseScale;
+        const sw = c.w * baseScale;
+        const sh = c.h * baseScale;
+        // convierte relativo al pie (bottom-center) -> mundo
+        prop.collider = {
+          x: prop.x + sx,
+          y: prop.y + sy - sh, // porque y en collider se mide hacia arriba desde el pie
+          w: sw,
+          h: sh
+        };
+        // añade a obstáculos del mundo
+        OBSTACLES.push({ ...prop.collider, name:`${type}` });
+      }
+
+      PROPS.push(prop);
+    }
+  }
+}
+
+/* ===== COLISIÓN player vs rect ===== */
+let FEET_RADIUS = 10;
 function circleRectOverlap(cx, cy, r, rect){
   const rx = clamp(cx, rect.x, rect.x+rect.w);
   const ry = clamp(cy, rect.y, rect.y+rect.h);
@@ -156,7 +253,7 @@ function circleRectOverlap(cx, cy, r, rect){
   return (dx*dx + dy*dy) <= (r*r);
 }
 
-/* ===== LAYOUT (bandas negras fijas) ===== */
+/* ===== LAYOUT (bandas negras) ===== */
 function resizeCanvas(){
   const screen=document.querySelector('.screen');
   canvas.width=screen.clientWidth;
@@ -168,11 +265,11 @@ function resizeCanvas(){
   bgRect.dx=(canvas.width-bgRect.dw)/2;
   bgRect.dy=(canvas.height-bgRect.dh)/2;
 
-  applyZoom(); // recalcula cam.w/h y mapScaleX/Y según ZOOM
+  applyZoom();
 }
 window.addEventListener('resize', resizeCanvas);
 
-/* ===== CÁMARA INSTANTÁNEA (sin lerp) ===== */
+/* ===== CÁMARA INSTANTÁNEA ===== */
 function updateCamera(){
   cam.x = (player.x - cam.w/2);
   cam.y = (player.y - cam.h/2);
@@ -194,19 +291,17 @@ function update(dt){
     nx += (vx/len)*player.speed*dt;
     ny += (vy/len)*player.speed*dt;
 
-    // límites del mundo (como antes)
+    // límites del mundo
     const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
     const halfW=Math.round(sw*s)/2, halfH=Math.round(sh*s)/2;
     nx = clamp(nx, halfW, world.w - halfW);
     ny = clamp(ny, halfH, world.h - halfH);
 
-    // --- COLISIÓN con descomposición por ejes (deslizamiento) ---
-    // intenta mover en X
+    // colisión ejes (deslizamiento)
     let tryX = true;
     for(const ob of OBSTACLES){ if(circleRectOverlap(nx, player.y, FEET_RADIUS, ob)){ tryX=false; break; } }
     if(tryX) player.x = nx;
 
-    // intenta mover en Y
     let tryY = true;
     for(const ob of OBSTACLES){ if(circleRectOverlap(player.x, ny, FEET_RADIUS, ob)){ tryY=false; break; } }
     if(tryY) player.y = ny;
@@ -218,17 +313,16 @@ function update(dt){
     player.frame=0;
   }
 
-  updateCamera(); // cámara directa, sin retardo
+  updateCamera();
 }
 
-/* ===== ZOOM de la “lupa” ===== */
+/* ===== ZOOM ===== */
 function applyZoom(){
   cam.w = Math.max(64, Math.round(roomOriginal.w / ZOOM));
   cam.h = Math.max(64, Math.round(roomOriginal.h / ZOOM));
   mapScaleX = bgRect.dw / cam.w;
   mapScaleY = bgRect.dh / cam.h;
 
-  // re-clamp por si el zoom cambió estando cerca del borde
   cam.x = clamp(cam.x, 0, world.w - cam.w);
   cam.y = clamp(cam.y, 0, world.h - cam.h);
 }
@@ -238,18 +332,73 @@ function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Redondea el source a píxel entero y fuerza bordes exactos
-  let srcX = Math.round(cam.x);
-  let srcY = Math.round(cam.y);
-  if (srcX < 0) srcX = 0;
-  if (srcY < 0) srcY = 0;
-  if (srcX > world.w - cam.w) srcX = world.w - cam.w;
-  if (srcY > world.h - cam.h) srcY = world.h - cam.h;
-
   // Fondo
+  let srcX = Math.round(cam.x), srcY = Math.round(cam.y);
+  srcX = clamp(srcX, 0, world.w - cam.w);
+  srcY = clamp(srcY, 0, world.h - cam.h);
   ctx.drawImage(bgImg, srcX, srcY, cam.w, cam.h, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
 
-  // DEBUG: dibuja obstáculos (mapeados al rect visible)
+  // Lista de dibujado con orden por "pie" (Y en pantalla)
+  const drawList = [];
+
+  // Añade props
+  for(const p of PROPS){
+    const scrX = bgRect.dx + (p.x - cam.x) * mapScaleX;
+    const scrY = bgRect.dy + (p.y - cam.y) * mapScaleY; // pie
+    const drawW = Math.round(p.iw * p.scale * mapScaleX);
+    const drawH = Math.round(p.ih * p.scale * mapScaleY);
+    const dx = Math.round(scrX - drawW/2);
+    const dy = Math.round(scrY - drawH);
+
+    drawList.push({
+      y: scrY,
+      draw: ()=> ctx.drawImage(p.img, 0,0,p.iw,p.ih, dx, dy, drawW, drawH),
+      debug: ()=> {
+        if(DEBUG_PROPS && p.collider){
+          const c = p.collider;
+          const cdx = bgRect.dx + (c.x - cam.x) * mapScaleX;
+          const cdy = bgRect.dy + (c.y - cam.y) * mapScaleY;
+          const cdw = c.w * mapScaleX;
+          const cdh = c.h * mapScaleY;
+          ctx.save();
+          ctx.globalAlpha = .45;
+          ctx.fillStyle = '#33ff66';
+          ctx.strokeStyle = '#003300';
+          ctx.fillRect(Math.round(cdx), Math.round(cdy), Math.round(cdw), Math.round(cdh));
+          ctx.strokeRect(Math.round(cdx), Math.round(cdy), Math.round(cdw), Math.round(cdh));
+          ctx.restore();
+        }
+      }
+    });
+  }
+
+  // Añade player
+  const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
+  const dw=Math.round(sw*s), dh=Math.round(sh*s);
+  const screenX=Math.round(bgRect.dx + (player.x - cam.x) * mapScaleX);
+  const screenY=Math.round(bgRect.dy + (player.y - cam.y) * mapScaleY); // pie
+
+  drawList.push({
+    y: screenY,
+    draw: ()=>{
+      // sombra
+      ctx.fillStyle='rgba(0,0,0,.30)';
+      ctx.beginPath();
+      ctx.ellipse(screenX, screenY + Math.round(dh/2) - 4, dw/2.5, dh/6, 0, 0, Math.PI*2);
+      ctx.fill();
+      // sprite
+      const img=player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
+      ctx.drawImage(img,0,0,sw,sh, Math.round(screenX - dw/2), Math.round(screenY - dh/2), dw, dh);
+    }
+  });
+
+  // Ordena por Y y pinta
+  drawList.sort((a,b)=>a.y-b.y).forEach(item=>item.draw());
+
+  // DEBUG de props (colliders) encima
+  drawList.forEach(item=> item.debug && item.debug());
+
+  // DEBUG: obstáculos generales
   if(DEBUG_OBS){
     ctx.save();
     ctx.globalAlpha = 0.35;
@@ -264,44 +413,9 @@ function draw(){
       const dh = ob.h * mapScaleY;
       ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
       ctx.strokeRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-
-      // etiqueta
-      if(ob.name){
-        ctx.globalAlpha = 0.9;
-        ctx.font = '10px monospace';
-        ctx.fillStyle = '#fff';
-        ctx.fillText(ob.name, Math.round(dx)+3, Math.round(dy)+12);
-        ctx.globalAlpha = 0.35;
-      }
     }
-
-    // radio de pies (círculo) para depurar tamaño de colisión
-    const footX = bgRect.dx + (player.x - cam.x) * mapScaleX;
-    const footY = bgRect.dy + (player.y - cam.y) * mapScaleY;
-    ctx.globalAlpha = 0.9;
-    ctx.strokeStyle = '#00e0ff';
-    ctx.beginPath();
-    ctx.ellipse(Math.round(footX), Math.round(footY), FEET_RADIUS*mapScaleX, FEET_RADIUS*mapScaleY, 0, 0, Math.PI*2);
-    ctx.stroke();
-
     ctx.restore();
   }
-
-  // Juansin (mismo tamaño exacto que tu script)
-  const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
-  const dw=Math.round(sw*s), dh=Math.round(sh*s);
-  const screenX=Math.round(bgRect.dx + (player.x - cam.x) * mapScaleX);
-  const screenY=Math.round(bgRect.dy + (player.y - cam.y) * mapScaleY);
-
-  // sombra
-  ctx.fillStyle='rgba(0,0,0,.30)';
-  ctx.beginPath();
-  ctx.ellipse(screenX, screenY + Math.round(dh/2) - 4, dw/2.5, dh/6, 0, 0, Math.PI*2);
-  ctx.fill();
-
-  // sprite
-  const img=player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
-  ctx.drawImage(img, 0,0, sw,sh, Math.round(screenX - dw/2), Math.round(screenY - dh/2), dw, dh);
 }
 
 /* ===== LOOP ===== */
@@ -315,13 +429,13 @@ function loop(now){
 
 /* ===== INIT ===== */
 async function init(){
-  const [bg,spr]=await Promise.all([loadImage(BACKGROUND),preloadSprites(SPRITES_JUAN)]);
+  const [bg,spr] = await Promise.all([loadImage(BACKGROUND), preloadSprites(SPRITES_JUAN)]);
   bgImg=bg; sprites=spr;
+  await preloadCatalog(); // carga sprites de props
 
   world.w=bgImg.width; world.h=bgImg.height;
 
   resizeCanvas();
-  buildObstacles(); // convierte % -> píxeles con dimensiones reales
 
   // Posición inicial
   const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
@@ -336,20 +450,28 @@ async function init(){
   player.x = clamp(player.x, halfW, world.w - halfW);
   player.y = clamp(player.y, halfH, world.h - halfH);
 
-  updateCamera(); // cámara centrada
+  // Construye props (y añade sus colliders) + obstáculos ad-hoc
+  OBSTACLES = [];              // limpia
+  buildProps();
+  buildObstaclesFromDefs();
 
+  updateCamera();
   requestAnimationFrame(loop);
 }
 init();
 
-/* Helpers expuestas para toquetear en consola: */
+/* ===== Helpers para consola ===== */
 window.setZoom = function(z){ ZOOM = Math.max(1, z); applyZoom(); updateCamera(); };
-window.addObstaclePx = function(x,y,w,h,name='px'){
-  OBSTACLES.push({x,y,w,h,name}); 
+window.toggleProps = function(){ DEBUG_PROPS = !DEBUG_PROPS; };
+window.addPropPercent = function(type,xp,yp){
+  if(!PLACED[type]) PLACED[type]=[];
+  PLACED[type].push({type:'percent',x:xp,y:yp});
+  // reconstruye
+  OBSTACLES = [];
+  buildProps();
+  buildObstaclesFromDefs();
 };
-window.addObstaclePercent = function(xp,yp,wp,hp,name='%'){
-  const r = rectP(xp,yp,wp,hp); OBSTACLES.push({...r,name});
-};
+window.FOOTS = ()=>console.log('player feet:', player.x, player.y);
 </script>
 </body>
 </html>
