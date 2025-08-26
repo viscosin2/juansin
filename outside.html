@@ -215,10 +215,16 @@ function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // fondo (snap a entero para evitar shimmer)
+  // Fondo dentro del rect de pantalla
   let sx=Math.round(cam.x), sy=Math.round(cam.y);
   sx=clamp(sx,0,world.w-cam.w); sy=clamp(sy,0,world.h-cam.h);
   ctx.drawImage(bgImg, sx,sy, cam.w,cam.h, screenRect.dx,screenRect.dy, screenRect.dw,screenRect.dh);
+
+  // ⬇️ Todo lo demás recortado a screenRect (evita dibujar fuera de las bandas)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
 
   // build draw list (orden por y del pie)
   const list=[];
@@ -247,7 +253,7 @@ function draw(){
     });
   }
 
-  // juan (mismo tamaño exacto)
+  // Juan
   const sw=JUAN.size.w, sh=JUAN.size.h, s=JUAN.scale;
   const jw=Math.round(sw*s), jh=Math.round(sh*s);
   const jx=Math.round(screenRect.dx+(player.x-cam.x)*mapScaleX);
@@ -263,13 +269,12 @@ function draw(){
   list.sort((a,b)=>a.y-b.y).forEach(it=>it.draw());
   list.forEach(it=>it.debug && it.debug());
 
-  // debug de obstáculos + HUD
+  // DEBUG: obstáculos + pies (también dentro del clip)
   if(DEBUG_OBS){
     ctx.save();
-    // título
     ctx.globalAlpha=.95; ctx.fillStyle='#00e0ff'; ctx.font='bold 12px monospace';
     ctx.fillText('DEBUG ON', screenRect.dx+8, screenRect.dy+14);
-    // obstáculos
+
     ctx.globalAlpha=.5; ctx.fillStyle='#ff3366'; ctx.strokeStyle='#ffffff'; ctx.lineWidth=1;
     for(const ob of OBSTACLES){
       const dx=screenRect.dx+(ob.x-cam.x)*mapScaleX, dy=screenRect.dy+(ob.y-cam.y)*mapScaleY;
@@ -277,11 +282,13 @@ function draw(){
       ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
       ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
     }
-    // pies
-    const fx=jx, fy=jy; ctx.globalAlpha=1; ctx.strokeStyle='#ffff00'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.ellipse(fx,fy, FEET_RADIUS*mapScaleX, FEET_RADIUS*mapScaleY, 0,0,Math.PI*2); ctx.stroke();
+
+    ctx.globalAlpha=1; ctx.strokeStyle='#ffff00'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(jx,jy, FEET_RADIUS*mapScaleX, FEET_RADIUS*mapScaleY, 0,0,Math.PI*2); ctx.stroke();
     ctx.restore();
   }
+
+  ctx.restore(); // ⬅️ salimos del clip
 }
 
 /* ========== LOOP ========== */
