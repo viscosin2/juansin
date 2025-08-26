@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum=1, user-scalable=no" />
-<title>Juansin – mapa con cámara (solo D‑Pad, bandas negras)</title>
+<title>Juansin – mapa con cámara suave</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -25,7 +25,6 @@
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
 
-  /* viñeta opcional para sensación de “lupa” */
   .vignette::after{
     content:""; position:absolute; inset:0; pointer-events:none;
     background:radial-gradient(ellipse at center, rgba(0,0,0,0) 65%, rgba(0,0,0,.22) 100%);
@@ -37,30 +36,28 @@
 <div class="gameboy">
   <div class="screen-container">
     <div class="screen vignette">
-      <canvas id="game" aria-label="Juego"></canvas>
+      <canvas id="game"></canvas>
     </div>
   </div>
 
-  <!-- Controles táctiles (solo D‑Pad + acción inerte) -->
   <div class="controls">
     <div class="dpad">
       <div></div>
-      <button id="btn-up" class="img-btn arrow btn-up" aria-label="Arriba"></button>
+      <button id="btn-up" class="img-btn arrow btn-up"></button>
       <div></div>
-      <button id="btn-left" class="img-btn arrow btn-left" aria-label="Izquierda"></button>
+      <button id="btn-left" class="img-btn arrow btn-left"></button>
       <div></div>
-      <button id="btn-right" class="img-btn arrow btn-right" aria-label="Derecha"></button>
+      <button id="btn-right" class="img-btn arrow btn-right"></button>
       <div></div>
-      <button id="btn-down" class="img-btn arrow btn-down" aria-label="Abajo"></button>
+      <button id="btn-down" class="img-btn arrow btn-down"></button>
       <div></div>
     </div>
-    <button id="btn-act" class="img-act" aria-label="Acción"></button>
+    <button id="btn-act" class="img-act"></button>
   </div>
 </div>
 
 <script>
-/* ===== ASSETS ===== */
-const BACKGROUND="assets/locations/outside.png"; // mapa grande
+const BACKGROUND="assets/locations/outside.png";
 const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
   idle:{ down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
   walk:{ down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"],
@@ -69,49 +66,34 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
          right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
 
-/* ===== CANVAS ===== */
-const roomOriginal={w:512,h:350}; // tamaño lógico previo para bandas negras
+const roomOriginal={w:512,h:350};
 const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
 
-/* ===== ESTADO GLOBAL ===== */
 let bgImg=null, sprites=null;
-
-// mundo = tamaño real del fondo (se define al cargar)
 let world={w:1024,h:768};
-
-// cámara “lupa”: EXACTA al roomOriginal (mantiene bandas)
 let cam={x:0,y:0,w:roomOriginal.w,h:roomOriginal.h};
-
-// rectángulo destino dentro del canvas que conserva bandas negras
 let bgRect={dx:0,dy:0,dw:0,dh:0};
-
-// factores para mapear mundo (coordenadas de cam) -> pixeles dentro de bgRect
 let mapScaleX=1, mapScaleY=1;
 
-/* ===== PLAYER (mismo movimiento) ===== */
 const player={x:0,y:0,speed:230,dir:'down',moving:false,frame:0,frameTime:0};
 
-/* ===== INPUT: SOLO D‑PAD ===== */
 const keys={up:false,down:false,left:false,right:false};
 function bindHold(btn,on,off){
-  const start=e=>{e.preventDefault(); on();};
-  const end=e=>{e.preventDefault(); off();};
+  const start=e=>{e.preventDefault();on();};
+  const end=e=>{e.preventDefault();off();};
   btn.addEventListener('touchstart',start,{passive:false});
   btn.addEventListener('touchend',end,{passive:false});
   btn.addEventListener('touchcancel',end,{passive:false});
   btn.addEventListener('mousedown',start);
   window.addEventListener('mouseup',end);
 }
-bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
-bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
-bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
+bindHold(document.getElementById('btn-up'),()=>keys.up=true,()=>keys.up=false);
+bindHold(document.getElementById('btn-down'),()=>keys.down=true,()=>keys.down=false);
+bindHold(document.getElementById('btn-left'),()=>keys.left=true,()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
 
-// Acción inerte (por si la usas después)
 document.getElementById('btn-act').addEventListener('click', e=>e.preventDefault());
-document.getElementById('btn-act').addEventListener('touchstart', e=>{ e.preventDefault(); }, {passive:false});
 
-/* ===== UTIL ===== */
 const loadImage=src=>new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; });
 async function preloadSprites(map){
   const out={ idle:{}, walk:{}, size:map.size, scale:map.scale };
@@ -120,111 +102,88 @@ async function preloadSprites(map){
 }
 function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 
-/* ===== LAYOUT (bandas negras) ===== */
 function resizeCanvas(){
   const screen=document.querySelector('.screen');
   canvas.width=screen.clientWidth;
   canvas.height=screen.clientHeight;
 
-  // Calcula el rect destino que mantiene la relación 512x350 (bandas arriba/abajo)
   const k=Math.min(canvas.width/roomOriginal.w, canvas.height/roomOriginal.h);
   bgRect.dw=roomOriginal.w*k;
   bgRect.dh=roomOriginal.h*k;
   bgRect.dx=(canvas.width-bgRect.dw)/2;
   bgRect.dy=(canvas.height-bgRect.dh)/2;
 
-  // Mapa de coordenadas de cámara a pixeles del rectángulo visible
   mapScaleX=bgRect.dw/cam.w;
   mapScaleY=bgRect.dh/cam.h;
 }
 window.addEventListener('resize', resizeCanvas);
 
-/* ===== CÁMARA ===== */
 function updateCamera(){
-  cam.x=Math.round(player.x - cam.w/2);
-  cam.y=Math.round(player.y - cam.h/2);
-  cam.x=clamp(cam.x, 0, world.w - cam.w);
-  cam.y=clamp(cam.y, 0, world.h - cam.h);
+  cam.x = (player.x - cam.w/2);
+  cam.y = (player.y - cam.h/2);
+  cam.x=clamp(cam.x,0,world.w-cam.w);
+  cam.y=clamp(cam.y,0,world.h-cam.h);
 }
 
-/* ===== UPDATE ===== */
 function update(dt){
   const vx=(keys.left?-1:0)+(keys.right?1:0);
   const vy=(keys.up?-1:0)+(keys.down?1:0);
   player.moving=!!(vx||vy);
 
   if(player.moving){
-    player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
+    player.dir=Math.abs(vx)>Math.abs(vy)?(vx<0?'left':'right'):(vy<0?'up':'down');
     const len=Math.hypot(vx,vy)||1;
+    player.x+=(vx/len)*player.speed*dt;
+    player.y+=(vy/len)*player.speed*dt;
 
-    player.x += (vx/len)*player.speed*dt;
-    player.y += (vy/len)*player.speed*dt;
-
-    // límites del mundo dejando medio sprite para “tocar” borde
     const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
     const halfW=Math.round(sw*s)/2, halfH=Math.round(sh*s)/2;
-
-    player.x=clamp(player.x, halfW, world.w - halfW);
-    player.y=clamp(player.y, halfH, world.h - halfH);
+    player.x=clamp(player.x,halfW,world.w-halfW);
+    player.y=clamp(player.y,halfH,world.h-halfH);
 
     player.frameTime+=dt;
-    if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
-  } else {
-    player.frame=0;
-  }
+    if(player.frameTime>=0.12){ player.frame=(player.frame+1)%2; player.frameTime=0; }
+  } else player.frame=0;
 
   updateCamera();
 }
 
-/* ===== DRAW ===== */
 function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Fondo: recorte de la cámara dentro del rect con bandas
-  ctx.drawImage(
-    bgImg,
-    cam.x, cam.y, cam.w, cam.h,           // source (mundo)
-    bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh  // destino (pantalla)
-  );
+  const srcX=Math.floor(cam.x), srcY=Math.floor(cam.y);
+  ctx.drawImage(bgImg,srcX,srcY,cam.w,cam.h,bgRect.dx,bgRect.dy,bgRect.dw,bgRect.dh);
 
-  // Juansin EXACTO (usa solo sprites.scale, no el zoom de la “lupa”)
   const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
   const dw=Math.round(sw*s), dh=Math.round(sh*s);
+  const screenX=Math.round(bgRect.dx+(player.x-cam.x)*mapScaleX);
+  const screenY=Math.round(bgRect.dy+(player.y-cam.y)*mapScaleY);
 
-  // Posición en pantalla: mundo -> rect visible (sin escalar tamaño del sprite)
-  const screenX = Math.round(bgRect.dx + (player.x - cam.x) * mapScaleX);
-  const screenY = Math.round(bgRect.dy + (player.y - cam.y) * mapScaleY);
-
-  // sombra
   ctx.fillStyle='rgba(0,0,0,.30)';
   ctx.beginPath();
-  ctx.ellipse(screenX, screenY + Math.round(dh/2) - 4, dw/2.5, dh/6, 0, 0, Math.PI*2);
+  ctx.ellipse(screenX,screenY+Math.round(dh/2)-4,dw/2.5,dh/6,0,0,Math.PI*2);
   ctx.fill();
 
-  // sprite
-  const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
-  ctx.drawImage(img, 0,0, sw,sh, Math.round(screenX - dw/2), Math.round(screenY - dh/2), dw, dh);
+  const img=player.moving?sprites.walk[player.dir][player.frame]:sprites.idle[player.dir][0];
+  ctx.drawImage(img,0,0,sw,sh,Math.round(screenX-dw/2),Math.round(screenY-dh/2),dw,dh);
 }
 
-/* ===== LOOP ===== */
-function loop(now){ if(!loop.last) loop.last=now; const dt=Math.min(1/30,(now-loop.last)/1000); loop.last=now; update(dt); draw(); requestAnimationFrame(loop); }
+function loop(now){
+  if(!loop.last) loop.last=now;
+  const dt=Math.min(1/60,(now-loop.last)/1000);
+  loop.last=now;
+  update(dt); draw();
+  requestAnimationFrame(loop);
+}
 
-/* ===== INIT ===== */
 async function init(){
-  const [bg,spr]=await Promise.all([ loadImage(BACKGROUND), preloadSprites(SPRITES_JUAN) ]);
+  const [bg,spr]=await Promise.all([loadImage(BACKGROUND),preloadSprites(SPRITES_JUAN)]);
   bgImg=bg; sprites=spr;
-
-  // mundo = tamaño real del fondo grande
-  world.w = bgImg.width;
-  world.h = bgImg.height;
-
+  world.w=bgImg.width; world.h=bgImg.height;
   resizeCanvas();
-
-  // posición inicial parecida a la tuya (50% ancho, 80% alto del mapa)
-  player.x = Math.round(world.w * 0.5);
-  player.y = Math.round(world.h * 0.80);
-
+  player.x=Math.round(world.w*0.5);
+  player.y=Math.round(world.h*0.80);
   updateCamera();
   requestAnimationFrame(loop);
 }
