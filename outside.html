@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum=1, user-scalable=no" />
-<title>Juansin – mapa con cámara suave</title>
+<title>Juansin – cámara con lerp (suave)</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -25,6 +25,7 @@
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
 
+  /* viñeta suave tipo “lupa” */
   .vignette::after{
     content:""; position:absolute; inset:0; pointer-events:none;
     background:radial-gradient(ellipse at center, rgba(0,0,0,0) 65%, rgba(0,0,0,.22) 100%);
@@ -40,23 +41,25 @@
     </div>
   </div>
 
+  <!-- Solo D-Pad + acción inerte -->
   <div class="controls">
     <div class="dpad">
       <div></div>
-      <button id="btn-up" class="img-btn arrow btn-up"></button>
+      <button id="btn-up" class="img-btn arrow btn-up" aria-label="Arriba"></button>
       <div></div>
-      <button id="btn-left" class="img-btn arrow btn-left"></button>
+      <button id="btn-left" class="img-btn arrow btn-left" aria-label="Izquierda"></button>
       <div></div>
-      <button id="btn-right" class="img-btn arrow btn-right"></button>
+      <button id="btn-right" class="img-btn arrow btn-right" aria-label="Derecha"></button>
       <div></div>
-      <button id="btn-down" class="img-btn arrow btn-down"></button>
+      <button id="btn-down" class="img-btn arrow btn-down" aria-label="Abajo"></button>
       <div></div>
     </div>
-    <button id="btn-act" class="img-act"></button>
+    <button id="btn-act" class="img-act" aria-label="Acción"></button>
   </div>
 </div>
 
 <script>
+/* ===== ASSETS ===== */
 const BACKGROUND="assets/locations/outside.png";
 const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
   idle:{ down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
@@ -66,17 +69,25 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
          right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"] }
 };
 
-const roomOriginal={w:512,h:350};
+/* ===== CANVAS / LAYOUT ===== */
+const roomOriginal={w:512,h:350}; // para bandas negras
 const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
 
 let bgImg=null, sprites=null;
 let world={w:1024,h:768};
+
+// cámara (lupa) = exactamente roomOriginal para mantener bandas
 let cam={x:0,y:0,w:roomOriginal.w,h:roomOriginal.h};
+// objetivo de cámara (para lerp)
+let camTarget={x:0,y:0};
+
 let bgRect={dx:0,dy:0,dw:0,dh:0};
 let mapScaleX=1, mapScaleY=1;
 
+/* ===== PLAYER ===== */
 const player={x:0,y:0,speed:230,dir:'down',moving:false,frame:0,frameTime:0};
 
+/* ===== INPUT: solo D-Pad ===== */
 const keys={up:false,down:false,left:false,right:false};
 function bindHold(btn,on,off){
   const start=e=>{e.preventDefault();on();};
@@ -87,13 +98,15 @@ function bindHold(btn,on,off){
   btn.addEventListener('mousedown',start);
   window.addEventListener('mouseup',end);
 }
-bindHold(document.getElementById('btn-up'),()=>keys.up=true,()=>keys.up=false);
-bindHold(document.getElementById('btn-down'),()=>keys.down=true,()=>keys.down=false);
-bindHold(document.getElementById('btn-left'),()=>keys.left=true,()=>keys.left=false);
+bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
+bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
+bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
 
 document.getElementById('btn-act').addEventListener('click', e=>e.preventDefault());
+document.getElementById('btn-act').addEventListener('touchstart', e=>{ e.preventDefault(); }, {passive:false});
 
+/* ===== UTIL ===== */
 const loadImage=src=>new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; });
 async function preloadSprites(map){
   const out={ idle:{}, walk:{}, size:map.size, scale:map.scale };
@@ -102,6 +115,7 @@ async function preloadSprites(map){
 }
 function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 
+/* ===== LAYOUT (bandas negras) ===== */
 function resizeCanvas(){
   const screen=document.querySelector('.screen');
   canvas.width=screen.clientWidth;
@@ -118,57 +132,87 @@ function resizeCanvas(){
 }
 window.addEventListener('resize', resizeCanvas);
 
-function updateCamera(){
-  cam.x = (player.x - cam.w/2);
-  cam.y = (player.y - cam.h/2);
-  cam.x=clamp(cam.x,0,world.w-cam.w);
-  cam.y=clamp(cam.y,0,world.h-cam.h);
+/* ===== CÁMARA con LERP ===== */
+// Suavizado base pensado para 60fps (0.18 ≈ 18% del error por frame)
+const CAMERA_SMOOTH_BASE = 0.18;
+
+// Factor de suavizado dependiente de dt, para que sea consistente si cae fps
+function smoothFactor(dt){
+  // convierte el coef. base por frame en uno continuo por dt (frames a 60)
+  const frames = dt * 60;
+  return 1 - Math.pow(1 - CAMERA_SMOOTH_BASE, frames);
 }
 
+function updateCameraTargets(){
+  // centra a Juan
+  let tx = (player.x - cam.w/2);
+  let ty = (player.y - cam.h/2);
+  // clampa a los límites del mundo
+  camTarget.x = clamp(tx, 0, world.w - cam.w);
+  camTarget.y = clamp(ty, 0, world.h - cam.h);
+}
+
+function updateCamera(dt){
+  const a = smoothFactor(dt);
+  // interpola hacia el objetivo (suave)
+  cam.x += (camTarget.x - cam.x) * a;
+  cam.y += (camTarget.y - cam.y) * a;
+}
+
+/* ===== UPDATE ===== */
 function update(dt){
   const vx=(keys.left?-1:0)+(keys.right?1:0);
   const vy=(keys.up?-1:0)+(keys.down?1:0);
   player.moving=!!(vx||vy);
 
   if(player.moving){
-    player.dir=Math.abs(vx)>Math.abs(vy)?(vx<0?'left':'right'):(vy<0?'up':'down');
+    player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
     const len=Math.hypot(vx,vy)||1;
     player.x+=(vx/len)*player.speed*dt;
     player.y+=(vy/len)*player.speed*dt;
 
     const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
     const halfW=Math.round(sw*s)/2, halfH=Math.round(sh*s)/2;
-    player.x=clamp(player.x,halfW,world.w-halfW);
-    player.y=clamp(player.y,halfH,world.h-halfH);
+    player.x=clamp(player.x, halfW, world.w - halfW);
+    player.y=clamp(player.y, halfH, world.h - halfH);
 
     player.frameTime+=dt;
     if(player.frameTime>=0.12){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else player.frame=0;
 
-  updateCamera();
+  // cámara: calcula target y avanza suavemente
+  updateCameraTargets();
+  updateCamera(dt);
 }
 
+/* ===== DRAW ===== */
 function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
+  // Fondo: usa floor en el source para evitar shimmer
   const srcX=Math.floor(cam.x), srcY=Math.floor(cam.y);
-  ctx.drawImage(bgImg,srcX,srcY,cam.w,cam.h,bgRect.dx,bgRect.dy,bgRect.dw,bgRect.dh);
+  ctx.drawImage(bgImg, srcX, srcY, cam.w, cam.h, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
 
+  // Juansin con su tamaño EXACTO del script original
   const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
   const dw=Math.round(sw*s), dh=Math.round(sh*s);
-  const screenX=Math.round(bgRect.dx+(player.x-cam.x)*mapScaleX);
-  const screenY=Math.round(bgRect.dy+(player.y-cam.y)*mapScaleY);
 
+  const screenX=Math.round(bgRect.dx + (player.x - cam.x) * mapScaleX);
+  const screenY=Math.round(bgRect.dy + (player.y - cam.y) * mapScaleY);
+
+  // sombra
   ctx.fillStyle='rgba(0,0,0,.30)';
   ctx.beginPath();
-  ctx.ellipse(screenX,screenY+Math.round(dh/2)-4,dw/2.5,dh/6,0,0,Math.PI*2);
+  ctx.ellipse(screenX, screenY + Math.round(dh/2) - 4, dw/2.5, dh/6, 0, 0, Math.PI*2);
   ctx.fill();
 
-  const img=player.moving?sprites.walk[player.dir][player.frame]:sprites.idle[player.dir][0];
-  ctx.drawImage(img,0,0,sw,sh,Math.round(screenX-dw/2),Math.round(screenY-dh/2),dw,dh);
+  // sprite
+  const img=player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
+  ctx.drawImage(img, 0,0, sw,sh, Math.round(screenX - dw/2), Math.round(screenY - dh/2), dw, dh);
 }
 
+/* ===== LOOP ===== */
 function loop(now){
   if(!loop.last) loop.last=now;
   const dt=Math.min(1/60,(now-loop.last)/1000);
@@ -177,14 +221,23 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
+/* ===== INIT ===== */
 async function init(){
   const [bg,spr]=await Promise.all([loadImage(BACKGROUND),preloadSprites(SPRITES_JUAN)]);
   bgImg=bg; sprites=spr;
+
   world.w=bgImg.width; world.h=bgImg.height;
+
   resizeCanvas();
+
+  // posición inicial (similar a la tuya)
   player.x=Math.round(world.w*0.5);
   player.y=Math.round(world.h*0.80);
-  updateCamera();
+
+  // Inicializa cámara directamente en el target (sin “caza” inicial)
+  updateCameraTargets();
+  cam.x=camTarget.x; cam.y=camTarget.y;
+
   requestAnimationFrame(loop);
 }
 init();
