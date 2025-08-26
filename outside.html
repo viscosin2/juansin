@@ -247,15 +247,27 @@ async function init(){
 
   resizeCanvas();
 
-  // posición inicial (similar a la tuya)
-  player.x=Math.round(world.w*0.5);
-  player.y=Math.round(world.h*0.80);
+// Dimensiones del sprite para clamping correcto
+const sw = sprites.size.w, sh = sprites.size.h, s = sprites.scale;
+const halfW = Math.round(sw*s)/2, halfH = Math.round(sh*s)/2;
 
-  // Inicializa cámara directamente en el target (sin “caza” inicial)
-  updateCameraTargets();
-  cam.x=camTarget.x; cam.y=camTarget.y;
+// Posición inicial (por porcentaje o por píxel)
+if(START.mode === 'percent'){
+  player.x = world.w * (START.x/100);
+  player.y = world.h * (START.y/100);
+} else {
+  player.x = START.x;
+  player.y = START.y;
+}
 
-  requestAnimationFrame(loop);
+// Asegura que no empieza fuera de límites
+player.x = clamp(player.x, halfW, world.w - halfW);
+player.y = clamp(player.y, halfH, world.h - halfH);
+
+// Inicializa objetivos de cámara y colócala directamente ahí
+updateCameraTargets();
+cam.x = camTarget.x; 
+cam.y = camTarget.y;
 }
 init();
 </script>
