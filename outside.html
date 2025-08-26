@@ -168,34 +168,30 @@ function update(dt){
   updateCamera();
 }
 
-/* ===== DRAW ===== */
 function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Dibuja “lupa”: recorte del fondo (source = la ventana de la cámara)
+  // Fondo recortado por la cámara
   ctx.drawImage(bgImg, cam.x, cam.y, cam.w, cam.h, 0, 0, canvas.width, canvas.height);
 
-  // Dibuja sombra + sprite de Juan en coordenadas de pantalla
-  const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
-  const dw=Math.round(sw*s), dh=Math.round(sh*s);
+  // Tamaño del sprite de Juan EXACTO como antes
+  const sw = sprites.size.w, sh = sprites.size.h, s = sprites.scale;
+  const dw = Math.round(sw*s), dh = Math.round(sh*s);
 
-  // posición en pantalla (en función de la cámara)
+  // Posición en pantalla (según cámara)
   const screenX = Math.round((player.x - cam.x) * scaleX);
   const screenY = Math.round((player.y - cam.y) * scaleY);
 
   // sombra
   ctx.fillStyle='rgba(0,0,0,.30)';
   ctx.beginPath();
-  ctx.ellipse(screenX, screenY + Math.round(dh/2*scaleY) - 4, (dw/2.5)*scaleX, (dh/6)*scaleY, 0, 0, Math.PI*2);
+  ctx.ellipse(screenX, screenY + Math.round(dh/2) - 4, dw/2.5, dh/6, 0, 0, Math.PI*2);
   ctx.fill();
 
-  // sprite (respetando pixeles)
+  // sprite (sin aplicar zoom de cámara, solo el scale definido en sprite)
   const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
-  // lo dibujamos escalado coherente con la “lupa” para mantener tamaño visual:
-  const drawW = Math.round(dw * scaleX);
-  const drawH = Math.round(dh * scaleY);
-  ctx.drawImage(img, 0,0, sw,sh, Math.round(screenX - drawW/2), Math.round(screenY - drawH/2), drawW, drawH);
+  ctx.drawImage(img, 0,0, sw,sh, Math.round(screenX - dw/2), Math.round(screenY - dh/2), dw, dh);
 }
 
 /* ===== LOOP ===== */
