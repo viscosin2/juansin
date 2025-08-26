@@ -148,7 +148,7 @@ function toggleDebug(){ DEBUG_OBS=!DEBUG_OBS; }
 window.toggleDebug = toggleDebug; // en consola: toggleDebug()
 
 /* Colisión “círculo vs rect” con radio de pies (en píxeles de mundo) */
-const FEET_RADIUS = 12; // ajusta si quieres más/menos “gordo”
+const FEET_RADIUS = 10; // ajusta si quieres más/menos “gordo”
 function circleRectOverlap(cx, cy, r, rect){
   const rx = clamp(cx, rect.x, rect.x+rect.w);
   const ry = clamp(cy, rect.y, rect.y+rect.h);
