@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Juansin – habitación (restaurado)</title>
+<title>Juansin – habitación (planta + colisión)</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -82,12 +82,11 @@
 </div>
 
 <script>
-/* ===== Config base ===== */
+/* ===== Base y assets ===== */
 const roomOriginal={w:512,h:350};
 const BASE_SPEED=200, SHOES_BONUS=30, DARK_MULT=0.2, DARK_OFF=0.60, DARK_NONE=0.00;
 
-/* Assets */
-const BACKGROUND="assets/locations/room.png";
+const BACKGROUND="assets/locations/room.PNG";
 const SPRITES={ size:{w:36,h:40}, scale:0.9,
   idle:{down:["assets/juan_character/idle_down_shoes.png"],up:["assets/juan_character/idle_up_shoes.png"],left:["assets/juan_character/idle_left_shoes.png"],right:["assets/juan_character/idle_right_shoes.png"]},
   walk:{down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"],
@@ -105,7 +104,7 @@ const bgm=new Audio("assets/sounds/ambient1.mp3"); bgm.loop=true; bgm.volume=.4;
 const pickup=new Audio("assets/sounds/pickup.mp3"); pickup.volume=.7;
 const doorSnd=new Audio("assets/sounds/door_clack.wav"); doorSnd.volume=.9;
 
-/* Estado */
+/* Estado global */
 let bgImg, plant1Img, sofaImg, tvOnImg, tvOffImg, bedImg, sandalsImg, lampImg, sprites=null;
 let tvOn=true, tvAlreadyOff=false, lampOn=false, hasShoes=false;
 let darkness=DARK_OFF, darkWarn=false, exiting=false, hasStarted=false;
@@ -114,7 +113,7 @@ let darkness=DARK_OFF, darkWarn=false, exiting=false, hasStarted=false;
 const canvas=document.getElementById('game'), ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
 let bgRect={dx:0,dy:0,dw:0,dh:0}, scaleFactor=1;
 
-/* Bounds & obstáculos EXACTOS (coords 512×350) */
+/* ===== Dimensiones EXACTAS de la habitación (en 512×350) ===== */
 const boundsBase={x:20,y:85,w:465,h:235};
 const obstaclesBase=[
   {x:230,y:25,w:70,h:50},
@@ -135,6 +134,7 @@ const doorBase={x:392,y:31,w:48,h:63},
       doorInteractBase={x:doorBase.x-8,y:doorBase.y+doorBase.h-doorInteractDepth,w:doorBase.w+16,h:doorInteractDepth};
 const playerStartBase={x:260,y:150};
 
+/* Pos escaladas */
 let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plantPos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={}, doorPos={}, doorInteractPos={};
 
 /* Player */
@@ -159,13 +159,15 @@ const script=[{speaker:'Juan',text:'...'},{speaker:'Juan',text:'Qué hambre teng
 function openDialog(){dialogEl.classList.add('show');dialogEl.classList.remove('ready');dialogOpen=true;dialogIdx=0;renderLine(true);}
 function closeDialog(){dialogEl.classList.remove('show','ready');dialogOpen=false;}
 function renderLine(type){const L=script[dialogIdx]||{speaker:'',text:''};dialogName.textContent=L.speaker||'';dialogText.textContent='';dialogHint.style.opacity=0;type?typeText(L.text):(dialogText.textContent=L.text,dialogEl.classList.add('ready'))}
-function typeText(t){clearInterval(typingTimer);let i=0;typingTimer=setInterval(()=>{if(i<t.length){dialogText.textContent+=t[i++];}else{clearInterval(typingTimer);dialogEl.classList.add('ready');dialogHint.style.opacity=1;}},typingSpeed)}
+function typeText(t){clearInterval(typingTimer);let i=0;typingTimer=setInterval(()=>{if(i<t.length){dialogText.textContent+=t[i++]}else{clearInterval(typingTimer);dialogEl.classList.add('ready');dialogHint.style.opacity=1;}},typingSpeed)}
 function advanceDialog(){if(!dialogOpen)return;const full=script[dialogIdx]?.text||'';if(typingTimer){clearInterval(typingTimer);typingTimer=null;dialogText.textContent=full;dialogEl.classList.add('ready');dialogHint.style.opacity=1;return}dialogIdx++;if(dialogIdx<script.length){dialogEl.classList.remove('ready');dialogHint.style.opacity=0;renderLine(true);}else closeDialog()}
 
-/* Escalado exacto */
-function updateScaled(){const sc=scaleFactor,bx=bgRect.dx,by=bgRect.dy;
+/* Escalado exacto y colisiones */
+function updateScaled(){
+  const sc=scaleFactor,bx=bgRect.dx,by=bgRect.dy;
   bounds={x:bx+Math.round(boundsBase.x*sc),y:by+Math.round(boundsBase.y*sc),w:Math.round(boundsBase.w*sc),h:Math.round(boundsBase.h*sc)};
   obstacles=obstaclesBase.map(o=>({x:bx+Math.round(o.x*sc),y:by+Math.round(o.y*sc),w:Math.round(o.w*sc),h:Math.round(o.h*sc)}));
+
   sofaPos={x:bx+Math.round(sofaBase.x*sc),y:by+Math.round(sofaBase.y*sc),w:Math.round(sofaBase.w*sc),h:Math.round(sofaBase.h*sc)};
   tvPos  ={x:bx+Math.round(tvBase.x*sc),y:by+Math.round(tvBase.y*sc),w:Math.round(tvBase.w*sc),h:Math.round(tvBase.h*sc)};
   tvInteractPos={x:tvPos.x,y:tvPos.y+tvPos.h-Math.round(40*sc),w:tvPos.w,h:Math.round(2*sc)};
@@ -176,18 +178,34 @@ function updateScaled(){const sc=scaleFactor,bx=bgRect.dx,by=bgRect.dy;
   sandalsPos={x:bx+Math.round(sandalsBase.x*sc),y:by+Math.round(sandalsBase.y*sc),w:Math.round(sandalsBase.w*sc),h:Math.round(sandalsBase.h*sc)};
   doorPos={x:bx+Math.round(doorBase.x*sc),y:by+Math.round(doorBase.y*sc),w:Math.round(doorBase.w*sc),h:Math.round(doorBase.h*sc)};
   doorInteractPos={x:bx+Math.round(doorInteractBase.x*sc),y:by+Math.round(doorInteractBase.y*sc),w:Math.round(doorInteractBase.w*sc),h:Math.round(doorInteractBase.h*sc)};
+
+  /* Colisión base de la planta (para no atravesarla) */
+  const pbH = Math.max(6, Math.round(10*sc));         // altura base de maceta
+  const pbPad= Math.round(8*sc);                       // margen lateral
+  obstacles.push({
+    x: plantPos.x + pbPad,
+    y: plantPos.y + plantPos.h - pbH,
+    w: Math.max(8, plantPos.w - pbPad*2),
+    h: pbH
+  });
 }
-function resizeCanvas(){const s=document.querySelector('.screen');canvas.width=s.clientWidth;canvas.height=s.clientHeight;
+
+function resizeCanvas(){
+  const s=document.querySelector('.screen');
+  canvas.width=s.clientWidth; canvas.height=s.clientHeight;
   if(!bgImg){ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);return}
   scaleFactor=Math.min(canvas.width/roomOriginal.w, canvas.height/roomOriginal.h);
   bgRect.dw=roomOriginal.w*scaleFactor; bgRect.dh=roomOriginal.h*scaleFactor;
   bgRect.dx=(canvas.width-bgRect.dw)/2; bgRect.dy=(canvas.height-bgRect.dh)/2;
   updateScaled();
-  if(!hasStarted){player.x=bgRect.dx+Math.round(playerStartBase.x*scaleFactor);player.y=bgRect.dy+Math.round(playerStartBase.y*scaleFactor);}
+  if(!hasStarted){
+    player.x=bgRect.dx+Math.round(playerStartBase.x*scaleFactor);
+    player.y=bgRect.dy+Math.round(playerStartBase.y*scaleFactor);
+  }
 }
 addEventListener('resize',resizeCanvas);
 
-/* Colisiones (AABB) */
+/* Colisión (AABB) */
 function collides(nx,ny){
   const hw=SPRITES.size.w*SPRITES.scale/2, hh=SPRITES.size.h*SPRITES.scale/2;
   const r={x:nx-hw,y:ny-hh,w:hw*2,h:hh*2};
@@ -196,16 +214,21 @@ function collides(nx,ny){
   return false;
 }
 
-/* Entrada: SOLO D-pad */
+/* SOLO D-pad */
 const keys={up:false,down:false,left:false,right:false};
-function bindHold(btn,on,off){const start=e=>{e.preventDefault();on()};const end=e=>{e.preventDefault();off()};
-  btn.addEventListener('touchstart',start,{passive:false});btn.addEventListener('touchend',end,{passive:false});btn.addEventListener('touchcancel',end,{passive:false});
-  btn.addEventListener('mousedown',start);window.addEventListener('mouseup',end);
+function bindHold(btn,on,off){const start=e=>{e.preventDefault();on()}, end=e=>{e.preventDefault();off()};
+  btn.addEventListener('touchstart',start,{passive:false});
+  btn.addEventListener('touchend',end,{passive:false});
+  btn.addEventListener('touchcancel',end,{passive:false});
+  btn.addEventListener('mousedown',start);
+  window.addEventListener('mouseup',end);
 }
 ['up','down','left','right'].forEach(d=>bindHold(document.getElementById('btn-'+d),()=>keys[d]=true,()=>keys[d]=false));
 function pressVisual(el){const on=()=>el.classList.add('pressed'),off=()=>el.classList.remove('pressed');
   el.addEventListener('mousedown',on);el.addEventListener('mouseup',off);el.addEventListener('mouseleave',off);
-  el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});el.addEventListener('touchend',off,{passive:false});el.addEventListener('touchcancel',off,{passive:false});
+  el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});
+  el.addEventListener('touchend',off,{passive:false});
+  el.addEventListener('touchcancel',off,{passive:false});
 }
 ['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>pressVisual(document.getElementById(id)));
 
@@ -214,11 +237,11 @@ function handleAction(){
   if(!hasStarted){startGame();return}
   if(dialogOpen){advanceDialog();return}
 
-  // Puerta: requiere chanclas y todo apagado
+  // Puerta
   if(aabb(getPlayerRect(),doorInteractPos)){
     if(!hasShoes) return showToast('Ponte las chanclas.');
-    if(tvOn) return showToast('Apaga la tele.');
-    if(lampOn) return showToast('Apaga la luz.');
+    if(tvOn)      return showToast('Apaga la tele.');
+    if(lampOn)    return showToast('Apaga la luz.');
     return startExit();
   }
 
@@ -229,11 +252,25 @@ function handleAction(){
     return;
   }
 
-  // Lámpara (borde inferior)
-  const nearLamp={x:lampPos.x,y:lampPos.y+lampPos.h-20,w:lampPos.w,h:20};
-  if(aabb(getPlayerRect(),nearLamp)){ lampOn=!lampOn; return; }
+  // Lámpara (interacción en el borde inferior)
+  if(aabb(getPlayerRect(), {x:lampInteractPos.x, y:lampInteractPos.y, w:lampInteractPos.w, h:lampInteractPos.h} )){
+    lampOn=!lampOn; return;
+  }
 
-  // Cama/planta mensajes opcionales
+  // 🌿 Planta: interacción con mensajito (zona pequeña frontal)
+  const plantMsgH = Math.max(6, Math.round(10*scaleFactor));
+  const plantMsg = {
+    x: plantPos.x + Math.round(6*scaleFactor),
+    y: plantPos.y + plantPos.h - plantMsgH,
+    w: Math.max(10, plantPos.w - Math.round(12*scaleFactor)),
+    h: plantMsgH
+  };
+  if(aabb(getPlayerRect(), plantMsg)){
+    showToast('10 años regándola y ni un solo aguacate…');
+    return;
+  }
+
+  // Cama (msg)
   const nearBed={x:bedPos.x,y:bedPos.y+20,w:bedPos.w-15,h:35};
   if(aabb(getPlayerRect(),nearBed)) return showToast('No es hora de cerrar el kiosko.');
 }
@@ -248,11 +285,9 @@ function fadeOut(a,ms){return new Promise(r=>{const v0=a.volume,n=Math.max(1,Mat
 
 /* Update / Draw */
 function update(dt){
-  // Luz ambiente
-  const target= lampOn ? DARK_NONE : DARK_OFF;
+  const target = lampOn ? DARK_NONE : DARK_OFF;
   darkness += (target - darkness) * Math.min(1, dt*8);
 
-  // Velocidad por luz y chanclas
   const base=BASE_SPEED+(hasShoes?SHOES_BONUS:0);
   player.speed=(tvOn||lampOn)?base:base*DARK_MULT;
   if(!(tvOn||lampOn)){ if(!darkWarn){ showToast('Despacio, está oscuro.'); darkWarn=true; } } else darkWarn=false;
@@ -269,7 +304,7 @@ function update(dt){
     player.frameTime+=dt; if(player.frameTime>=0.14){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else player.frame=0;
 
-  // Recoger chanclas
+  // Chanclas
   if(!hasShoes && sandalsImg){
     const p=getPlayerRect(), r={x:p.x+p.w*.25,y:p.y+p.h*.25,w:p.w*.5,h:p.h*.5};
     if(aabb(r,sandalsPos)){ hasShoes=true; try{pickup.currentTime=0;pickup.play()}catch(e){} }
@@ -277,7 +312,6 @@ function update(dt){
 }
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  // fondo
   ctx.drawImage(bgImg,bgRect.dx,bgRect.dy,bgRect.dw,bgRect.dh);
 
   // z-order por y (pies)
