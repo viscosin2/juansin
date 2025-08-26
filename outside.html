@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum=1, user-scalable=no" />
-<title>Juansin – cámara instantánea (sin lerp)</title>
+<title>Juansin – cámara instantánea + obstáculos (debug)</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
 
-  /* Viñeta sutil (opcional). No afecta a tamaños. */
+  /* Viñeta sutil */
   .vignette::after{
     content:""; position:absolute; inset:0; pointer-events:none;
     background:radial-gradient(ellipse at center, rgba(0,0,0,0) 65%, rgba(0,0,0,.22) 100%);
@@ -70,10 +70,9 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
 };
 
 // === CONFIG INICIAL ===
-// Posición inicial (percent o pixel)
-const START = { mode:'percent', x:50, y:80 };
-// Zoom de la “lupa”: 1 = 512×350; 2 = más zoom (recorte 256×175)
-let ZOOM = 2.5;
+const START = { mode:'percent', x:50, y:80 };   // posición inicial
+let ZOOM = 2.5;                                  // más zoom como pediste
+let DEBUG_OBS = true;                            // mostrar obstáculos en pantalla
 
 /* ===== CANVAS / LAYOUT ===== */
 const roomOriginal={w:512,h:350}; // mantiene bandas negras
@@ -120,6 +119,45 @@ async function preloadSprites(map){
 }
 function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 
+/* ===== OBSTÁCULOS =====
+   Puedes definir en porcentaje (del tamaño del mapa) o en píxeles absolutos.
+   rectP(x%, y%, w%, h%)  | rect(x, y, w, h)
+*/
+const OBSTACLE_DEFS = [
+  // --- ejemplos en PORCENTAJE ---
+  {type:'percent', x:12, y:58, w:20, h:5, name:'valla central izq'},
+  {type:'percent', x:35, y:58, w:20, h:5, name:'valla central der'},
+  {type:'percent', x:70, y:30, w:18, h:6, name:'bloque alto'},
+
+  // --- ejemplo en PÍXELES (se ajusta a tu mapa real) ---
+  // {type:'pixel', x: 300, y: 600, w: 180, h: 40, name:'bloque en px'},
+];
+let OBSTACLES = []; // aquí quedarán convertidos a píxeles del mundo
+
+function rectP(px, py, pw, ph){
+  return { x: Math.round(world.w*(px/100)),
+           y: Math.round(world.h*(py/100)),
+           w: Math.round(world.w*(pw/100)),
+           h: Math.round(world.h*(ph/100)) };
+}
+function buildObstacles(){
+  OBSTACLES = OBSTACLE_DEFS.map(o=>{
+    const r = (o.type==='percent') ? rectP(o.x,o.y,o.w,o.h) : {x:o.x,y:o.y,w:o.w,h:o.h};
+    return {...r, name:o.name||''};
+  });
+}
+function toggleDebug(){ DEBUG_OBS=!DEBUG_OBS; }
+window.toggleDebug = toggleDebug; // en consola: toggleDebug()
+
+/* Colisión “círculo vs rect” con radio de pies (en píxeles de mundo) */
+const FEET_RADIUS = 12; // ajusta si quieres más/menos “gordo”
+function circleRectOverlap(cx, cy, r, rect){
+  const rx = clamp(cx, rect.x, rect.x+rect.w);
+  const ry = clamp(cy, rect.y, rect.y+rect.h);
+  const dx = cx - rx, dy = cy - ry;
+  return (dx*dx + dy*dy) <= (r*r);
+}
+
 /* ===== LAYOUT (bandas negras fijas) ===== */
 function resizeCanvas(){
   const screen=document.querySelector('.screen');
@@ -148,22 +186,39 @@ function updateCamera(){
 function update(dt){
   const vx=(keys.left?-1:0)+(keys.right?1:0);
   const vy=(keys.up?-1:0)+(keys.down?1:0);
-  player.moving=!!(vx||vy);
+  const moving = !!(vx||vy);
+  player.moving = moving;
 
-  if(player.moving){
+  let nx = player.x, ny = player.y;
+  if(moving){
     player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
     const len=Math.hypot(vx,vy)||1;
-    player.x+=(vx/len)*player.speed*dt;
-    player.y+=(vy/len)*player.speed*dt;
+    nx += (vx/len)*player.speed*dt;
+    ny += (vy/len)*player.speed*dt;
 
+    // límites del mundo (como antes)
     const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
     const halfW=Math.round(sw*s)/2, halfH=Math.round(sh*s)/2;
-    player.x=clamp(player.x, halfW, world.w - halfW);
-    player.y=clamp(player.y, halfH, world.h - halfH);
+    nx = clamp(nx, halfW, world.w - halfW);
+    ny = clamp(ny, halfH, world.h - halfH);
 
+    // --- COLISIÓN con descomposición por ejes (deslizamiento) ---
+    // intenta mover en X
+    let tryX = true;
+    for(const ob of OBSTACLES){ if(circleRectOverlap(nx, player.y, FEET_RADIUS, ob)){ tryX=false; break; } }
+    if(tryX) player.x = nx;
+
+    // intenta mover en Y
+    let tryY = true;
+    for(const ob of OBSTACLES){ if(circleRectOverlap(player.x, ny, FEET_RADIUS, ob)){ tryY=false; break; } }
+    if(tryY) player.y = ny;
+
+    // animación
     player.frameTime+=dt;
     if(player.frameTime>=0.12){ player.frame=(player.frame+1)%2; player.frameTime=0; }
-  } else player.frame=0;
+  } else {
+    player.frame=0;
+  }
 
   updateCamera(); // cámara directa, sin retardo
 }
@@ -193,12 +248,50 @@ function draw(){
   if (srcX > world.w - cam.w) srcX = world.w - cam.w;
   if (srcY > world.h - cam.h) srcY = world.h - cam.h;
 
+  // Fondo
   ctx.drawImage(bgImg, srcX, srcY, cam.w, cam.h, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
 
-  // Juansin con su tamaño EXACTO del script original
+  // DEBUG: dibuja obstáculos (mapeados al rect visible)
+  if(DEBUG_OBS){
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#ff3355';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+
+    for(const ob of OBSTACLES){
+      const dx = bgRect.dx + (ob.x - cam.x) * mapScaleX;
+      const dy = bgRect.dy + (ob.y - cam.y) * mapScaleY;
+      const dw = ob.w * mapScaleX;
+      const dh = ob.h * mapScaleY;
+      ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+      ctx.strokeRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+
+      // etiqueta
+      if(ob.name){
+        ctx.globalAlpha = 0.9;
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(ob.name, Math.round(dx)+3, Math.round(dy)+12);
+        ctx.globalAlpha = 0.35;
+      }
+    }
+
+    // radio de pies (círculo) para depurar tamaño de colisión
+    const footX = bgRect.dx + (player.x - cam.x) * mapScaleX;
+    const footY = bgRect.dy + (player.y - cam.y) * mapScaleY;
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = '#00e0ff';
+    ctx.beginPath();
+    ctx.ellipse(Math.round(footX), Math.round(footY), FEET_RADIUS*mapScaleX, FEET_RADIUS*mapScaleY, 0, 0, Math.PI*2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Juansin (mismo tamaño exacto que tu script)
   const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
   const dw=Math.round(sw*s), dh=Math.round(sh*s);
-
   const screenX=Math.round(bgRect.dx + (player.x - cam.x) * mapScaleX);
   const screenY=Math.round(bgRect.dy + (player.y - cam.y) * mapScaleY);
 
@@ -230,6 +323,7 @@ async function init(){
   world.w=bgImg.width; world.h=bgImg.height;
 
   resizeCanvas();
+  buildObstacles(); // convierte % -> píxeles con dimensiones reales
 
   // Posición inicial
   const sw=sprites.size.w, sh=sprites.size.h, s=sprites.scale;
@@ -244,20 +338,20 @@ async function init(){
   player.x = clamp(player.x, halfW, world.w - halfW);
   player.y = clamp(player.y, halfH, world.h - halfH);
 
-  // Cámara arranca ya centrada (sin persecución)
-  updateCamera();
+  updateCamera(); // cámara centrada
 
   requestAnimationFrame(loop);
 }
 init();
 
-/* ===== (opcional) cambia zoom en caliente por consola ===== */
-function setZoom(z){
-  ZOOM = Math.max(1, z);
-  applyZoom();
-  updateCamera();
-}
-window.setZoom = setZoom;
+/* Helpers expuestas para toquetear en consola: */
+window.setZoom = function(z){ ZOOM = Math.max(1, z); applyZoom(); updateCamera(); };
+window.addObstaclePx = function(x,y,w,h,name='px'){
+  OBSTACLES.push({x,y,w,h,name}); 
+};
+window.addObstaclePercent = function(xp,yp,wp,hp,name='%'){
+  const r = rectP(xp,yp,wp,hp); OBSTACLES.push({...r,name});
+};
 </script>
 </body>
 </html>
