@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum=1, user-scalable=no" />
-<title>Juansin – cámara suave sin tirones (snap a bordes)</title>
+<title>Juansin – cámara instantánea (sin lerp)</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -25,7 +25,7 @@
   .img-act::before{ content:""; display:block; width:100%; height:100%; background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02); }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
 
-  /* viñeta suave tipo “lupa” */
+  /* Viñeta sutil (opcional). No afecta a tamaños. */
   .vignette::after{
     content:""; position:absolute; inset:0; pointer-events:none;
     background:radial-gradient(ellipse at center, rgba(0,0,0,0) 65%, rgba(0,0,0,.22) 100%);
@@ -60,7 +60,7 @@
 
 <script>
 /* ===== ASSETS ===== */
-const BACKGROUND="assets/locations/outside.png"; // tu ruta actual
+const BACKGROUND="assets/locations/outside.png"; // tu fondo grande
 const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
   idle:{ down:["assets/juan_character/idle_down_shoes.png"], up:["assets/juan_character/idle_up_shoes.png"], left:["assets/juan_character/idle_left_shoes.png"], right:["assets/juan_character/idle_right_shoes.png"] },
   walk:{ down:["assets/juan_character/walk_down_0_shoes.png","assets/juan_character/walk_down_1_shoes.png"],
@@ -70,20 +70,21 @@ const SPRITES_JUAN={ size:{w:36,h:40}, scale:0.9,
 };
 
 // === CONFIG INICIAL ===
-const START = { mode:'percent', x:50, y:80 }; // donde empieza Juan
-let ZOOM = 2.0; // 1 = 512x350; 2 = más zoom (256x175), etc.
+// Posición inicial (percent o pixel)
+const START = { mode:'percent', x:50, y:80 };
+// Zoom de la “lupa”: 1 = 512×350; 2 = más zoom (recorte 256×175)
+let ZOOM = 2.0;
 
 /* ===== CANVAS / LAYOUT ===== */
 const roomOriginal={w:512,h:350}; // mantiene bandas negras
-const canvas=document.getElementById('game'); const ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
 
 let bgImg=null, sprites=null;
 let world={w:1024,h:768};
 
-// cámara (lupa) se recalcula con zoom
+// cámara (se recalcula con el zoom)
 let cam={x:0,y:0,w:roomOriginal.w,h:roomOriginal.h};
-// objetivo (para lerp)
-let camTarget={x:0,y:0};
 
 let bgRect={dx:0,dy:0,dw:0,dh:0};
 let mapScaleX=1, mapScaleY=1;
@@ -119,7 +120,7 @@ async function preloadSprites(map){
 }
 function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
 
-/* ===== LAYOUT (bandas negras) ===== */
+/* ===== LAYOUT (bandas negras fijas) ===== */
 function resizeCanvas(){
   const screen=document.querySelector('.screen');
   canvas.width=screen.clientWidth;
@@ -131,40 +132,14 @@ function resizeCanvas(){
   bgRect.dx=(canvas.width-bgRect.dw)/2;
   bgRect.dy=(canvas.height-bgRect.dh)/2;
 
-  applyZoom();
+  applyZoom(); // recalcula cam.w/h y mapScaleX/Y según ZOOM
 }
 window.addEventListener('resize', resizeCanvas);
 
-/* ===== CÁMARA con LERP + SNAP ===== */
-const CAMERA_SMOOTH_BASE = 0.18;   // suavizado por frame @60fps
-const CAM_EPS = 0.4;               // umbral de snap (subpíxel) para clavar objetivo
-
-function smoothFactor(dt){
-  const frames = dt * 60;
-  return 1 - Math.pow(1 - CAMERA_SMOOTH_BASE, frames);
-}
-
-function updateCameraTargets(){
-  // centra a Juan
-  let tx = (player.x - cam.w/2);
-  let ty = (player.y - cam.h/2);
-  // clampa a mundo
-  camTarget.x = clamp(tx, 0, world.w - cam.w);
-  camTarget.y = clamp(ty, 0, world.h - cam.h);
-}
-
-function updateCamera(dt){
-  const a = smoothFactor(dt);
-
-  // interpola
-  cam.x += (camTarget.x - cam.x) * a;
-  cam.y += (camTarget.y - cam.y) * a;
-
-  // si estamos muy cerca del objetivo, SNAP (evita “no llegar” al borde)
-  if (Math.abs(cam.x - camTarget.x) < CAM_EPS) cam.x = camTarget.x;
-  if (Math.abs(cam.y - camTarget.y) < CAM_EPS) cam.y = camTarget.y;
-
-  // por seguridad, re-clamp
+/* ===== CÁMARA INSTANTÁNEA (sin lerp) ===== */
+function updateCamera(){
+  cam.x = (player.x - cam.w/2);
+  cam.y = (player.y - cam.h/2);
   cam.x = clamp(cam.x, 0, world.w - cam.w);
   cam.y = clamp(cam.y, 0, world.h - cam.h);
 }
@@ -190,18 +165,17 @@ function update(dt){
     if(player.frameTime>=0.12){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else player.frame=0;
 
-  updateCameraTargets();
-  updateCamera(dt);
+  updateCamera(); // cámara directa, sin retardo
 }
 
+/* ===== ZOOM de la “lupa” ===== */
 function applyZoom(){
   cam.w = Math.max(64, Math.round(roomOriginal.w / ZOOM));
   cam.h = Math.max(64, Math.round(roomOriginal.h / ZOOM));
-
   mapScaleX = bgRect.dw / cam.w;
   mapScaleY = bgRect.dh / cam.h;
 
-  // tras cambiar zoom, asegúrate de que la cámara sigue en rango
+  // re-clamp por si el zoom cambió estando cerca del borde
   cam.x = clamp(cam.x, 0, world.w - cam.w);
   cam.y = clamp(cam.y, 0, world.h - cam.h);
 }
@@ -211,9 +185,13 @@ function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Si el target es un borde, fuerza source exacto al borde para que se vea TODO
-  let srcX = (camTarget.x===0) ? 0 : (camTarget.x===world.w-cam.w) ? (world.w-cam.w) : Math.round(cam.x);
-  let srcY = (camTarget.y===0) ? 0 : (camTarget.y===world.h-cam.h) ? (world.h-cam.h) : Math.round(cam.y);
+  // Redondea el source a píxel entero y fuerza bordes exactos
+  let srcX = Math.round(cam.x);
+  let srcY = Math.round(cam.y);
+  if (srcX < 0) srcX = 0;
+  if (srcY < 0) srcY = 0;
+  if (srcX > world.w - cam.w) srcX = world.w - cam.w;
+  if (srcY > world.h - cam.h) srcY = world.h - cam.h;
 
   ctx.drawImage(bgImg, srcX, srcY, cam.w, cam.h, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
 
@@ -230,6 +208,7 @@ function draw(){
   ctx.ellipse(screenX, screenY + Math.round(dh/2) - 4, dw/2.5, dh/6, 0, 0, Math.PI*2);
   ctx.fill();
 
+  // sprite
   const img=player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
   ctx.drawImage(img, 0,0, sw,sh, Math.round(screenX - dw/2), Math.round(screenY - dh/2), dw, dh);
 }
@@ -265,10 +244,8 @@ async function init(){
   player.x = clamp(player.x, halfW, world.w - halfW);
   player.y = clamp(player.y, halfH, world.h - halfH);
 
-  // Cámara arranca ya en target (sin persecución inicial)
-  updateCameraTargets();
-  cam.x = camTarget.x;
-  cam.y = camTarget.y;
+  // Cámara arranca ya centrada (sin persecución)
+  updateCamera();
 
   requestAnimationFrame(loop);
 }
@@ -278,9 +255,9 @@ init();
 function setZoom(z){
   ZOOM = Math.max(1, z);
   applyZoom();
-  updateCameraTargets();
+  updateCamera();
 }
-window.setZoom = setZoom; // para probar: setZoom(2.5)
+window.setZoom = setZoom;
 </script>
 </body>
 </html>
