@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Juansin – habitación</title>
+<title>Juansin – habitación (restaurado)</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -64,7 +64,7 @@
     </div>
   </div>
 
-  <!-- Controles táctiles -->
+  <!-- D-Pad táctil + Acción -->
   <div class="controls">
     <div class="dpad">
       <div></div>
@@ -82,7 +82,7 @@
 </div>
 
 <script>
-/* ===== Config ===== */
+/* ===== Config base ===== */
 const roomOriginal={w:512,h:350};
 const BASE_SPEED=200, SHOES_BONUS=30, DARK_MULT=0.2, DARK_OFF=0.60, DARK_NONE=0.00;
 
@@ -106,20 +106,33 @@ const pickup=new Audio("assets/sounds/pickup.mp3"); pickup.volume=.7;
 const doorSnd=new Audio("assets/sounds/door_clack.wav"); doorSnd.volume=.9;
 
 /* Estado */
-let bgImg, plant1Img, sofaImg, tvOnImg, tvOffImg, bedImg, sandalsImg, lampImg;
-let sprites=null;
+let bgImg, plant1Img, sofaImg, tvOnImg, tvOffImg, bedImg, sandalsImg, lampImg, sprites=null;
 let tvOn=true, tvAlreadyOff=false, lampOn=false, hasShoes=false;
 let darkness=DARK_OFF, darkWarn=false, exiting=false, hasStarted=false;
 
-/* Canvas */
+/* Canvas & layout */
 const canvas=document.getElementById('game'), ctx=canvas.getContext('2d'); ctx.imageSmoothingEnabled=false;
 let bgRect={dx:0,dy:0,dw:0,dh:0}, scaleFactor=1;
 
-/* Bounds/obstáculos (en coords de la imagen 512x350) */
+/* Bounds & obstáculos EXACTOS (coords 512×350) */
 const boundsBase={x:20,y:85,w:465,h:235};
-const obstaclesBase=[{x:230,y:25,w:70,h:50},{x:0,y:190,w:95,h:38},{x:0,y:260,w:40,h:21},{x:450,y:250,w:15,h:.5},{x:5,y:25,w:140,h:50},{x:195,y:170,w:170,h:.5}];
-const sofaBase={x:170,y:75,w:220,h:180}, tvBase={x:205,y:35,w:125,h:90}, bedBase={x:3,y:155,w:120,h:130}, plantBase={x:3,y:230,w:60,h:90}, sandalsBase={x:55,y:270,w:50,h:50}, lampBase={x:100,y:18,w:90,h:100};
-const doorBase={x:392,y:31,w:48,h:63}, doorInteractDepth=14, doorInteractBase={x:doorBase.x-8,y:doorBase.y+doorBase.h-doorInteractDepth,w:doorBase.w+16,h:doorInteractDepth};
+const obstaclesBase=[
+  {x:230,y:25,w:70,h:50},
+  {x:0,y:190,w:95,h:38},
+  {x:0,y:260,w:40,h:21},
+  {x:450,y:250,w:15,h:.5},
+  {x:5,y:25,w:140,h:50},
+  {x:195,y:170,w:170,h:.5}
+];
+const sofaBase={x:170,y:75,w:220,h:180},
+      tvBase={x:205,y:35,w:125,h:90},
+      bedBase={x:3,y:155,w:120,h:130},
+      plantBase={x:3,y:230,w:60,h:90},
+      sandalsBase={x:55,y:270,w:50,h:50},
+      lampBase={x:100,y:18,w:90,h:100};
+const doorBase={x:392,y:31,w:48,h:63},
+      doorInteractDepth=14,
+      doorInteractBase={x:doorBase.x-8,y:doorBase.y+doorBase.h-doorInteractDepth,w:doorBase.w+16,h:doorInteractDepth};
 const playerStartBase={x:260,y:150};
 
 let bounds={}, obstacles=[], bedPos={}, sofaPos={}, plantPos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={}, doorPos={}, doorInteractPos={};
@@ -129,10 +142,10 @@ const player={x:0,y:0,speed:BASE_SPEED,dir:'down',moving:false,frame:0,frameTime
 
 /* Helpers */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const aabb=(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
 const loadImage=(src)=>new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>{console.warn('No carga',src);const c=document.createElement('canvas');c.width=c.height=1;res(c)};i.src=src;});
-async function preloadSprites(map){const r={idle:{},walk:{},size:map.size,scale:map.scale};for(const s of ['idle','walk'])for(const d of Object.keys(map[s]))r[s][d]=await Promise.all(map[s][d].map(loadImage));return r;}
-const aabb=(a,b)=>a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
-const getPlayerRect=(x=player.x,y=player.y)=>{const hw=SPRITES.size.w*SPRITES.scale/2, hh=SPRITES.size.h*SPRITES.scale/2;return{x:x-hw,y:y-hh,w:hw*2,h:hh*2}};
+async function preloadSprites(map){const r={idle:{},walk:{},size:map.size,scale:map.scale};for(const s of['idle','walk'])for(const d of Object.keys(map[s]))r[s][d]=await Promise.all(map[s][d].map(loadImage));return r;}
+const getPlayerRect=(x=player.x,y=player.y)=>{const hw=SPRITES.size.w*SPRITES.scale/2,hh=SPRITES.size.h*SPRITES.scale/2;return{x:x-hw,y:y-hh,w:hw*2,h:hh*2}};
 
 /* UI */
 const bootMask=document.getElementById('bootMask'), pressStart=document.getElementById('pressStart'), sceneFade=document.getElementById('sceneFade');
@@ -140,7 +153,7 @@ const dialogEl=document.getElementById('dialog'), dialogName=document.getElement
 const toast=document.getElementById('toast');
 function showToast(msg,ms=1800){toast.textContent=msg;toast.classList.add('show');clearTimeout(showToast._t);showToast._t=setTimeout(()=>toast.classList.remove('show'),ms);}
 
-/* Diálogo corto */
+/* Diálogo */
 let dialogOpen=false, typingTimer=null, typingSpeed=22, dialogIdx=0;
 const script=[{speaker:'Juan',text:'...'},{speaker:'Juan',text:'Qué hambre tengo…'},{speaker:'Juan',text:'Voy al súper.'}];
 function openDialog(){dialogEl.classList.add('show');dialogEl.classList.remove('ready');dialogOpen=true;dialogIdx=0;renderLine(true);}
@@ -149,7 +162,7 @@ function renderLine(type){const L=script[dialogIdx]||{speaker:'',text:''};dialog
 function typeText(t){clearInterval(typingTimer);let i=0;typingTimer=setInterval(()=>{if(i<t.length){dialogText.textContent+=t[i++];}else{clearInterval(typingTimer);dialogEl.classList.add('ready');dialogHint.style.opacity=1;}},typingSpeed)}
 function advanceDialog(){if(!dialogOpen)return;const full=script[dialogIdx]?.text||'';if(typingTimer){clearInterval(typingTimer);typingTimer=null;dialogText.textContent=full;dialogEl.classList.add('ready');dialogHint.style.opacity=1;return}dialogIdx++;if(dialogIdx<script.length){dialogEl.classList.remove('ready');dialogHint.style.opacity=0;renderLine(true);}else closeDialog()}
 
-/* Escalado */
+/* Escalado exacto */
 function updateScaled(){const sc=scaleFactor,bx=bgRect.dx,by=bgRect.dy;
   bounds={x:bx+Math.round(boundsBase.x*sc),y:by+Math.round(boundsBase.y*sc),w:Math.round(boundsBase.w*sc),h:Math.round(boundsBase.h*sc)};
   obstacles=obstaclesBase.map(o=>({x:bx+Math.round(o.x*sc),y:by+Math.round(o.y*sc),w:Math.round(o.w*sc),h:Math.round(o.h*sc)}));
@@ -174,10 +187,10 @@ function resizeCanvas(){const s=document.querySelector('.screen');canvas.width=s
 }
 addEventListener('resize',resizeCanvas);
 
-/* Colisiones */
-function collides(newX,newY){
+/* Colisiones (AABB) */
+function collides(nx,ny){
   const hw=SPRITES.size.w*SPRITES.scale/2, hh=SPRITES.size.h*SPRITES.scale/2;
-  const r={x:newX-hw,y:newY-hh,w:hw*2,h:hh*2};
+  const r={x:nx-hw,y:ny-hh,w:hw*2,h:hh*2};
   if(r.x<bounds.x||r.x+r.w>bounds.x+bounds.w||r.y<bounds.y||r.y+r.h>bounds.y+bounds.h) return true;
   for(const o of obstacles){ if(aabb(r,o)) return true; }
   return false;
@@ -196,12 +209,12 @@ function pressVisual(el){const on=()=>el.classList.add('pressed'),off=()=>el.cla
 }
 ['btn-up','btn-down','btn-left','btn-right','btn-act'].forEach(id=>pressVisual(document.getElementById(id)));
 
-/* Acción (botón grande) */
+/* Acción */
 function handleAction(){
   if(!hasStarted){startGame();return}
   if(dialogOpen){advanceDialog();return}
 
-  // Puerta: requiere chanclas puestas y todo apagado
+  // Puerta: requiere chanclas y todo apagado
   if(aabb(getPlayerRect(),doorInteractPos)){
     if(!hasShoes) return showToast('Ponte las chanclas.');
     if(tvOn) return showToast('Apaga la tele.');
@@ -216,43 +229,40 @@ function handleAction(){
     return;
   }
 
-  // Lámpara (zona cerca del borde inferior)
-  const nearLamp={x:lampPos.x, y:lampPos.y+lampPos.h-20, w:lampPos.w, h:20};
+  // Lámpara (borde inferior)
+  const nearLamp={x:lampPos.x,y:lampPos.y+lampPos.h-20,w:lampPos.w,h:20};
   if(aabb(getPlayerRect(),nearLamp)){ lampOn=!lampOn; return; }
 
-  // Planta/cama: mensajes (opcionales)
-  const nearBed={x:bedPos.x, y:bedPos.y+20, w:bedPos.w-15, h:35};
+  // Cama/planta mensajes opcionales
+  const nearBed={x:bedPos.x,y:bedPos.y+20,w:bedPos.w-15,h:35};
   if(aabb(getPlayerRect(),nearBed)) return showToast('No es hora de cerrar el kiosko.');
 }
+document.getElementById('btn-act').addEventListener('click',e=>{e.preventDefault();handleAction()});
+document.getElementById('btn-act').addEventListener('touchstart',e=>{e.preventDefault();handleAction()},{passive:false});
 
-/* Salida con fade */
+/* Salida */
 async function startExit(){ if(exiting) return; exiting=true; try{doorSnd.currentTime=0;doorSnd.play();}catch(e){}
   try{await fadeOut(bgm,250)}catch(e){} sceneFade.classList.add('show'); setTimeout(()=>location.href="outside.html",450);
 }
-function fadeOut(a,ms){return new Promise(r=>{const v0=a.volume, n=Math.max(1,Math.floor(ms/16)); let i=0; const it=setInterval(()=>{i++;a.volume=Math.max(0,v0*(1-i/n)); if(i>=n){clearInterval(it);a.volume=0;r()}},16)})}
-
-/* BGM / START */
-function startGame(){ hasStarted=true; pressStart.classList.add('hide'); try{bgm.currentTime=0; bgm.play().catch(()=>{})}catch(e){} setTimeout(()=>openDialog(),350); }
-document.getElementById('btn-act').addEventListener('click',e=>{e.preventDefault();handleAction()});
-document.getElementById('btn-act').addEventListener('touchstart',e=>{e.preventDefault();handleAction()},{passive:false});
+function fadeOut(a,ms){return new Promise(r=>{const v0=a.volume,n=Math.max(1,Math.floor(ms/16));let i=0;const it=setInterval(()=>{i++;a.volume=Math.max(0,v0*(1-i/n));if(i>=n){clearInterval(it);a.volume=0;r()}},16)})}
 
 /* Update / Draw */
 function update(dt){
   // Luz ambiente
-  const target = lampOn ? DARK_NONE : DARK_OFF;
+  const target= lampOn ? DARK_NONE : DARK_OFF;
   darkness += (target - darkness) * Math.min(1, dt*8);
 
   // Velocidad por luz y chanclas
-  const base = BASE_SPEED + (hasShoes?SHOES_BONUS:0);
-  player.speed = (tvOn || lampOn) ? base : base * DARK_MULT;
+  const base=BASE_SPEED+(hasShoes?SHOES_BONUS:0);
+  player.speed=(tvOn||lampOn)?base:base*DARK_MULT;
   if(!(tvOn||lampOn)){ if(!darkWarn){ showToast('Despacio, está oscuro.'); darkWarn=true; } } else darkWarn=false;
 
-  if(dialogOpen || exiting || !hasStarted){ player.moving=false; player.frame=0; return; }
+  if(dialogOpen||exiting||!hasStarted){ player.moving=false; player.frame=0; return; }
 
   const vx=(keys.left?-1:0)+(keys.right?1:0), vy=(keys.up?-1:0)+(keys.down?1:0);
-  player.moving = !!(vx||vy);
+  player.moving=!!(vx||vy);
   if(player.moving){
-    player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
+    player.dir=Math.abs(vx)>Math.abs(vy)?(vx<0?'left':'right'):(vy<0?'up':'down');
     const len=Math.hypot(vx,vy)||1, nx=(vx/len)*player.speed*dt, ny=(vy/len)*player.speed*dt;
     const nxp=player.x+nx, nyp=player.y+ny;
     if(!collides(nxp,nyp)){ player.x=nxp; player.y=nyp; }
@@ -268,29 +278,25 @@ function update(dt){
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   // fondo
-  ctx.drawImage(bgImg, bgRect.dx, bgRect.dy, bgRect.dw, bgRect.dh);
+  ctx.drawImage(bgImg,bgRect.dx,bgRect.dy,bgRect.dw,bgRect.dh);
 
-  // lista z-order por y
+  // z-order por y (pies)
   const list=[];
-  // tele
-  const timg=tvOn?tvOnImg:tvOffImg; list.push({y:tvPos.y+tvPos.h/2, draw:()=>ctx.drawImage(timg,tvPos.x,tvPos.y,tvPos.w,tvPos.h)});
-  // lámpara, planta, sofá, cama, chanclas
-  if(lampImg)   list.push({y:lampPos.y+lampPos.h/2,   draw:()=>ctx.drawImage(lampImg,  lampPos.x,  lampPos.y,  lampPos.w,  lampPos.h)});
-  if(plant1Img) list.push({y:plantPos.y+plantPos.h/2, draw:()=>ctx.drawImage(plant1Img,plantPos.x,plantPos.y,plantPos.w,plantPos.h)});
-  if(sofaImg)   list.push({y:sofaPos.y+sofaPos.h/2,   draw:()=>ctx.drawImage(sofaImg,  sofaPos.x,  sofaPos.y,  sofaPos.w,  sofaPos.h)});
-  if(bedImg)    list.push({y:bedPos.y+bedPos.h/2,     draw:()=>ctx.drawImage(bedImg,   bedPos.x,   bedPos.y,   bedPos.w,   bedPos.h)});
+  const timg=tvOn?tvOnImg:tvOffImg; list.push({y:tvPos.y+tvPos.h/2,draw:()=>ctx.drawImage(timg,tvPos.x,tvPos.y,tvPos.w,tvPos.h)});
+  if(lampImg)   list.push({y:lampPos.y+lampPos.h/2,  draw:()=>ctx.drawImage(lampImg,  lampPos.x,  lampPos.y,  lampPos.w,  lampPos.h)});
+  if(plant1Img) list.push({y:plantPos.y+plantPos.h/2,draw:()=>ctx.drawImage(plant1Img,plantPos.x,plantPos.y,plantPos.w,plantPos.h)});
+  if(sofaImg)   list.push({y:sofaPos.y+sofaPos.h/2,  draw:()=>ctx.drawImage(sofaImg,  sofaPos.x,  sofaPos.y,  sofaPos.w,  sofaPos.h)});
+  if(bedImg)    list.push({y:bedPos.y+bedPos.h/2,    draw:()=>ctx.drawImage(bedImg,   bedPos.x,   bedPos.y,   bedPos.w,   bedPos.h)});
   if(!hasShoes && sandalsImg) list.push({y:sandalsPos.y+sandalsPos.h/2, draw:()=>ctx.drawImage(sandalsImg,sandalsPos.x,sandalsPos.y,sandalsPos.w,sandalsPos.h)});
 
   // player
-  const sw=SPRITES.size.w, sh=SPRITES.size.h, sc=SPRITES.scale;
-  const dw=Math.round(sw*sc), dh=Math.round(sh*sc);
-  const img = sprites ? (player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0]) : null;
-  list.push({y:player.y, draw:()=>{ ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(Math.round(player.x),Math.round(player.y+dh/2-4),dw/2.5,dh/6,0,0,Math.PI*2); ctx.fill();
-    if(img) ctx.drawImage(img,0,0,sw,sh,Math.round(player.x-dw/2),Math.round(player.y-dh/2),dw,dh); }});
+  const sw=SPRITES.size.w, sh=SPRITES.size.h, sc=SPRITES.scale, dw=Math.round(sw*sc), dh=Math.round(sh*sc);
+  const img = sprites ? (player.moving?sprites.walk[player.dir][player.frame]:sprites.idle[player.dir][0]) : null;
+  list.push({y:player.y,draw:()=>{ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(Math.round(player.x),Math.round(player.y+dh/2-4),dw/2.5,dh/6,0,0,Math.PI*2);ctx.fill(); if(img) ctx.drawImage(img,0,0,sw,sh,Math.round(player.x-dw/2),Math.round(player.y-dh/2),dw,dh); }});
 
   list.sort((a,b)=>a.y-b.y).forEach(o=>o.draw());
 
-  // oscurecimiento + luces
+  // oscuridad + luces
   if(darkness>0){ ctx.fillStyle=`rgba(0,0,0,${darkness.toFixed(3)})`; ctx.fillRect(0,0,canvas.width,canvas.height); }
   if(tvOn)   drawLight(tvPos.x+tvPos.w/2, tvPos.y+tvPos.h/2, 100, 0.35+Math.random()*0.05);
   if(lampOn) drawLight(lampPos.x+lampPos.w/2, lampPos.y+lampPos.h/3, 110, 0.30+Math.random()*0.04);
@@ -317,10 +323,9 @@ async function init(){
 }
 init();
 
-/* Start desde banner con botón Acción */
+/* START (banner) + Acción */
 pressStart.addEventListener('click', startGame);
-
-/* Botón Acción (ya ligado arriba) */
+function startGame(){ if(hasStarted) return; hasStarted=true; pressStart.classList.add('hide'); try{bgm.currentTime=0; bgm.play().catch(()=>{})}catch(e){} setTimeout(()=>openDialog(),350); }
 </script>
 </body>
 </html>
