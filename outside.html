@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
@@ -42,14 +42,14 @@
 
 <script>
 /* ========== CONFIG RÁPIDA ========== */
-const ROOM = { w:512, h:350 };                 // ventana lógica (mantiene bandas)
-const ZOOM = 2.1;                               // 1 = sin zoom; 2.5 como pediste
-const START = { mode:'percent', x:7, y:81 };    // posición inicial
-const FEET_RADIUS_X = 7;   // ancho (horizontal)
-const FEET_RADIUS_Y = 4;    // alto (vertical)
-const FEET_OFFSET_Y = 8;   // píxeles hacia abajo, ajusta a tu gusto
-const DEBUG_OBS = true, DEBUG_PROPS = true;     // overlays SIEMPRE activos
-const DEPTH_BAND = 12; 
+const ROOM = { w:512, h:350 };
+const ZOOM = 2.1;
+const START = { mode:'percent', x:7, y:81 };
+const FEET_RADIUS_X = 7;
+const FEET_RADIUS_Y = 4;
+const FEET_OFFSET_Y = 8;
+const DEBUG_OBS = true, DEBUG_PROPS = true;
+const DEPTH_BAND = 12;
 
 /* ========== ASSETS ========== */
 const BG_SRC = "assets/locations/outside.png";
@@ -63,60 +63,55 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
 
 // ========== NIEBLA ==========
 const FOG = {
-  alpha: 0,            // opacidad actual (0..1)
-  target: 0,           // objetivo (0 o 1)
-  speed: 2.5,          // velocidad del fade (más alto = más rápido)
-  color: 'rgba(220, 230, 255, 0.65)', // color base de niebla
-  clearOnExitDirs: ['top','right'],   // direcciones que limpian al salir
-  forceClearIfOutside: false          // si true, limpiar al salir por cualquier lado
+  alpha: 0,
+  target: 0,
+  speed: 2.5,
+  color: 'rgba(220, 230, 255, 0.65)',
+  clearOnExitDirs: ['top','right'],
+  forceClearIfOutside: false
 };
-
-let _fogZonesBuilt = [];           // zonas ya convertidas a coords de mundo
-let _prevFeet = null;              // posición pies del frame anterior
-let _wasInsideZone = false;        // estaba dentro en el frame anterior
-
-
-// Rects de niebla en coordenadas de mundo
+let _fogZonesBuilt = [];
+let _prevFeet = null;
+let _wasInsideZone = false;
 const FOG_ZONES = [{type:'percent', x:2, y:40, w:30, h:25}];
 
-/* Catálogo de props: (x,y) = pie (bottom-center); collider relativo al pie */
+/* ========== CATALOGO / PLACEMENT ========== */
 const CATALOG = {
   arbolclaro:   { src:'assets/objects/arbolclaro.png',   scale:1, collider:{x:-12,y:-6,w:23.8,h:6} },
-  arbustoclaro:   { src:'assets/objects/arbustoclaro.png', scale:1, collider:{x:-16,y:-6,w:32,h:16} },
-  rock:   { src:'assets/objects/piedra.png',       scale:1, collider:{x:-11.5,y:-10,w:23.5,h:10} },
-  valla_clara:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null},
-  valla_media:  { src:'assets/objects/valla_media.png',  scale:1, collider:null},
-  valla_oscura:  { src:'assets/objects/valla_oscura.png',  scale:1, collider:{x:-30,y:1,w:300,h:1}},
-  casajuan:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91,h:21}, depthBand: 1, depthAnchorY: 1},
-  casaclara:  { src:'assets/objects/casaclara.png',     scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand: 1, depthAnchorY: 1},
-  casaclara_amarilla:  { src:'assets/objects/casaclara_amarilla.png',     scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand: 1, depthAnchorY: 1},
-  casaclara_azul:  { src:'assets/objects/casaclara_azul.png',     scale:1, collider:{x:-28,y:-5,w:58, h:21}, flipX:true, depthBand: 1, depthAnchorY: 1},
-  bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
-  river1: { src:'assets/objects/rio1.png', scale:1, collider:null},
-  river2: { src:'assets/objects/rio2.png', scale:1, collider:null},
-
+  arbustoclaro: { src:'assets/objects/arbustoclaro.png', scale:1, collider:{x:-16,y:-6,w:32,h:16} },
+  rock:         { src:'assets/objects/piedra.png',       scale:1, collider:{x:-11.5,y:-10,w:23.5,h:10} },
+  valla_clara:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null },
+  valla_media:  { src:'assets/objects/valla_media.png',  scale:1, collider:null },
+  valla_oscura: { src:'assets/objects/valla_oscura.png', scale:1, collider:{x:-30,y:1,w:300,h:1}},
+  casajuan:     { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91, h:21}, depthBand:1, depthAnchorY:1},
+  casaclara:    { src:'assets/objects/casaclara.png',    scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
+  casaclara_amarilla:{ src:'assets/objects/casaclara_amarilla.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
+  casaclara_azul:{ src:'assets/objects/casaclara_azul.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, flipX:true, depthBand:1, depthAnchorY:1},
+  bridge:       { src:'assets/objects/puente.png', scale:1, collider:null },
+  river1:       { src:'assets/objects/rio1.png',   scale:1, collider:null },
+  river2:       { src:'assets/objects/rio2.png',   scale:1, collider:null }
 };
 
- const PLACED = {
+const PLACED = {
   arbolclaro:  [{type:'percent',x:4,y:85},{type:'percent',x:17,y:87.5},{type:'percent',x:2,y:64},{type:'percent',x:28.2,y:65.5}],
-  casajuan: [{type:'percent',x:7.2,y:82}],
-  casaclara_amarilla: [{type:'percent',x:25,y:90}],
-  casaclara_azul: [{type:'percent',x:5.5,y:45}],
-  casaclara: [{type:'percent',x:7,y:20}],
-  arbustoclaro:  [{type:'percent',x:18.5,y:89},{type:'percent',x:48,y:79}],
-  valla_clara: [{type:'percent',x:15.25,y:99.75}],
-  valla_media: [{type:'percent',x:53.61,y:31.9}],
+  casajuan:    [{type:'percent',x:7.2,y:82}],
+  casaclara_amarilla:[{type:'percent',x:25,y:90}],
+  casaclara_azul:    [{type:'percent',x:5.5,y:45}],
+  casaclara:         [{type:'percent',x:7,y:20}],
+  arbustoclaro: [{type:'percent',x:18.5,y:89},{type:'percent',x:48,y:79}],
+  valla_clara:  [{type:'percent',x:15.25,y:99.75}],
+  valla_media:  [{type:'percent',x:53.61,y:31.9}],
   valla_oscura: [{type:'percent',x:80.17,y:99.2}],
-  rock:  [{type:'percent',x:60,y:72}],
-  bridge:[{type:'percent',x:24,y:21}],
-  river1: [{type:'percent', x:5.73, y:62.37}],
-  river2: [{type:'percent', x:22.97, y:62.37}]
+  rock:         [{type:'percent',x:60,y:72}],
+  bridge:       [{type:'percent',x:24,y:21}],
+  river1:       [{type:'percent', x:5.73,  y:62.37}],
+  river2:       [{type:'percent', x:22.97, y:62.37}]
 };
 
-/* Obstáculos extra (además de los de props) */
+/* Obstáculos extra */
 const OBSTACLE_DEFS = [
-  {type:'percent', x:29.4, y:30.6, w:31.85, h:80, name:'zona bloqueada 1'},
-  {type:'percent', x:60, y:30.6, w:17.9, h:24.5, name:'zona bloqueada 2'}
+  {type:'percent', x:29.4, y:30.6, w:31.85, h:80,   name:'zona bloqueada 1'},
+  {type:'percent', x:60,   y:30.6, w:17.9,  h:24.5, name:'zona bloqueada 2'}
 ];
 
 /* ========== STATE BÁSICO ========== */
@@ -131,7 +126,7 @@ let screenRect={dx:0,dy:0,dw:0,dh:0}, mapScaleX=1, mapScaleY=1;
 
 const player={x:0,y:0,dir:'down',speed:150,moving:false,frame:0,frameTime:0};
 
-/* ========== INPUT: SOLO D-PAD ========== */
+/* ========== INPUT (D-PAD) ========== */
 const keys={up:false,down:false,left:false,right:false};
 function bindHold(btn,on,off){ const start=e=>{e.preventDefault();on();}; const end=e=>{e.preventDefault();off();};
   btn.addEventListener('touchstart',start,{passive:false});
@@ -144,7 +139,7 @@ bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
 
-/* ========== UTILS CORTAS ========== */
+/* ========== UTILS ========== */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const loadImage=src=>new Promise(r=>{
   const i=new Image(); i.onload=()=>r(i); i.onerror=()=>{console.warn('No carga',src); r(null)}; i.src=src;
@@ -177,7 +172,6 @@ function centerCameraOnPlayer(){
 }
 
 /* ========== COLISIÓN ========== */
-// Centro de los pies (cx,cy), radios rx,ry, rect = {x,y,w,h}
 function ellipseRectOverlap(cx, cy, rx, ry, rect){
   const qx = clamp(cx, rect.x, rect.x + rect.w);
   const qy = clamp(cy, rect.y, rect.y + rect.h);
@@ -199,122 +193,52 @@ async function preloadCatalog(){
 function buildPropsAndObstacles(){
   PROPS=[]; OBSTACLES=[];
 
-  // props -> instancias + colliders
   for(const [type,list] of Object.entries(PLACED)){
     const spec=CATALOG[type]; const img=PROP_IMAGES[type];
-    if(!spec){ console.warn('Tipo desconocido',type); continue; }
-    if(!list||!list.length){ continue; }
+    if(!spec || !list?.length) continue;
 
     for (const p of list) {
-  const pos = (p.type === 'percent') ? percentToWorld(p) : { x: p.x, y: p.y };
+      const pos = (p.type === 'percent') ? percentToWorld(p) : { x: p.x, y: p.y };
+      const prop = {
+        type, img,
+        x: pos.x, y: pos.y,
+        iw: img ? img.naturalWidth : 32,
+        ih: img ? img.naturalHeight : 32,
+        scale: spec.scale || 1,
+      };
 
-  const prop = {
-    type,
-    img,
-    x: pos.x,
-    y: pos.y,
-    iw: img ? img.naturalWidth : 32,
-    ih: img ? img.naturalHeight : 32,
-    scale: spec.scale || 1,
-  };
+      if (spec.collider) {
+        const c = spec.collider, s = prop.scale;
+        const col = {
+          x: prop.x + c.x * s,
+          y: prop.y + (c.y * s) - (c.h * s),
+          w: c.w * s,
+          h: c.h * s
+        };
+        prop.collider = col;
+        OBSTACLES.push({ ...col, name: type });
+      }
 
-  if (spec.collider) {
-    const c = spec.collider, s = prop.scale;
-    const col = {
-      x: prop.x + c.x * s,
-      y: prop.y + (c.y * s) - (c.h * s),
-      w: c.w * s,
-      h: c.h * s
-    };
-    prop.collider = col;
-    OBSTACLES.push({ ...col, name: type });
-  }
-  PROPS.push(prop);
-}
-
+      PROPS.push(prop);
+    }
   }
 
-  // obstáculos extra
   for(const o of OBSTACLE_DEFS){
     const r=(o.type==='percent') ? { ...percentToWorld(o), w:Math.round(world.w*(o.w/100)), h:Math.round(world.h*(o.h/100)) } : o;
     OBSTACLES.push({x:r.x,y:r.y,w:r.w,h:r.h,name:o.name||'extra'});
   }
 }
 
-/*=========== HELPERS =========== */
-
- function cornerSlide(targetX, targetY, vx, vy){
-  const SLIDE = 3; // píxeles mundo
-  // Prioriza deslizar en el eje perpendicular al dominante
-  if(Math.abs(vx) > Math.abs(vy)){
-    // intenta subir/bajar un poco y luego aplicar X
-    for(const off of [-SLIDE, SLIDE]){
-      const ty = clamp(player.y + off, 0, world.h);
-      if(!anyOverlap(targetX, ty)){ player.y = ty; player.x = targetX; return true; }
-    }
-  } else {
-    // intenta izquierda/derecha un poco y luego aplicar Y
-    for(const off of [-SLIDE, SLIDE]){
-      const tx = clamp(player.x + off, 0, world.w);
-      if(!anyOverlap(tx, targetY)){ player.x = tx; player.y = targetY; return true; }
-    }
-  }
-  return false;
-}
-
-// Si por lo que sea aparece dentro, empuja hacia afuera con el mínimo movimiento
-function nudgeOut(){
-  let moved = false;
-  for(const ob of OBSTACLES){
-    if(!ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)) continue;
-
-    // Vector del centro de la elipse al punto más cercano del rect
-    const qx = clamp(player.x, ob.x, ob.x + ob.w);
-    const qy = clamp(player.y + FEET_OFFSET_Y, ob.y, ob.y + ob.h);
-    let dx = player.x - qx, dy = (player.y + FEET_OFFSET_Y) - qy;
-
-    // normalizamos por los radios para estimar penetración mínima
-    const ndx = dx / FEET_RADIUS_X, ndy = dy / FEET_RADIUS_Y;
-    const len = Math.hypot(ndx, ndy) || 1e-6;
-    // cuánto falta para salir (1 = justo tocando)
-    const overlap = 1 - len + 0.001; // epsilon
-    if(overlap > 0){
-      // empuje mínimo en espacio normalizado, luego des-escalamos
-      const pushX = (ndx/len) * overlap * FEET_RADIUS_X;
-      const pushY = (ndy/len) * overlap * FEET_RADIUS_Y;
-      player.x += pushX;
-      player.y += pushY;
-      moved = true;
-    }
-  }
-  return moved;
-}
-
-function feetWorld() {
-  // centro de la elipse de colisión (pies) en mundo
-  return { x: player.x, y: player.y + FEET_OFFSET_Y };
-}
-
-function pointInRect(px, py, r) {
-  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
-}
-
-// Devuelve 'top' | 'right' | 'bottom' | 'left' según por dónde saliste
+/* ========== HELPERS NIEBLA ========== */
+function feetWorld() { return { x: player.x, y: player.y + FEET_OFFSET_Y }; }
+function pointInRect(px, py, r) { return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h; }
 function exitSide(prev, now, zone) {
-  // si antes estaba dentro y ahora fuera, calculamos lado más cercano
   const cx = Math.min(Math.max(now.x, zone.x), zone.x + zone.w);
   const cy = Math.min(Math.max(now.y, zone.y), zone.y + zone.h);
-  const dx = now.x - cx;
-  const dy = now.y - cy;
-
-  if (Math.abs(dx) > Math.abs(dy)) {
-    return (dx > 0) ? 'right' : 'left';
-  } else {
-    return (dy > 0) ? 'bottom' : 'top';
-  }
+  const dx = now.x - cx, dy = now.y - cy;
+  if (Math.abs(dx) > Math.abs(dy)) return (dx > 0) ? 'right' : 'left';
+  return (dy > 0) ? 'bottom' : 'top';
 }
-
-// Convierte posibles zonas en % a mundo (igual que para obstáculos)
 function buildFogZones() {
   const out = [];
   for (const z of FOG_ZONES) {
@@ -325,14 +249,46 @@ function buildFogZones() {
         w: Math.round(world.w * (z.w/100)),
         h: Math.round(world.h * (z.h/100))
       });
-    } else {
-      out.push({ ...z });
-    }
+    } else out.push({ ...z });
   }
   return out;
 }
 
-/* ========== UPDATE ========== */
+/* ========== MOVIMIENTO Y UPDATE ========== */
+function cornerSlide(targetX, targetY, vx, vy){
+  const SLIDE = 3;
+  if(Math.abs(vx) > Math.abs(vy)){
+    for(const off of [-SLIDE, SLIDE]){
+      const ty = clamp(player.y + off, 0, world.h);
+      if(!anyOverlap(targetX, ty)){ player.y = ty; player.x = targetX; return true; }
+    }
+  } else {
+    for(const off of [-SLIDE, SLIDE]){
+      const tx = clamp(player.x + off, 0, world.w);
+      if(!anyOverlap(tx, targetY)){ player.x = tx; player.y = targetY; return true; }
+    }
+  }
+  return false;
+}
+function nudgeOut(){
+  let moved = false;
+  for(const ob of OBSTACLES){
+    if(!ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)) continue;
+    const qx = clamp(player.x, ob.x, ob.x + ob.w);
+    const qy = clamp(player.y + FEET_OFFSET_Y, ob.y, ob.y + ob.h);
+    let dx = player.x - qx, dy = (player.y + FEET_OFFSET_Y) - qy;
+    const ndx = dx / FEET_RADIUS_X, ndy = dy / FEET_RADIUS_Y;
+    const len = Math.hypot(ndx, ndy) || 1e-6;
+    const overlap = 1 - len + 0.001;
+    if(overlap > 0){
+      const pushX = (ndx/len) * overlap * FEET_RADIUS_X;
+      const pushY = (ndy/len) * overlap * FEET_RADIUS_Y;
+      player.x += pushX; player.y += pushY; moved = true;
+    }
+  }
+  return moved;
+}
+
 function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
@@ -344,76 +300,55 @@ function update(dt){
     const stepx = (vx/len)*player.speed*dt;
     const stepy = (vy/len)*player.speed*dt;
 
-    // límites por tamaño del sprite
     const sw=JUAN.size.w, sh=JUAN.size.h, s=JUAN.scale;
     const halfW=Math.round(sw*s)/2, halfH=Math.round(sh*s)/2;
 
     const nx = clamp(player.x + stepx, halfW, world.w - halfW);
     const ny = clamp(player.y + stepy, halfH, world.h - halfH);
 
-    // prueba X
-    let blockedX=false;
-    for (const ob of OBSTACLES){
-      if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX=true; break; }
-    }
+    let blockedX=false, blockedY=false;
+    for (const ob of OBSTACLES) if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX=true; break; }
     if (!blockedX) player.x = nx;
 
-    // prueba Y
-    let blockedY=false;
-    for (const ob of OBSTACLES){
-      if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY=true; break; }
-    }
+    for (const ob of OBSTACLES) if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY=true; break; }
     if (!blockedY) player.y = ny;
 
-    // si ambos bloqueados, intenta deslizar; si no, empujón mínimo
     if (blockedX && blockedY){
       if (!cornerSlide(nx, ny, stepx, stepy)) nudgeOut();
     }
 
-    // animación
     player.frameTime += dt;
     if (player.frameTime >= 0.12){ player.frame=(player.frame+1)%2; player.frameTime=0; }
   } else {
     player.frame = 0;
   }
 
-  // seguridad por si quedó dentro de algo (spawn/resize)
   nudgeOut();
-
   centerCameraOnPlayer();
 
- // ===== NIEBLA: detectar entrada/salida y fijar target =====
-const feet = feetWorld();
-const insideNow = _fogZonesBuilt.some(z => pointInRect(feet.x, feet.y, z));
+  // ===== NIEBLA: entrada/salida y target =====
+  const feet = feetWorld();
+  const insideNow = _fogZonesBuilt.some(z => pointInRect(feet.x, feet.y, z));
 
-if (insideNow) {
-  FOG.target = 1; // activar niebla
-} else {
-  if (FOG.forceClearIfOutside) {
-    FOG.target = 0; // limpiar siempre al salir
-  } else if (_wasInsideZone) {
-    // venías de dentro, averigua por dónde has salido con la PRIMERA zona que cumpla
-    const z = _fogZonesBuilt.find(z => pointInRect(_prevFeet.x, _prevFeet.y, z));
-    if (z) {
-      const side = exitSide(_prevFeet, feet, z);
-      if (FOG.clearOnExitDirs.includes(side)) {
-        FOG.target = 0; // solo limpiar si saliste por top/right (por defecto)
-      }
-      // si sales por left/bottom y no está en clearOnExitDirs, se mantiene la niebla (fade no cambia)
-    } else {
-      // seguridad: si no encontramos zona previa, limpia
+  if (insideNow) {
+    FOG.target = 1;
+  } else {
+    if (FOG.forceClearIfOutside) {
       FOG.target = 0;
+    } else if (_wasInsideZone) {
+      const z = _fogZonesBuilt.find(z => pointInRect(_prevFeet.x, _prevFeet.y, z));
+      if (z) {
+        const side = exitSide(_prevFeet, feet, z);
+        if (FOG.clearOnExitDirs.includes(side)) FOG.target = 0;
+      } else {
+        FOG.target = 0;
+      }
     }
   }
-}
 
-// suaviza alpha hacia el target
-FOG.alpha += (FOG.target - FOG.alpha) * Math.min(1, dt * FOG.speed);
-
-// guarda estado para el próximo frame
-_prevFeet = feet;
-_wasInsideZone = insideNow;
-
+  FOG.alpha += (FOG.target - FOG.alpha) * Math.min(1, dt * FOG.speed);
+  _prevFeet = feet;
+  _wasInsideZone = insideNow;
 }
 
 /* ========== DRAW ========== */
@@ -431,26 +366,24 @@ function draw(){
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  // Proyectamos JUAN primero (para el sort con depthBand)
+  // ——— jugador en coords pantalla
   const sw = JUAN.size.w, sh = JUAN.size.h, s = JUAN.scale;
   const jw = Math.round(sw*s), jh = Math.round(sh*s);
   const jx = Math.round(screenRect.dx + (player.x - cam.x) * mapScaleX);
   const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
-  const jFoot = jy + jh/2; // pie de Juan en pantalla (bottom-center)
+  const jFoot = jy + jh/2;
 
-  // build draw list (orden por y del pie)
   const list = [];
 
-  // props (incluye soporte para animados: p.e. river)
+  // props
   for(const p of PROPS){
     const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
-    const py = screenRect.dy + (p.y - cam.y) * mapScaleY; // pie en pantalla
+    const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
     const dw = Math.round(p.iw * p.scale * mapScaleX);
     const dh = Math.round(p.ih * p.scale * mapScaleY);
     const dx = Math.round(px - dw/2), dy = Math.round(py - dh);
     const spec = CATALOG[p.type] || {};
     const band = spec.depthBand ?? DEPTH_BAND;
-
     const anchor = (spec.depthAnchorY ?? 0) * mapScaleY;
     const pyCut = py + anchor;
 
@@ -466,21 +399,16 @@ function draw(){
           ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh);
           ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh);
           return;
-        } 
-        else {
-  if(spec.flipX){
-  ctx.save();
-  ctx.scale(-1,1); // espejo horizontal
-  // ojo: al voltear, el origen también se voltea: ajustamos dx
-  ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh);
-  ctx.restore();
-}else{
-  ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
-}
-
-}
-
-    },
+        }
+        if(spec.flipX){
+          ctx.save();
+          ctx.scale(-1,1);
+          ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh);
+          ctx.restore();
+        } else {
+          ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
+        }
+      },
       debug: ()=>{
         if(DEBUG_PROPS && p.collider){
           const c=p.collider;
@@ -495,7 +423,7 @@ function draw(){
     });
   }
 
-  // Juan
+  // jugador
   list.push({
     y: jFoot,
     draw: () => {
@@ -508,49 +436,23 @@ function draw(){
     }
   });
 
-  // pinta ordenado
+  // pintar ordenado
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   list.forEach(it=>it.debug && it.debug());
 
-// ===== Overlay de NIEBLA a pantalla completa (basado en FOG.alpha) =====
-if (FOG.alpha > 0.001) {
-  ctx.save();
+  // ===== NIEBLA A PANTALLA COMPLETA (fade con FOG.alpha)
+  if (FOG.alpha > 0.001) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+    ctx.clip();
+    ctx.globalAlpha = FOG.alpha;
+    ctx.fillStyle = FOG.color;
+    ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+    ctx.restore();
+  }
 
-  // recorte a la pantalla útil (screenRect)
-  ctx.beginPath();
-  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-  ctx.clip();
-
-  ctx.globalAlpha = FOG.alpha;
-
-  // niebla uniforme simple:
-  ctx.fillStyle = FOG.color;
-  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-
-  // si prefieres la versión con gradiente suave, sustituye por esto:
-  /*
-  const g = ctx.createRadialGradient(
-    screenRect.dx + screenRect.dw*0.5,
-    screenRect.dy + screenRect.dh*0.5,
-    0,
-    screenRect.dx + screenRect.dw*0.5,
-    screenRect.dy + screenRect.dh*0.5,
-    Math.max(screenRect.dw, screenRect.dh)*0.7
-  );
-  g.addColorStop(0, FOG.color);
-  g.addColorStop(1, 'rgba(220,230,255,0.0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-  */
-
-  ctx.restore();
-}
-
-  ctx.restore();
-}
-
-
-  // DEBUG: obstáculos + pies (también dentro del clip)
+  // ===== DEBUG: obstáculos + pies
   if(DEBUG_OBS){
     ctx.save();
     ctx.globalAlpha = .95; ctx.fillStyle = '#00e0ff'; ctx.font = 'bold 12px monospace';
@@ -580,14 +482,12 @@ if (FOG.alpha > 0.001) {
     ctx.restore();
   }
 
-  ctx.restore(); // ⬅️ salimos del clip
+  ctx.restore(); // fin del clip de pantalla
 }
 
-
-/* ========== LOOP ========== */
+/* ========== LOOP / INIT ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; update(dt); draw(); requestAnimationFrame(loop); }
 
-/* ========== INIT ========== */
 async function init(){
   const [bg,spr] = await Promise.all([loadImage(BG_SRC), preloadSprites(JUAN)]);
   bgImg=bg; sprites=spr;
@@ -597,7 +497,6 @@ async function init(){
   _fogZonesBuilt = buildFogZones();
   resize();
 
-  // posición inicial
   const sw=JUAN.size.w, sh=JUAN.size.h, ss=JUAN.scale;
   const halfW=Math.round(sw*ss)/2, halfH=Math.round(sh*ss)/2;
   if(START.mode==='percent'){ player.x=world.w*(START.x/100); player.y=world.h*(START.y/100); }
@@ -605,6 +504,7 @@ async function init(){
   player.x=clamp(player.x,halfW,world.w-halfW);
   player.y=clamp(player.y,halfH,world.h-halfH);
 
+  // postura inicial mirando abajo
   player.dir = 'down';
   player.moving = false;
   player.frame = 0;
