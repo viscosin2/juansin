@@ -351,6 +351,7 @@ function draw(){
   const jw = Math.round(sw*s), jh = Math.round(sh*s);
   const jx = Math.round(screenRect.dx + (player.x - cam.x) * mapScaleX);
   const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
+  const jFoot = jy + jh/2; // pie de Juan en pantalla (bottom-center)
 
   // build draw list (orden por y del pie)
   const list = [];
@@ -366,10 +367,11 @@ function draw(){
     const band = spec.depthBand ?? (typeof DEPTH_BAND !== 'undefined' ? DEPTH_BAND : 48);
 
     // regla de orden con banda de profundidad
-    const sortY =
-      (jy < py - band) ? (py + 0.5) :      // Juan claramente delante → p detrás
-      (jy > py + band) ? (py - 0.5) :      // Juan claramente detrás  → p delante
-      py;                                  // zona gris → empate natural
+const sortY =
+  (jFoot < py - band) ? (py + 0.5) :      // Juan claramente delante → prop detrás
+  (jFoot > py + band) ? (py - 0.5) :      // Juan claramente detrás  → prop delante
+  py;                                     // zona gris → empate
+                               // zona gris → empate natural
 
     list.push({
       y: sortY,
