@@ -49,6 +49,7 @@ const FEET_RADIUS_X = 7;   // ancho (horizontal)
 const FEET_RADIUS_Y = 10;    // alto (vertical)
 const FEET_OFFSET_Y = 2;   // píxeles hacia abajo, ajusta a tu gusto
 const DEBUG_OBS = true, DEBUG_PROPS = true;     // overlays SIEMPRE activos
+const DEPTH_BAND = 12; 
 
 /* ========== ASSETS ========== */
 const BG_SRC = "assets/locations/outside.png";
@@ -66,7 +67,7 @@ const CATALOG = {
   bush:   { src:'assets/objects/arbustoclaro.png', scale:1, collider:{x:-16,y:-16,w:32,h:16} },
   rock:   { src:'assets/objects/piedra.png',       scale:1, collider:{x:-12,y:-10,w:24,h:10} },
   fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:{x:-16,y:-10,w:32,h:10} },
-  house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-40,y:-18,w:80,h:40}, depthBand: 10},
+  house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-40,y:-18,w:80,h:40}, depthBand: 10, depthAnchorY: -6},
   bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
   river: { src: 'assets/objects/rio.png',        scale:1, collider: null, wavy: true}
 };
@@ -327,8 +328,6 @@ function update(dt){
   centerCameraOnPlayer();
 }
 
-
-/* ========== DRAW ========== */
 /* ========== DRAW ========== */
 function draw(){
   if(!bgImg) return;
@@ -364,14 +363,13 @@ function draw(){
     const dh = Math.round(p.ih * p.scale * mapScaleY);
     const dx = Math.round(px - dw/2), dy = Math.round(py - dh);
     const spec = CATALOG[p.type] || {};
-    const band = spec.depthBand ?? (typeof DEPTH_BAND !== 'undefined' ? DEPTH_BAND : 48);
-
-    // regla de orden con banda de profundidad
+    const band = spec.depthBand ?? DEPTH_BAND;
+const anchor = (spec.depthAnchorY ?? 0) * mapScaleY;
+const pyCut = py + anchor;
 const sortY =
-  (jFoot < py - band) ? (py + 0.5) :      // Juan claramente delante → prop detrás
-  (jFoot > py + band) ? (py - 0.5) :      // Juan claramente detrás  → prop delante
-  py;                                     // zona gris → empate
-                               // zona gris → empate natural
+  (jFoot < pyCut - band) ? (py + 0.5) :
+  (jFoot > pyCut + band) ? (py - 0.5) :
+  py;
 
     list.push({
       y: sortY,
