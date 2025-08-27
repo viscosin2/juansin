@@ -61,12 +61,23 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
         right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"]}
 };
 
- // Zonas de niebla en coordenadas de mundo (puedes usar percent)
-const FOG_ZONES = [
-  // Rectángulo grande en % del mapa
-  { type:'percent', x:5, y:80, w:28, h:18, alpha:0.55, speedX:8, speedY:4, scale:2 },
-];
+// ========== NIEBLA ==========
+const FOG = {
+  alpha: 0,            // opacidad actual (0..1)
+  target: 0,           // objetivo (0 o 1)
+  speed: 2.5,          // velocidad del fade (más alto = más rápido)
+  color: 'rgba(220, 230, 255, 0.65)', // color base de niebla
+  clearOnExitDirs: ['top','right'],   // direcciones que limpian al salir
+  forceClearIfOutside: false          // si true, limpiar al salir por cualquier lado
+};
 
+let _fogZonesBuilt = [];           // zonas ya convertidas a coords de mundo
+let _prevFeet = null;              // posición pies del frame anterior
+let _wasInsideZone = false;        // estaba dentro en el frame anterior
+
+
+// Rects de niebla en coordenadas de mundo
+const FOG_ZONES = [{type:'percent', x:2, y:40, w:30, h:25}];
 
 /* Catálogo de props: (x,y) = pie (bottom-center); collider relativo al pie */
 const CATALOG = {
@@ -279,56 +290,47 @@ function nudgeOut(){
   return moved;
 }
 
-// --- genera una textura de ruido 256x256 (una vez) ---
-let FOG_TEX = null;
-function makeNoiseTexture(size=256){
-  const c = document.createElement('canvas');
-  c.width = c.height = size;
-  const cctx = c.getContext('2d', { willReadFrequently:true });
+function feetWorld() {
+  // centro de la elipse de colisión (pies) en mundo
+  return { x: player.x, y: player.y + FEET_OFFSET_Y };
+}
 
-  // fondo negro transparente
-  cctx.clearRect(0,0,size,size);
+function pointInRect(px, py, r) {
+  return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+}
 
-  // puntos blancos suaves
-  const img = cctx.createImageData(size, size);
-  for(let i=0;i<img.data.length;i+=4){
-    const r = Math.random();                // 0..1
-    const v = 220 + (r*35|0);               // gris clarito
-    const a = (r*r*105)|0;                  // alpha bajo (0..105)
-    img.data[i]   = v;
-    img.data[i+1] = v;
-    img.data[i+2] = v;
-    img.data[i+3] = a;
+// Devuelve 'top' | 'right' | 'bottom' | 'left' según por dónde saliste
+function exitSide(prev, now, zone) {
+  // si antes estaba dentro y ahora fuera, calculamos lado más cercano
+  const cx = Math.min(Math.max(now.x, zone.x), zone.x + zone.w);
+  const cy = Math.min(Math.max(now.y, zone.y), zone.y + zone.h);
+  const dx = now.x - cx;
+  const dy = now.y - cy;
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return (dx > 0) ? 'right' : 'left';
+  } else {
+    return (dy > 0) ? 'bottom' : 'top';
   }
-  cctx.putImageData(img, 0, 0);
-  return c;
 }
 
-// --- conv % a mundo o pasa px tal cual ---
-function rectToWorld(r){
-  if(r.type==='percent'){
-    return {
-      x: Math.round(world.w*(r.x/100)),
-      y: Math.round(world.h*(r.y/100)),
-      w: Math.round(world.w*(r.w/100)),
-      h: Math.round(world.h*(r.h/100)),
-      alpha: r.alpha, speedX: r.speedX||0, speedY: r.speedY||0, scale: r.scale||1
-    };
+// Convierte posibles zonas en % a mundo (igual que para obstáculos)
+function buildFogZones() {
+  const out = [];
+  for (const z of FOG_ZONES) {
+    if (z.type === 'percent') {
+      out.push({
+        x: Math.round(world.w * (z.x/100)),
+        y: Math.round(world.h * (z.y/100)),
+        w: Math.round(world.w * (z.w/100)),
+        h: Math.round(world.h * (z.h/100))
+      });
+    } else {
+      out.push({ ...z });
+    }
   }
-  return { ...r, alpha:r.alpha, speedX:r.speedX||0, speedY:r.speedY||0, scale:r.scale||1 };
+  return out;
 }
-
-// --- mundo → pantalla (dentro de tu screenRect y con cámara) ---
-function worldRectToScreenRect(wx,wy,ww,wh){
-  const dx = screenRect.dx + (wx - cam.x) * mapScaleX;
-  const dy = screenRect.dy + (wy - cam.y) * mapScaleY;
-  const dw = ww * mapScaleX;
-  const dh = wh * mapScaleY;
-  return {dx,dy,dw,dh};
-}
-
-
- 
 
 /* ========== UPDATE ========== */
 function update(dt){
@@ -379,6 +381,39 @@ function update(dt){
   nudgeOut();
 
   centerCameraOnPlayer();
+
+ // ===== NIEBLA: detectar entrada/salida y fijar target =====
+const feet = feetWorld();
+const insideNow = _fogZonesBuilt.some(z => pointInRect(feet.x, feet.y, z));
+
+if (insideNow) {
+  FOG.target = 1; // activar niebla
+} else {
+  if (FOG.forceClearIfOutside) {
+    FOG.target = 0; // limpiar siempre al salir
+  } else if (_wasInsideZone) {
+    // venías de dentro, averigua por dónde has salido con la PRIMERA zona que cumpla
+    const z = _fogZonesBuilt.find(z => pointInRect(_prevFeet.x, _prevFeet.y, z));
+    if (z) {
+      const side = exitSide(_prevFeet, feet, z);
+      if (FOG.clearOnExitDirs.includes(side)) {
+        FOG.target = 0; // solo limpiar si saliste por top/right (por defecto)
+      }
+      // si sales por left/bottom y no está en clearOnExitDirs, se mantiene la niebla (fade no cambia)
+    } else {
+      // seguridad: si no encontramos zona previa, limpia
+      FOG.target = 0;
+    }
+  }
+}
+
+// suaviza alpha hacia el target
+FOG.alpha += (FOG.target - FOG.alpha) * Math.min(1, dt * FOG.speed);
+
+// guarda estado para el próximo frame
+_prevFeet = feet;
+_wasInsideZone = insideNow;
+
 }
 
 /* ========== DRAW ========== */
@@ -522,7 +557,32 @@ for(const z of FOG_ZONES){
   // Rellenamos algo más grande que la zona para cubrir sobras del blur
   ctx.fillRect(Math.floor(sr.dx)-8, Math.floor(sr.dy)-8, Math.ceil(sr.dw)+16, Math.ceil(sr.dh)+16);
 
-  // ctx.filter = 'none';
+// ===== Overlay de NIEBLA a pantalla completa =====
+if (FOG.alpha > 0.001) {
+  ctx.save();
+
+  // recortamos a screenRect para respetar las “bandas”
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
+
+  ctx.globalAlpha = FOG.alpha;
+
+  const g = ctx.createRadialGradient(
+     screenRect.dx + screenRect.dw*0.5,
+     screenRect.dy + screenRect.dh*0.5,
+     0,
+     screenRect.dx + screenRect.dw*0.5,
+     screenRect.dy + screenRect.dh*0.5,
+     Math.max(screenRect.dw, screenRect.dh)*0.7
+   );
+   g.addColorStop(0, FOG.color);
+   g.addColorStop(1, 'rgba(220,230,255,0.0)');
+   ctx.fillStyle = g;
+   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+
+  ctx.restore();
+}
   ctx.restore();
 }
 
@@ -571,6 +631,7 @@ async function init(){
   await preloadCatalog();
 
   world.w=bgImg.naturalWidth; world.h=bgImg.naturalHeight;
+  _fogZonesBuilt = buildFogZones();
   resize();
 
   // posición inicial
