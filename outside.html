@@ -47,6 +47,7 @@ const ZOOM = 2.5;                               // 1 = sin zoom; 2.5 como pedist
 const START = { mode:'percent', x:5, y:90 };    // posición inicial
 const FEET_RADIUS_X = 12;   // ancho (horizontal)
 const FEET_RADIUS_Y = 8;    // alto (vertical)
+const FEET_OFFSET_Y = 4;   // píxeles hacia abajo, ajusta a tu gusto
 const DEBUG_OBS = true, DEBUG_PROPS = true;     // overlays SIEMPRE activos
 
 /* ========== ASSETS ========== */
@@ -206,12 +207,12 @@ function update(dt){
 
     // intenta mover eje X
     let nx=clamp(player.x+dx,halfW,world.w-halfW), okX=true;
-    for(const ob of OBSTACLES){ if(ellipseRectOverlap(nx, player.y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ okX=false; break; } }
+    for(const ob of OBSTACLES){ if(ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ okX=false; break; } }
     if(okX) player.x=nx;
 
     // intenta mover eje Y
     let ny=clamp(player.y+dy,halfH,world.h-halfH), okY=true;
-    for(const ob of OBSTACLES){ if(ellipseRectOverlap(nx, player.y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ okY=false; break; } }
+    for(const ob of OBSTACLES){ if(ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ okY=false; break; } }
     if(okY) player.y=ny;
 
     player.frameTime+=dt; if(player.frameTime>=0.12){ player.frame=(player.frame+1)%2; player.frameTime=0; }
@@ -324,10 +325,10 @@ ctx.strokeStyle='#ffff00';
 ctx.lineWidth=2;
 ctx.beginPath();
 ctx.ellipse(
-  jx, jy, 
-  FEET_RADIUS_X*mapScaleX,   // ancho horizontal
-  FEET_RADIUS_Y*mapScaleY,   // alto vertical
-  0, 0, Math.PI*2
+  jx, jy + FEET_OFFSET_Y * mapScaleY,   
+  FEET_RADIUS_X * mapScaleX,
+  FEET_RADIUS_Y * mapScaleY,
+  0, 0, Math.PI * 2
 );
 ctx.stroke();
     ctx.restore();
