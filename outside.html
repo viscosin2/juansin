@@ -476,11 +476,11 @@ function draw(){
         } 
        if (spec.wavy) {
   drawWaterInside(p.img, dx,dy, dw,dh, {
-    margin: spec.innerMarginPct ?? 0.08, // deja 8% de borde quieto
-    amp:    spec.amp ?? 1.2,             // píxeles de “pellizco” horizontal
-    stretch:spec.stretch ?? 0.02,        // ±2% de estiramiento
-    patches:spec.patches ?? 6,
-    speed:  spec.speed ?? 1.1,
+    margin: spec.innerMarginPct ?? 0.1, // deja 8% de borde quieto
+    amp:    spec.amp ?? 2,             // píxeles de “pellizco” horizontal
+    stretch:spec.stretch ?? 0.03,        // ±2% de estiramiento
+    patches:spec.patches ?? 7,
+    speed:  spec.speed ?? 1.2,
   }, p);
 } else {
   ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
