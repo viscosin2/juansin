@@ -60,13 +60,19 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
 
 /* Catálogo de props: (x,y) = pie (bottom-center); collider relativo al pie */
 const CATALOG = {
-  tree:   { src:'assets/objects/arbolclaro.png',   scale:1, collider:{x:-14,y:-10,w:28,h:30} },
+  tree:   { src:'assets/objects/arbolclaro.png',   scale:1, collider:{x:-14,y:1,w:28,h:5} },
   bush:   { src:'assets/objects/arbustoclaro.png', scale:1, collider:{x:-16,y:-16,w:32,h:16} },
   rock:   { src:'assets/objects/piedra.png',       scale:1, collider:{x:-12,y:-10,w:24,h:10} },
   fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:{x:-16,y:-10,w:32,h:10} },
-  house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-40,y:-24,w:80,h:55} },
-  bridge: { src:'assets/objects/puente.png',       scale:1, collider:null }
-};
+  house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-40,y:-5,w:80,h:55} },
+  bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
+  river: {
+     src: 'assets/objects/river.png',
+     scale: 1,
+     collider: null,
+     animated: true
+   }
+ };
 
 /* Props colocados (puedes usar % o px) */
 const PLACED = {
@@ -75,7 +81,8 @@ const PLACED = {
   bush:  [{type:'percent',x:45,y:78},{type:'percent',x:48,y:79}],
   fence: [{type:'percent',x:15.25,y:99.75}],
   rock:  [{type:'percent',x:60,y:72}],
-  bridge:[{type:'percent',x:55,y:65}]
+  bridge:[{type:'percent',x:55,y:65}],
+  river: [{type:'percent', x:50, y:60}]
 };
 
 /* Obstáculos extra (además de los de props) */
