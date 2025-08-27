@@ -87,7 +87,7 @@ const CATALOG = {
   casaclara:    { src:'assets/objects/casaclara.png',    scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
   casaclara_amarilla:{ src:'assets/objects/casaclara_amarilla.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
   casaclara_azul:{ src:'assets/objects/casaclara_azul.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, flipX:true, depthBand:1, depthAnchorY:1},
-  bridge:       { src:'assets/objects/puente.png', scale:1, collider:null },
+  bridge:       { src:'assets/objects/puente.png', scale:1, collider:{x:-20,y:-15,w:10, h:3} },
   river1:       { src:'assets/objects/rio1.png',   scale:1, collider:null },
   river2:       { src:'assets/objects/rio2.png',   scale:1, collider:null }
 };
@@ -113,7 +113,9 @@ const OBSTACLE_DEFS = [
   {type:'percent', x:29.4, y:30.6, w:31.85, h:80,   name:'zona bloqueada 1'},
   {type:'percent', x:60,   y:30.6, w:17.9,  h:24.5, name:'zona bloqueada 2'},
   {type:'percent', x:0,   y:50, w:15,  h:11, name:'zona bloqueada 3'},
-  {type:'percent', x:15,   y:50, w:20,  h:11, name:'zona bloqueada 4'}
+  {type:'percent', x:15,   y:50, w:20,  h:11, name:'zona bloqueada 4'},
+  {type:'percent', x:24,   y:21, w:10,  h:3, name:'zona bloqueada 5'},
+  {type:'percent', x:1,   y:1, w:1,  h:110, name:'zona bloqueada 5'}
 ];
 
 /* ========== STATE BÁSICO ========== */
