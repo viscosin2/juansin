@@ -66,12 +66,12 @@ const CATALOG = {
   tree:   { src:'assets/objects/arbolclaro.png',   scale:1, collider:{x:-12,y:-6,w:23.8,h:6} },
   bush:   { src:'assets/objects/arbustoclaro.png', scale:1, collider:{x:-16,y:-16,w:32,h:16} },
   rock:   { src:'assets/objects/piedra.png',       scale:1, collider:{x:-11.5,y:-10,w:23.5,h:10} },
-  fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null },
+  fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null},
   house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91,h:21}, depthBand: 1, depthAnchorY: 1},
   houseclara:  { src:'assets/objects/casaclara.png',     scale:1, collider:{x:-46.5,y:-5,w:91,h:21}, depthBand: 1, depthAnchorY: 1},
   bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
-  river1: { src:'assets/objects/rio1.png', scale:1, collider:null, wavy:true, innerMarginPct:0.08, patches:7, amp:1.5, speed:1.0 },
-  river2: { src:'assets/objects/rio2.png', scale:1, collider:null, wavy:true, innerMarginPct:0.08, patches:7, amp:1.5, speed:1.0 },
+  river1: { src:'assets/objects/rio1.png', scale:1, collider:null},
+  river2: { src:'assets/objects/rio2.png', scale:1, collider:null},
 
 };
 
@@ -164,8 +164,6 @@ function anyOverlap(cx, cy){
   return false;
 }
 
-
-
 /* ========== PROPS / OBSTÁCULOS ========== */
 async function preloadCatalog(){
   const entries=Object.entries(CATALOG);
@@ -192,12 +190,8 @@ function buildPropsAndObstacles(){
     iw: img ? img.naturalWidth : 32,
     ih: img ? img.naturalHeight : 32,
     scale: spec.scale || 1,
-    // flags útiles por si quieres consultarlos luego
-    wavy: !!spec.wavy,
-    glint: !!spec.glint
   };
 
-  // collider (si hay)
   if (spec.collider) {
     const c = spec.collider, s = prop.scale;
     const col = {
@@ -209,13 +203,6 @@ function buildPropsAndObstacles(){
     prop.collider = col;
     OBSTACLES.push({ ...col, name: type });
   }
-
-  // si es “río animado”, prepara sus celdas internas (ventanas) 1 sola vez
-  if (prop.wavy) {
-    // puedes ajustar el 6 por prop o en spec.wavyCellCount
-  prop._patches = makeWavyPatches(prop, spec.patches ?? 6);
-  }
-
   PROPS.push(prop);
 }
 
@@ -229,99 +216,6 @@ function buildPropsAndObstacles(){
 }
 
 /*=========== HELPERS =========== */
-
-// ===== Helpers =====
-
-// Marco interior: si margin < 1 lo tratamos como porcentaje; si no, como px.
-function innerRect(dx,dy,dw,dh, margin){
-  const m = (margin < 1) ? margin : (margin / Math.max(dw,dh));
-  const ix = dx + dw*m, iy = dy + dh*m;
-  const iw = dw * (1 - 2*m), ih = dh * (1 - 2*m);
-  return {x:ix, y:iy, w:iw, h:ih};
-}
-
-// Genera parches fijos por prop: posiciones y tamaños relativos dentro del marco interior
-function makeWavyPatches(prop, count=6){
-  if (prop._patches) return prop._patches;
-  const patches=[];
-  for(let i=0;i<count;i++){
-    const w = 0.18 + Math.random()*0.22;           // 18%–40% del ancho del marco
-    const h = 0.18 + Math.random()*0.25;           // 18%–43% del alto del marco
-    const x = Math.random()*(1-w);
-    const y = Math.random()*(1-h);
-    patches.push({
-      x,y,w,h,
-      phase: Math.random()*Math.PI*2,
-      dir:   Math.random()<0.5 ? -1 : 1,          // izquierda/derecha
-      speed: 0.8 + Math.random()*0.8,             // variación por parche
-    });
-  }
-  return (prop._patches = patches);
-}
-
-function drawRiverWavy(img, dx,dy,dw,dh, spec, prop, t){
-  // 1) Dibuja el sprite base (borde intacto)
-  ctx.drawImage(img, 0,0, img.naturalWidth,img.naturalHeight, dx,dy, dw,dh);
-
-  // 2) Marco interior: las orillas quietas
-  const margin = spec.innerMarginPct ?? 0.06;
-  const IR = innerRect(dx,dy,dw,dh, margin);
-
-  // 3) Parchecitos fijos por prop (se crean 1 vez)
-  const patches = prop._patches ?? (prop._patches = makeWavyPatches(prop, spec.patches ?? 6));
-
-  // Escalado base para que el motivo cubra exactamente dw x dh
-  const baseSX = dw / img.naturalWidth;
-  const baseSY = dh / img.naturalHeight;
-
-  // ¿Soporta setTransform del patrón?
-  const hasPatXform =
-    typeof CanvasPattern !== 'undefined' &&
-    CanvasPattern.prototype &&
-    typeof CanvasPattern.prototype.setTransform === 'function';
-
-  for (const p of patches){
-    const px = IR.x + IR.w * p.x;
-    const py = IR.y + IR.h * p.y;
-    const pw = IR.w * p.w;
-    const ph = IR.h * p.h;
-
-    // Desplazamiento “pellizco” por parche
-    const j    = Math.sin(t * (spec.speed ?? 1.2) * p.speed + p.phase);
-    const off  = j * (spec.amp ?? 2.0) * p.dir; // NO redondeamos
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(px, py, pw, ph);
-    ctx.clip();
-
-    if (hasPatXform){
-      // --- Camino moderno: patrón con transform ---
-      const pat = ctx.createPattern(img, 'repeat');
-      const m = new DOMMatrix();
-      m.a = baseSX;   // scaleX (sin stretch para evitar huecos)
-      m.d = baseSY;   // scaleY
-      m.e = off;      // desplazamiento X
-      m.f = 0;
-      pat.setTransform(m);
-
-      ctx.fillStyle = pat;
-      // Rellenamos TODO el marco interior; el clip limita al parche
-      ctx.fillRect(IR.x, IR.y, IR.w, IR.h);
-    } else {
-      // --- Fallback universal: tiling manual, sin estirar ni redondear ---
-      // Dibujamos varias teselas para que nunca falte relleno
-      const tileW = dw;   // ancho de una “tesela” del motivo ya escalada
-      const start = IR.x + off - tileW; // una a la izquierda por seguridad
-      for (let x = start; x < IR.x + IR.w + tileW; x += tileW){
-        ctx.drawImage(img, 0,0, img.naturalWidth,img.naturalHeight, x, IR.y, tileW, dh);
-      }
-    }
-
-    ctx.restore();
-  }
-}
-
 
  function cornerSlide(targetX, targetY, vx, vy){
   const SLIDE = 3; // píxeles mundo
@@ -426,13 +320,11 @@ function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // Fondo dentro del rect de pantalla
   let sx = Math.round(cam.x), sy = Math.round(cam.y);
   sx = clamp(sx, 0, world.w - cam.w);
   sy = clamp(sy, 0, world.h - cam.h);
   ctx.drawImage(bgImg, sx, sy, cam.w, cam.h, screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
-  // ⬇️ Todo lo demás recortado a screenRect (evita dibujar fuera de las bandas)
   ctx.save();
   ctx.beginPath();
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
@@ -473,16 +365,10 @@ function draw(){
           ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh);
           ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh);
           return;
-        }
-
-       if (spec.wavy) {
-  const t = performance.now()/1000;
-  drawRiverWavy(p.img, dx,dy, dw,dh, spec, p, t);
-} else {
+        } else {
   ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
 }
-
-      },
+    },
       debug: ()=>{
         if(DEBUG_PROPS && p.collider){
           const c=p.collider;
