@@ -360,13 +360,14 @@ for(const p of PROPS){
   const spec = CATALOG[p.type] || {};
   const band = (spec.depthBand ?? DEPTH_BAND);
 
-  const epsilon = 0.25;
-  const orderY = py + (player.y > p.y + band ? -epsilon   // prop detrás (antes del jugador)
-                       : player.y < p.y - band ? +epsilon  // prop delante (después del jugador)
-                       : 0);
+
+const sortY =
+  (jy < py - band) ? (py + 0.5) :      
+  (jy > py + band) ? (py - 0.5) :     
+  py;  
 
   list.push({
-    y: orderY,
+    y: sortY,
     draw: ()=>{
       if(!p.img){ ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh); ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh); return; }
       if(spec.animated){
