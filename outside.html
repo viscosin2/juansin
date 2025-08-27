@@ -68,7 +68,7 @@ const CATALOG = {
   fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:{x:-16,y:-10,w:32,h:10} },
   house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-40,y:-10,w:80,h:20} },
   bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
-  river: { src: 'assets/objects/rio.png',        scale:1, collider: null, animated: true, speed:0.02}
+  river: { src: 'assets/objects/rio.png',        scale:1, collider: null, wavy: true}
 };
 
  const PLACED = {
@@ -192,6 +192,42 @@ function buildPropsAndObstacles(){
   }
 }
 
+/*=========== HELPERS =========== */
+
+ // Efecto olas: desplaza en X cada franja con un seno, y añade brillos sutiles
+function drawWavy(img, sx, sy, sw, sh, dx, dy, dw, dh, t){
+  const SLICES = 36;         // más = más suave (coste un pelín mayor)
+  const AMP    = 2.2;        // amplitud (px en pantalla)
+  const FREQ   = 2.5;        // ondas a lo alto
+  const SPEED  = 1.4;        // velocidad
+
+  const srcSliceH = sh / SLICES;
+  const dstSliceH = dh / SLICES;
+
+  for (let i=0;i<SLICES;i++){
+    const sy0 = sy + i*srcSliceH;
+    const dy0 = dy + i*dstSliceH;
+    const off = Math.sin((i/SLICES)*Math.PI*2*FREQ + t*SPEED) * AMP;
+
+    // última franja: ajusta el alto para no acumular error
+    const srcH = (i===SLICES-1) ? (sh - i*srcSliceH) : srcSliceH;
+    const dstH = (i===SLICES-1) ? (dh - i*dstSliceH) : dstSliceH;
+
+    // recorta y desplaza un poquito en X
+    ctx.drawImage(img, sx, sy0, sw, srcH, Math.round(dx+off), Math.round(dy0), dw, Math.round(dstH));
+  }
+
+  // “brillos” muy suaves que se deslizan
+  ctx.save();
+  ctx.globalAlpha = 0.08;
+  for (let k=0;k<6;k++){
+    const yy = dy + ((k+0.5)/6)*dh + Math.sin(t*2 + k)*6;
+    ctx.fillRect(dx, Math.round(yy), dw, 1);
+  }
+  ctx.restore();
+}
+
+
 /* ========== UPDATE ========== */
 function update(dt){
   const vx=(keys.left?-1:0)+(keys.right?1:0);
@@ -222,14 +258,16 @@ function update(dt){
 }
 
 /* ========== DRAW ========== */
+/* ========== DRAW ========== */
 function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   // Fondo dentro del rect de pantalla
-  let sx=Math.round(cam.x), sy=Math.round(cam.y);
-  sx=clamp(sx,0,world.w-cam.w); sy=clamp(sy,0,world.h-cam.h);
-  ctx.drawImage(bgImg, sx,sy, cam.w,cam.h, screenRect.dx,screenRect.dy, screenRect.dw,screenRect.dh);
+  let sx = Math.round(cam.x), sy = Math.round(cam.y);
+  sx = clamp(sx, 0, world.w - cam.w);
+  sy = clamp(sy, 0, world.h - cam.h);
+  ctx.drawImage(bgImg, sx, sy, cam.w, cam.h, screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
   // ⬇️ Todo lo demás recortado a screenRect (evita dibujar fuera de las bandas)
   ctx.save();
@@ -238,104 +276,117 @@ function draw(){
   ctx.clip();
 
   // build draw list (orden por y del pie)
-  const list=[];
+  const list = [];
 
   // props (incluye soporte para animados: p.e. river)
   for(const p of PROPS){
-    const px=screenRect.dx+(p.x-cam.x)*mapScaleX, py=screenRect.dy+(p.y-cam.y)*mapScaleY;
-    const dw=Math.round(p.iw*p.scale*mapScaleX), dh=Math.round(p.ih*p.scale*mapScaleY);
-    const dx=Math.round(px-dw/2), dy=Math.round(py-dh);
+    const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
+    const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
+    const dw = Math.round(p.iw * p.scale * mapScaleX);
+    const dh = Math.round(p.ih * p.scale * mapScaleY);
+    const dx = Math.round(px - dw/2);
+    const dy = Math.round(py - dh);
     const spec = CATALOG[p.type] || {};
 
     list.push({
-      y:py,
-      draw:()=>{
-        if(!p.img){ ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh); ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh); return; }
+      y: py,
+      draw: () => {
+        if(!p.img){
+          ctx.fillStyle = '#777'; ctx.fillRect(dx,dy,dw,dh);
+          ctx.strokeStyle = '#222'; ctx.strokeRect(dx,dy,dw,dh);
+          return;
+        }
 
         if(spec.animated){ // ====== EFECTO DESPLAZAMIENTO (agua río) ======
-          // Config simple: horizontal; cambia speed para más/menos rápido
           const speed = spec.speed ?? 0.02; // px/ms sobre la textura original
           const t = performance.now() * speed;
           const iw = p.iw, ih = p.ih;
-          // Desplazamiento en la textura, envuelto [0, iw)
-          const scroll = ((t % iw)+iw) % iw;
+          const scroll = ((t % iw) + iw) % iw; // [0, iw)
 
-          // Pintamos en dos partes para "wrap-around"
           // Parte A: desde scroll -> fin
           const aSrcW = iw - scroll;
           const aDstW = dw * (aSrcW / iw);
           ctx.drawImage(p.img, scroll, 0, aSrcW, ih, dx, dy, Math.round(aDstW), dh);
 
           // Parte B: desde inicio -> scroll
-          if(scroll>0){
+          if(scroll > 0){
             const bSrcW = scroll;
             const bDstW = dw * (bSrcW / iw);
             ctx.drawImage(p.img, 0, 0, bSrcW, ih, Math.round(dx + aDstW), dy, Math.round(bDstW), dh);
           }
         } else {
           // Dibujo normal
-          ctx.drawImage(p.img,0,0,p.iw,p.ih,dx,dy,dw,dh);
+          ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
         }
       },
-      debug:()=>{
+      debug: () => {
         if(DEBUG_PROPS && p.collider){
-          const c=p.collider;
-          const cx=screenRect.dx+(c.x-cam.x)*mapScaleX, cy=screenRect.dy+(c.y-cam.y)*mapScaleY;
-          const cw=c.w*mapScaleX, ch=c.h*mapScaleY;
-          ctx.save(); ctx.globalAlpha=.45; ctx.fillStyle='#33ff66'; ctx.strokeStyle='#003300';
-          ctx.fillRect(Math.round(cx),Math.round(cy),Math.round(cw),Math.round(ch));
-          ctx.strokeRect(Math.round(cx),Math.round(cy),Math.round(cw),Math.round(ch)); ctx.restore();
+          const c = p.collider;
+          const cx = screenRect.dx + (c.x - cam.x) * mapScaleX;
+          const cy = screenRect.dy + (c.y - cam.y) * mapScaleY;
+          const cw = c.w * mapScaleX, ch = c.h * mapScaleY;
+          ctx.save();
+          ctx.globalAlpha = .45; ctx.fillStyle = '#33ff66'; ctx.strokeStyle = '#003300';
+          ctx.fillRect(Math.round(cx), Math.round(cy), Math.round(cw), Math.round(ch));
+          ctx.strokeRect(Math.round(cx), Math.round(cy), Math.round(cw), Math.round(ch));
+          ctx.restore();
         }
       }
     });
   }
 
   // Juan
-  const sw=JUAN.size.w, sh=JUAN.size.h, s=JUAN.scale;
-  const jw=Math.round(sw*s), jh=Math.round(sh*s);
-  const jx=Math.round(screenRect.dx+(player.x-cam.x)*mapScaleX);
-  const jy=Math.round(screenRect.dy+(player.y-cam.y)*mapScaleY);
-  list.push({ y:jy, draw:()=>{
-      ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath();
-      ctx.ellipse(jx, jy+Math.round(jh/2)-4, jw/2.5, jh/6, 0, 0, Math.PI*2); ctx.fill();
+  const sw = JUAN.size.w, sh = JUAN.size.h, s = JUAN.scale;
+  const jw = Math.round(sw*s), jh = Math.round(sh*s);
+  const jx = Math.round(screenRect.dx + (player.x - cam.x) * mapScaleX);
+  const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
+  list.push({
+    y: jy,
+    draw: () => {
+      ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath();
+      ctx.ellipse(jx, jy + Math.round(jh/2) - 4, jw/2.5, jh/6, 0, 0, Math.PI*2); ctx.fill();
       const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
-      ctx.drawImage(img,0,0,sw,sh, Math.round(jx-jw/2), Math.round(jy-jh/2), jw, jh);
-  }});
+      ctx.drawImage(img, 0,0, sw,sh, Math.round(jx - jw/2), Math.round(jy - jh/2), jw, jh);
+    }
+  });
 
   // pinta ordenado
-  list.sort((a,b)=>a.y-b.y).forEach(it=>it.draw());
+  list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   list.forEach(it=>it.debug && it.debug());
 
   // DEBUG: obstáculos + pies (también dentro del clip)
   if(DEBUG_OBS){
     ctx.save();
-    ctx.globalAlpha=.95; ctx.fillStyle='#00e0ff'; ctx.font='bold 12px monospace';
-    ctx.fillText('DEBUG ON', screenRect.dx+8, screenRect.dy+14);
+    ctx.globalAlpha = .95; ctx.fillStyle = '#00e0ff'; ctx.font = 'bold 12px monospace';
+    ctx.fillText('DEBUG ON', screenRect.dx + 8, screenRect.dy + 14);
 
-    ctx.globalAlpha=.5; ctx.fillStyle='#ff3366'; ctx.strokeStyle='#ffffff'; ctx.lineWidth=1;
+    ctx.globalAlpha = .5; ctx.fillStyle = '#ff3366'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
     for(const ob of OBSTACLES){
-      const dx=screenRect.dx+(ob.x-cam.x)*mapScaleX, dy=screenRect.dy+(ob.y-cam.y)*mapScaleY;
-      const dw=ob.w*mapScaleX, dh=ob.h*mapScaleY;
-      ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-      ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+      const dx = screenRect.dx + (ob.x - cam.x) * mapScaleX;
+      const dy = screenRect.dy + (ob.y - cam.y) * mapScaleY;
+      const dw = ob.w * mapScaleX, dh = ob.h * mapScaleY;
+      ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+      ctx.strokeRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
     }
 
-ctx.globalAlpha=1; 
-ctx.strokeStyle='#ffff00'; 
-ctx.lineWidth=2;
-ctx.beginPath();
-ctx.ellipse(
-  jx, jy + FEET_OFFSET_Y * mapScaleY,   
-  FEET_RADIUS_X * mapScaleX,
-  FEET_RADIUS_Y * mapScaleY,
-  0, 0, Math.PI * 2
-);
-ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#ffff00';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(
+      jx,
+      jy + FEET_OFFSET_Y * mapScaleY,   // ⬅️ offset vertical (en “pies”) definido en tu config
+      FEET_RADIUS_X * mapScaleX,        // ⬅️ radio X del óvalo
+      FEET_RADIUS_Y * mapScaleY,        // ⬅️ radio Y del óvalo
+      0, 0, Math.PI * 2
+    );
+    ctx.stroke();
     ctx.restore();
   }
 
   ctx.restore(); // ⬅️ salimos del clip
 }
+
 
 /* ========== LOOP ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; update(dt); draw(); requestAnimationFrame(loop); }
