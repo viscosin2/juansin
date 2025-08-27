@@ -145,17 +145,19 @@ function centerCameraOnPlayer(){
 }
 
 /* ========== COLISIÓN ========== */
+// Centro de los pies (cx,cy), radios rx,ry, rect = {x,y,w,h}
 function ellipseRectOverlap(cx, cy, rx, ry, rect){
-  // "normalizamos" la elipse a un círculo
-  const nx = (rect.x > cx) ? rect.x :
-             (rect.x+rect.w < cx) ? rect.x+rect.w : cx;
-  const ny = (rect.y > cy) ? rect.y :
-             (rect.y+rect.h < cy) ? rect.y+rect.h : cy;
-
-  const dx = (cx - nx) / rx;
-  const dy = (cy - ny) / ry;
+  const qx = clamp(cx, rect.x, rect.x + rect.w);
+  const qy = clamp(cy, rect.y, rect.y + rect.h);
+  const dx = (cx - qx) / rx;
+  const dy = (cy - qy) / ry;
   return (dx*dx + dy*dy) <= 1;
 }
+function anyOverlap(cx, cy){
+  for(const ob of OBSTACLES) if(ellipseRectOverlap(cx, cy + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)) return true;
+  return false;
+}
+
 
 
 /* ========== PROPS / OBSTÁCULOS ========== */
@@ -227,37 +229,108 @@ function drawWavy(img, sx, sy, sw, sh, dx, dy, dw, dh, t){
   ctx.restore();
 }
 
+ function cornerSlide(targetX, targetY, vx, vy){
+  const SLIDE = 3; // píxeles mundo
+  // Prioriza deslizar en el eje perpendicular al dominante
+  if(Math.abs(vx) > Math.abs(vy)){
+    // intenta subir/bajar un poco y luego aplicar X
+    for(const off of [-SLIDE, SLIDE]){
+      const ty = clamp(player.y + off, 0, world.h);
+      if(!anyOverlap(targetX, ty)){ player.y = ty; player.x = targetX; return true; }
+    }
+  } else {
+    // intenta izquierda/derecha un poco y luego aplicar Y
+    for(const off of [-SLIDE, SLIDE]){
+      const tx = clamp(player.x + off, 0, world.w);
+      if(!anyOverlap(tx, targetY)){ player.x = tx; player.y = targetY; return true; }
+    }
+  }
+  return false;
+}
+
+// Si por lo que sea aparece dentro, empuja hacia afuera con el mínimo movimiento
+function nudgeOut(){
+  let moved = false;
+  for(const ob of OBSTACLES){
+    if(!ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)) continue;
+
+    // Vector del centro de la elipse al punto más cercano del rect
+    const qx = clamp(player.x, ob.x, ob.x + ob.w);
+    const qy = clamp(player.y + FEET_OFFSET_Y, ob.y, ob.y + ob.h);
+    let dx = player.x - qx, dy = (player.y + FEET_OFFSET_Y) - qy;
+
+    // normalizamos por los radios para estimar penetración mínima
+    const ndx = dx / FEET_RADIUS_X, ndy = dy / FEET_RADIUS_Y;
+    const len = Math.hypot(ndx, ndy) || 1e-6;
+    // cuánto falta para salir (1 = justo tocando)
+    const overlap = 1 - len + 0.001; // epsilon
+    if(overlap > 0){
+      // empuje mínimo en espacio normalizado, luego des-escalamos
+      const pushX = (ndx/len) * overlap * FEET_RADIUS_X;
+      const pushY = (ndy/len) * overlap * FEET_RADIUS_Y;
+      player.x += pushX;
+      player.y += pushY;
+      moved = true;
+    }
+  }
+  return moved;
+}
+
+
 
 /* ========== UPDATE ========== */
+/* ========== UPDATE ========== */
 function update(dt){
-  const vx=(keys.left?-1:0)+(keys.right?1:0);
-  const vy=(keys.up?-1:0)+(keys.down?1:0);
-  player.moving=!!(vx||vy);
+  const vx = (keys.left?-1:0) + (keys.right?1:0);
+  const vy = (keys.up?-1:0) + (keys.down?1:0);
+  player.moving = !!(vx||vy);
 
-  if(player.moving){
+  if (player.moving){
     player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
-    const len=Math.hypot(vx,vy)||1, dx=(vx/len)*player.speed*dt, dy=(vy/len)*player.speed*dt;
+    const len = Math.hypot(vx,vy)||1;
+    const stepx = (vx/len)*player.speed*dt;
+    const stepy = (vy/len)*player.speed*dt;
 
+    // límites por tamaño del sprite
     const sw=JUAN.size.w, sh=JUAN.size.h, s=JUAN.scale;
     const halfW=Math.round(sw*s)/2, halfH=Math.round(sh*s)/2;
 
-    // intenta mover eje X
-    let nx=clamp(player.x+dx,halfW,world.w-halfW), okX=true;
-    for(const ob of OBSTACLES){ if(ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ okX=false; break; } }
-    if(okX) player.x=nx;
+    const nx = clamp(player.x + stepx, halfW, world.w - halfW);
+    const ny = clamp(player.y + stepy, halfH, world.h - halfH);
 
-    // intenta mover eje Y
-    let ny=clamp(player.y+dy,halfH,world.h-halfH), okY=true;
-    for(const ob of OBSTACLES){ if(ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ okY=false; break; } }
-    if(okY) player.y=ny;
+    // prueba X
+    let blockedX=false;
+    for (const ob of OBSTACLES){
+      if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX=true; break; }
+    }
+    if (!blockedX) player.x = nx;
 
-    player.frameTime+=dt; if(player.frameTime>=0.12){ player.frame=(player.frame+1)%2; player.frameTime=0; }
-  } else player.frame=0;
+    // prueba Y
+    let blockedY=false;
+    for (const ob of OBSTACLES){
+      if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY=true; break; }
+    }
+    if (!blockedY) player.y = ny;
+
+    // si ambos bloqueados, intenta deslizar; si no, empujón mínimo
+    if (blockedX && blockedY){
+      if (!cornerSlide(nx, ny, stepx, stepy)) nudgeOut();
+    }
+
+    // animación
+    player.frameTime += dt;
+    if (player.frameTime >= 0.12){ player.frame=(player.frame+1)%2; player.frameTime=0; }
+  } else {
+    player.frame = 0;
+  }
+
+  // seguridad por si quedó dentro de algo (spawn/resize)
+  nudgeOut();
 
   centerCameraOnPlayer();
 }
 
-/* ========== DRAW ========== */
+
 /* ========== DRAW ========== */
 function draw(){
   if(!bgImg) return;
