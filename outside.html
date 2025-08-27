@@ -512,77 +512,40 @@ function draw(){
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   list.forEach(it=>it.debug && it.debug());
 
-
- // === NIEBLA en zonas ===
-if(!FOG_TEX) FOG_TEX = makeNoiseTexture(256);
-
-const now = performance.now()/1000; // segundos
-for(const z of FOG_ZONES){
-  const wz = rectToWorld(z);
-  const sr = worldRectToScreenRect(wz.x, wz.y, wz.w, wz.h);
-
-  // Si la zona está fuera de pantalla, sáltala
-  if(sr.dx>screenRect.dx+screenRect.dw || sr.dx+sr.dw<screenRect.dx ||
-     sr.dy>screenRect.dy+screenRect.dh || sr.dy+sr.dh<screenRect.dy) continue;
-
-  ctx.save();
-  // Clip exacto al rectángulo de niebla en pantalla
-  ctx.beginPath();
-  ctx.rect(Math.floor(sr.dx), Math.floor(sr.dy), Math.ceil(sr.dw), Math.ceil(sr.dh));
-  ctx.clip();
-
-  // Patrón repetido de la textura de ruido
-  const pat = ctx.createPattern(FOG_TEX, 'repeat');
-
-  // Transform del patrón: escala + desplazamiento animado
-  // Nota: desplazamos en "pantalla" para que NO dependa de la posición de Juan
-  const S = wz.scale || 1;
-  const a = S, d = S; // scaleX, scaleY
-  const offX = (now * (wz.speedX||0)) % (FOG_TEX.width  * a);
-  const offY = (now * (wz.speedY||0)) % (FOG_TEX.height * d);
-
-  const m = new DOMMatrix();
-  m.a = a;  // scaleX
-  m.d = d;  // scaleY
-  m.e = -offX; // translateX (signo negativo para “mover” la niebla)
-  m.f = -offY; // translateY
-
-  pat.setTransform(m);
-
-  // Suavizar un poco (opcional): descomenta si te gusta
-  // ctx.filter = 'blur(2px)';
-
-  ctx.globalAlpha = Math.max(0, Math.min(1, wz.alpha ?? 0.3));
-  ctx.fillStyle = pat;
-  // Rellenamos algo más grande que la zona para cubrir sobras del blur
-  ctx.fillRect(Math.floor(sr.dx)-8, Math.floor(sr.dy)-8, Math.ceil(sr.dw)+16, Math.ceil(sr.dh)+16);
-
-// ===== Overlay de NIEBLA a pantalla completa =====
+// ===== Overlay de NIEBLA a pantalla completa (basado en FOG.alpha) =====
 if (FOG.alpha > 0.001) {
   ctx.save();
 
-  // recortamos a screenRect para respetar las “bandas”
+  // recorte a la pantalla útil (screenRect)
   ctx.beginPath();
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
   ctx.globalAlpha = FOG.alpha;
 
+  // niebla uniforme simple:
+  ctx.fillStyle = FOG.color;
+  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+
+  // si prefieres la versión con gradiente suave, sustituye por esto:
+  /*
   const g = ctx.createRadialGradient(
-     screenRect.dx + screenRect.dw*0.5,
-     screenRect.dy + screenRect.dh*0.5,
-     0,
-     screenRect.dx + screenRect.dw*0.5,
-     screenRect.dy + screenRect.dh*0.5,
-     Math.max(screenRect.dw, screenRect.dh)*0.7
-   );
-   g.addColorStop(0, FOG.color);
-   g.addColorStop(1, 'rgba(220,230,255,0.0)');
-   ctx.fillStyle = g;
-   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+    screenRect.dx + screenRect.dw*0.5,
+    screenRect.dy + screenRect.dh*0.5,
+    0,
+    screenRect.dx + screenRect.dw*0.5,
+    screenRect.dy + screenRect.dh*0.5,
+    Math.max(screenRect.dw, screenRect.dh)*0.7
+  );
+  g.addColorStop(0, FOG.color);
+  g.addColorStop(1, 'rgba(220,230,255,0.0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  */
 
   ctx.restore();
 }
+
   ctx.restore();
 }
 
