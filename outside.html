@@ -101,7 +101,7 @@ let PROP_IMAGES={}, PROPS=[], OBSTACLES=[];
 let cam={x:0,y:0,w:ROOM.w/ZOOM|0,h:ROOM.h/ZOOM|0};
 let screenRect={dx:0,dy:0,dw:0,dh:0}, mapScaleX=1, mapScaleY=1;
 
-const player={x:0,y:0,dir:'down',speed:230,moving:false,frame:0,frameTime:0};
+const player={x:0,y:0,dir:'down',speed:150,moving:false,frame:0,frameTime:0};
 
 /* ========== INPUT: SOLO D-PAD ========== */
 const keys={up:false,down:false,left:false,right:false};
@@ -236,16 +236,42 @@ function draw(){
   // build draw list (orden por y del pie)
   const list=[];
 
-  // props
+  // props (incluye soporte para animados: p.e. river)
   for(const p of PROPS){
     const px=screenRect.dx+(p.x-cam.x)*mapScaleX, py=screenRect.dy+(p.y-cam.y)*mapScaleY;
     const dw=Math.round(p.iw*p.scale*mapScaleX), dh=Math.round(p.ih*p.scale*mapScaleY);
     const dx=Math.round(px-dw/2), dy=Math.round(py-dh);
+    const spec = CATALOG[p.type] || {};
+
     list.push({
       y:py,
       draw:()=>{
-        if(p.img) ctx.drawImage(p.img,0,0,p.iw,p.ih,dx,dy,dw,dh);
-        else { ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh); ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh); }
+        if(!p.img){ ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh); ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh); return; }
+
+        if(spec.animated){ // ====== EFECTO DESPLAZAMIENTO (agua río) ======
+          // Config simple: horizontal; cambia speed para más/menos rápido
+          const speed = spec.speed ?? 0.02; // px/ms sobre la textura original
+          const t = performance.now() * speed;
+          const iw = p.iw, ih = p.ih;
+          // Desplazamiento en la textura, envuelto [0, iw)
+          const scroll = ((t % iw)+iw) % iw;
+
+          // Pintamos en dos partes para "wrap-around"
+          // Parte A: desde scroll -> fin
+          const aSrcW = iw - scroll;
+          const aDstW = dw * (aSrcW / iw);
+          ctx.drawImage(p.img, scroll, 0, aSrcW, ih, dx, dy, Math.round(aDstW), dh);
+
+          // Parte B: desde inicio -> scroll
+          if(scroll>0){
+            const bSrcW = scroll;
+            const bDstW = dw * (bSrcW / iw);
+            ctx.drawImage(p.img, 0, 0, bSrcW, ih, Math.round(dx + aDstW), dy, Math.round(bDstW), dh);
+          }
+        } else {
+          // Dibujo normal
+          ctx.drawImage(p.img,0,0,p.iw,p.ih,dx,dy,dw,dh);
+        }
       },
       debug:()=>{
         if(DEBUG_PROPS && p.collider){
