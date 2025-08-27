@@ -78,7 +78,7 @@ const CATALOG = {
   fence: [{type:'percent',x:15.25,y:99.75}],
   rock:  [{type:'percent',x:60,y:72}],
   bridge:[{type:'percent',x:55,y:65}],
-  river: [{type:'percent', x:50, y:60}]
+  river: [{type:'percent', x:0, y:50}]
 };
 
 /* Obstáculos extra (además de los de props) */
@@ -276,9 +276,6 @@ function nudgeOut(){
   return moved;
 }
 
-
-
-/* ========== UPDATE ========== */
 /* ========== UPDATE ========== */
 function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
