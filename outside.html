@@ -391,11 +391,10 @@ function draw(){
     const anchor = (spec.depthAnchorY ?? 0) * mapScaleY;
     const pyCut = py + anchor;
 
-    const sortY =
-  (spec.type === 'river1' || spec.type === 'river2') ? -9999 : 
-  (jFoot < pyCut - band) ? (py + 0.5) :
-  (jFoot > pyCut + band) ? (py - 0.5) :
-  py;
+    const sortY = spec.forceBack ? -9999 :
+              (jFoot < pyCut - band) ? (py + 0.5) :
+              (jFoot > pyCut + band) ? (py - 0.5) :
+              py;
 
     list.push({
       y: sortY,
