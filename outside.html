@@ -210,7 +210,7 @@ function buildPropsAndObstacles(){
   // si es “río animado”, prepara sus celdas internas (ventanas) 1 sola vez
   if (prop.wavy) {
     // puedes ajustar el 6 por prop o en spec.wavyCellCount
-    prop._cells = makeWavyCells(prop, spec.wavyCellCount ?? 6);
+  prop._patches = makeWavyPatches(prop, spec.patches ?? 6);
   }
 
   PROPS.push(prop);
