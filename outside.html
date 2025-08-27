@@ -69,7 +69,7 @@ const CATALOG = {
   fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null },
   house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91,h:21}, depthBand: 1, depthAnchorY: 1},
   bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
-  river: { src: 'assets/objects/rio.png',          scale:1, collider: null, animated: true, wavy: true, speed: 0.06}
+  river: { src: 'assets/objects/rio.png',          scale:1, collider: null, wavy: true}
 };
 
  const PLACED = {
@@ -197,12 +197,11 @@ function buildPropsAndObstacles(){
 
 /*=========== HELPERS =========== */
 
- // Efecto olas: desplaza en X cada franja con un seno, y añade brillos sutiles
 function drawWavy(img, sx, sy, sw, sh, dx, dy, dw, dh, t){
-  const SLICES = 36;         // más = más suave (coste un pelín mayor)
-  const AMP    = 2.2;        // amplitud (px en pantalla)
-  const FREQ   = 2.5;        // ondas a lo alto
-  const SPEED  = 1.4;        // velocidad
+  const SLICES = 36;   // más = más suave
+  const AMP    = 2.0;  // amplitud de la ondita en px pantalla
+  const FREQ   = 2.2;  // cuántas ondas verticales
+  const SPEED  = 1.6;  // velocidad de animación
 
   const srcSliceH = sh / SLICES;
   const dstSliceH = dh / SLICES;
@@ -212,24 +211,24 @@ function drawWavy(img, sx, sy, sw, sh, dx, dy, dw, dh, t){
     const dy0 = dy + i*dstSliceH;
     const off = Math.sin((i/SLICES)*Math.PI*2*FREQ + t*SPEED) * AMP;
 
-    // última franja: ajusta el alto para no acumular error
     const srcH = (i===SLICES-1) ? (sh - i*srcSliceH) : srcSliceH;
     const dstH = (i===SLICES-1) ? (dh - i*dstSliceH) : dstSliceH;
 
-    // recorta y desplaza un poquito en X
+    // recortamos del sprite original y lo “metemos” desplazado DENTRO del mismo rectángulo
     ctx.drawImage(img, sx, sy0, sw, srcH, Math.round(dx+off), Math.round(dy0), dw, Math.round(dstH));
   }
 
-ctx.save();
-ctx.globalAlpha = 0.08;
-ctx.fillStyle = '#ffffff'; // ← añade color para los brillos
-for (let k=0;k<6;k++){
-  const yy = dy + ((k+0.5)/6)*dh + Math.sin(t*2 + k)*6;
-  ctx.fillRect(dx, Math.round(yy), dw, 1);
+  // brillos sutiles
+  ctx.save();
+  ctx.globalAlpha = 0.10;
+  ctx.fillStyle = '#ffffff';
+  for (let k=0;k<6;k++){
+    const yy = dy + ((k+0.5)/6)*dh + Math.sin(t*2 + k)*6;
+    ctx.fillRect(dx, Math.round(yy), dw, 1);
+  }
+  ctx.restore();
 }
-ctx.restore();
 
-}
 
  function cornerSlide(targetX, targetY, vx, vy){
   const SLIDE = 3; // píxeles mundo
@@ -380,17 +379,13 @@ const sortY =
           ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh);
           return;
         }
-        if(spec.animated){
-          const speed = spec.speed ?? 0.02, t = performance.now()*speed, iw=p.iw, ih=p.ih;
-          const scroll = ((t % iw)+iw)%iw, aSrcW=iw-scroll, aDstW = dw*(aSrcW/iw);
-          ctx.drawImage(p.img, scroll,0,aSrcW,ih, dx,dy, Math.round(aDstW), dh);
-          if(scroll>0){
-            const bSrcW=scroll, bDstW=dw*(bSrcW/iw);
-            ctx.drawImage(p.img, 0,0,bSrcW,ih, Math.round(dx+aDstW),dy, Math.round(bDstW),dh);
-          }
-        } else {
-          ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
-        }
+        if (spec.wavy) {
+  // ⬅️ mueve SOLO el interior, el sprite se queda en su sitio
+  const t = performance.now() / 1000; // segundos
+  drawWavy(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh, t);
+} else {
+  ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
+}
       },
       debug: ()=>{
         if(DEBUG_PROPS && p.collider){
