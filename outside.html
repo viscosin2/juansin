@@ -581,6 +581,12 @@ async function init(){
   player.x=clamp(player.x,halfW,world.w-halfW);
   player.y=clamp(player.y,halfH,world.h-halfH);
 
+  player.dir = 'down';
+  player.moving = false;
+  player.frame = 0;
+  player.frameTime = 0;
+  keys.up = keys.down = keys.left = keys.right = false;
+
   buildPropsAndObstacles();
   centerCameraOnPlayer();
   requestAnimationFrame(loop);
