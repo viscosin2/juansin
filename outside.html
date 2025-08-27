@@ -79,7 +79,7 @@ const CATALOG = {
   casajuan:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91,h:21}, depthBand: 1, depthAnchorY: 1},
   casaclara:  { src:'assets/objects/casaclara.png',     scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand: 1, depthAnchorY: 1},
   casaclara_amarilla:  { src:'assets/objects/casaclara_amarilla.png',     scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand: 1, depthAnchorY: 1},
-  casaclara_azul:  { src:'assets/objects/casaclara_azul.png',     scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand: 1, depthAnchorY: 1},
+  casaclara_azul:  { src:'assets/objects/casaclara_azul.png',     scale:1, collider:{x:-28,y:-5,w:58, h:21}, flipX:true, depthBand: 1, depthAnchorY: 1},
   bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
   river1: { src:'assets/objects/rio1.png', scale:1, collider:null},
   river2: { src:'assets/objects/rio2.png', scale:1, collider:null},
@@ -433,7 +433,16 @@ function draw(){
           return;
         } 
         else {
+  if(spec.flipX){
+  ctx.save();
+  ctx.scale(-1,1); // espejo horizontal
+  // ojo: al voltear, el origen también se voltea: ajustamos dx
+  ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh);
+  ctx.restore();
+}else{
   ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
+}
+
 }
 
     },
