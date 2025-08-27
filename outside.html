@@ -405,9 +405,9 @@ const sortY =
     });
   }
 
-  // Juan
-  list.push({
-    y: jy,
+// Juan
+list.push({
+  y: jFoot,
     draw: () => {
       ctx.fillStyle = 'rgba(0,0,0,.3)';
       ctx.beginPath();
@@ -416,7 +416,8 @@ const sortY =
       const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
       ctx.drawImage(img, 0,0, sw,sh, Math.round(jx - jw/2), Math.round(jy - jh/2), jw, jh);
     }
-  });
+});
+
 
   // pinta ordenado
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
