@@ -49,6 +49,8 @@ const FEET_RADIUS_X = 7;   // ancho (horizontal)
 const FEET_RADIUS_Y = 10;    // alto (vertical)
 const FEET_OFFSET_Y = 2;   // píxeles hacia abajo, ajusta a tu gusto
 const DEBUG_OBS = true, DEBUG_PROPS = true;     // overlays SIEMPRE activos
+const DEPTH_BAND = 18; // px en mundo; súbelo si quieres que Juan tenga que bajar más para pasar “detrás”
+
 
 /* ========== ASSETS ========== */
 const BG_SRC = "assets/locations/outside.png";
@@ -349,61 +351,45 @@ function draw(){
   const list = [];
 
   // props (incluye soporte para animados: p.e. river)
-  for(const p of PROPS){
-    const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
-    const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
-    const dw = Math.round(p.iw * p.scale * mapScaleX);
-    const dh = Math.round(p.ih * p.scale * mapScaleY);
-    const dx = Math.round(px - dw/2);
-    const dy = Math.round(py - dh);
-    const spec = CATALOG[p.type] || {};
+for(const p of PROPS){
+  const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
+  const py = screenRect.dy + (p.y - cam.y) * mapScaleY; // <- pie en pantalla
+  const dw = Math.round(p.iw * p.scale * mapScaleX);
+  const dh = Math.round(p.ih * p.scale * mapScaleY);
+  const dx = Math.round(px - dw/2), dy = Math.round(py - dh);
+  const spec = CATALOG[p.type] || {};
+  const band = (spec.depthBand ?? DEPTH_BAND);
 
-    list.push({
-      y: py,
-      draw: () => {
-        if(!p.img){
-          ctx.fillStyle = '#777'; ctx.fillRect(dx,dy,dw,dh);
-          ctx.strokeStyle = '#222'; ctx.strokeRect(dx,dy,dw,dh);
-          return;
-        }
+  const epsilon = 0.25;
+  const orderY = py + (player.y > p.y + band ? -epsilon   // prop detrás (antes del jugador)
+                       : player.y < p.y - band ? +epsilon  // prop delante (después del jugador)
+                       : 0);
 
-        if(spec.animated){ // ====== EFECTO DESPLAZAMIENTO (agua río) ======
-          const speed = spec.speed ?? 0.02; // px/ms sobre la textura original
-          const t = performance.now() * speed;
-          const iw = p.iw, ih = p.ih;
-          const scroll = ((t % iw) + iw) % iw; // [0, iw)
-
-          // Parte A: desde scroll -> fin
-          const aSrcW = iw - scroll;
-          const aDstW = dw * (aSrcW / iw);
-          ctx.drawImage(p.img, scroll, 0, aSrcW, ih, dx, dy, Math.round(aDstW), dh);
-
-          // Parte B: desde inicio -> scroll
-          if(scroll > 0){
-            const bSrcW = scroll;
-            const bDstW = dw * (bSrcW / iw);
-            ctx.drawImage(p.img, 0, 0, bSrcW, ih, Math.round(dx + aDstW), dy, Math.round(bDstW), dh);
-          }
-        } else {
-          // Dibujo normal
-          ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
-        }
-      },
-      debug: () => {
-        if(DEBUG_PROPS && p.collider){
-          const c = p.collider;
-          const cx = screenRect.dx + (c.x - cam.x) * mapScaleX;
-          const cy = screenRect.dy + (c.y - cam.y) * mapScaleY;
-          const cw = c.w * mapScaleX, ch = c.h * mapScaleY;
-          ctx.save();
-          ctx.globalAlpha = .45; ctx.fillStyle = '#33ff66'; ctx.strokeStyle = '#003300';
-          ctx.fillRect(Math.round(cx), Math.round(cy), Math.round(cw), Math.round(ch));
-          ctx.strokeRect(Math.round(cx), Math.round(cy), Math.round(cw), Math.round(ch));
-          ctx.restore();
-        }
+  list.push({
+    y: orderY,
+    draw: ()=>{
+      if(!p.img){ ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh); ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh); return; }
+      if(spec.animated){
+        const speed = spec.speed ?? 0.02, t = performance.now()*speed, iw=p.iw, ih=p.ih;
+        const scroll = ((t % iw)+iw)%iw, aSrcW=iw-scroll, aDstW = dw*(aSrcW/iw);
+        ctx.drawImage(p.img, scroll,0,aSrcW,ih, dx,dy, Math.round(aDstW), dh);
+        if(scroll>0){ const bSrcW=scroll, bDstW=dw*(bSrcW/iw); ctx.drawImage(p.img,0,0,bSrcW,ih, Math.round(dx+aDstW),dy, Math.round(bDstW),dh); }
+      } else {
+        ctx.drawImage(p.img,0,0,p.iw,p.ih, dx,dy, dw,dh);
       }
-    });
-  }
+    },
+    debug: ()=>{
+      if(DEBUG_PROPS && p.collider){
+        const c=p.collider;
+        const cx=screenRect.dx+(c.x-cam.x)*mapScaleX, cy=screenRect.dy+(c.y-cam.y)*mapScaleY;
+        const cw=c.w*mapScaleX, ch=c.h*mapScaleY;
+        ctx.save(); ctx.globalAlpha=.45; ctx.fillStyle='#33ff66'; ctx.strokeStyle='#003300';
+        ctx.fillRect(Math.round(cx),Math.round(cy),Math.round(cw),Math.round(ch));
+        ctx.strokeRect(Math.round(cx),Math.round(cy),Math.round(cw),Math.round(ch)); ctx.restore();
+      }
+    }
+  });
+}
 
   // Juan
   const sw = JUAN.size.w, sh = JUAN.size.h, s = JUAN.scale;
