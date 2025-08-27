@@ -61,6 +61,15 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
         right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"]}
 };
 
+ // Zonas de niebla en coordenadas de mundo (puedes usar percent)
+const FOG_ZONES = [
+  // Rectángulo grande en % del mapa
+  { type:'percent', x:30, y:40, w:28, h:18, alpha:0.35, speedX:8, speedY:4, scale:1.2 },
+  // Otro ejemplo en píxeles
+  // { type:'px', x:1200, y:700, w:500, h:300, alpha:0.28, speedX:12, speedY:0, scale:1.0 },
+];
+
+
 /* Catálogo de props: (x,y) = pie (bottom-center); collider relativo al pie */
 const CATALOG = {
   arbolclaro:   { src:'assets/objects/arbolclaro.png',   scale:1, collider:{x:-12,y:-6,w:23.8,h:6} },
@@ -378,6 +387,57 @@ function nudgeOut(){
   return moved;
 }
 
+// --- genera una textura de ruido 256x256 (una vez) ---
+let FOG_TEX = null;
+function makeNoiseTexture(size=256){
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const cctx = c.getContext('2d', { willReadFrequently:true });
+
+  // fondo negro transparente
+  cctx.clearRect(0,0,size,size);
+
+  // puntos blancos suaves
+  const img = cctx.createImageData(size, size);
+  for(let i=0;i<img.data.length;i+=4){
+    const r = Math.random();                // 0..1
+    const v = 220 + (r*35|0);               // gris clarito
+    const a = (r*r*105)|0;                  // alpha bajo (0..105)
+    img.data[i]   = v;
+    img.data[i+1] = v;
+    img.data[i+2] = v;
+    img.data[i+3] = a;
+  }
+  cctx.putImageData(img, 0, 0);
+  return c;
+}
+
+// --- conv % a mundo o pasa px tal cual ---
+function rectToWorld(r){
+  if(r.type==='percent'){
+    return {
+      x: Math.round(world.w*(r.x/100)),
+      y: Math.round(world.h*(r.y/100)),
+      w: Math.round(world.w*(r.w/100)),
+      h: Math.round(world.h*(r.h/100)),
+      alpha: r.alpha, speedX: r.speedX||0, speedY: r.speedY||0, scale: r.scale||1
+    };
+  }
+  return { ...r, alpha:r.alpha, speedX:r.speedX||0, speedY:r.speedY||0, scale:r.scale||1 };
+}
+
+// --- mundo → pantalla (dentro de tu screenRect y con cámara) ---
+function worldRectToScreenRect(wx,wy,ww,wh){
+  const dx = screenRect.dx + (wx - cam.x) * mapScaleX;
+  const dy = screenRect.dy + (wy - cam.y) * mapScaleY;
+  const dw = ww * mapScaleX;
+  const dh = wh * mapScaleY;
+  return {dx,dy,dw,dh};
+}
+
+
+ 
+
 /* ========== UPDATE ========== */
 function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
@@ -523,6 +583,56 @@ function draw(){
   // pinta ordenado
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   list.forEach(it=>it.debug && it.debug());
+
+
+ // === NIEBLA en zonas ===
+if(!FOG_TEX) FOG_TEX = makeNoiseTexture(256);
+
+const now = performance.now()/1000; // segundos
+for(const z of FOG_ZONES){
+  const wz = rectToWorld(z);
+  const sr = worldRectToScreenRect(wz.x, wz.y, wz.w, wz.h);
+
+  // Si la zona está fuera de pantalla, sáltala
+  if(sr.dx>screenRect.dx+screenRect.dw || sr.dx+sr.dw<screenRect.dx ||
+     sr.dy>screenRect.dy+screenRect.dh || sr.dy+sr.dh<screenRect.dy) continue;
+
+  ctx.save();
+  // Clip exacto al rectángulo de niebla en pantalla
+  ctx.beginPath();
+  ctx.rect(Math.floor(sr.dx), Math.floor(sr.dy), Math.ceil(sr.dw), Math.ceil(sr.dh));
+  ctx.clip();
+
+  // Patrón repetido de la textura de ruido
+  const pat = ctx.createPattern(FOG_TEX, 'repeat');
+
+  // Transform del patrón: escala + desplazamiento animado
+  // Nota: desplazamos en "pantalla" para que NO dependa de la posición de Juan
+  const S = wz.scale || 1;
+  const a = S, d = S; // scaleX, scaleY
+  const offX = (now * (wz.speedX||0)) % (FOG_TEX.width  * a);
+  const offY = (now * (wz.speedY||0)) % (FOG_TEX.height * d);
+
+  const m = new DOMMatrix();
+  m.a = a;  // scaleX
+  m.d = d;  // scaleY
+  m.e = -offX; // translateX (signo negativo para “mover” la niebla)
+  m.f = -offY; // translateY
+
+  pat.setTransform(m);
+
+  // Suavizar un poco (opcional): descomenta si te gusta
+  // ctx.filter = 'blur(2px)';
+
+  ctx.globalAlpha = Math.max(0, Math.min(1, wz.alpha ?? 0.3));
+  ctx.fillStyle = pat;
+  // Rellenamos algo más grande que la zona para cubrir sobras del blur
+  ctx.fillRect(Math.floor(sr.dx)-8, Math.floor(sr.dy)-8, Math.ceil(sr.dw)+16, Math.ceil(sr.dh)+16);
+
+  // ctx.filter = 'none';
+  ctx.restore();
+}
+
 
   // DEBUG: obstáculos + pies (también dentro del clip)
   if(DEBUG_OBS){
