@@ -66,16 +66,10 @@ const CATALOG = {
   fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:{x:-16,y:-10,w:32,h:10} },
   house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-40,y:7,w:80,h:20} },
   bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
-  river: {
-     src: 'assets/objects/river.png',
-     scale: 1,
-     collider: null,
-     animated: true
-   }
- };
+  river: { src: 'assets/objects/river.png',        scale:1, collider: null, animated: true, speed:0.02}
+};
 
-/* Props colocados (puedes usar % o px) */
-const PLACED = {
+ const PLACED = {
   tree:  [{type:'percent',x:17,y:87.5},{type:'percent',x:22,y:64},{type:'percent',x:30,y:58}],
   house: [{type:'percent',x:7.2,y:82}],
   bush:  [{type:'percent',x:45,y:78},{type:'percent',x:48,y:79}],
