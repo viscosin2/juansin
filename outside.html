@@ -69,7 +69,8 @@ const CATALOG = {
   fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null },
   house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91,h:21}, depthBand: 1, depthAnchorY: 1},
   bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
-  river: { src:'assets/objects/rio.png', scale:1, collider:null, wavy:true, wavyBorder: 3, wavyAmp: 2.2, wavyFreq: 2.4, wavySpeed: 1.3, wavySlices: 36}
+  river1: { src:'assets/objects/rio1.png', scale:1, collider:null, wavy:true, wavyBorder: 3, wavyAmp: 2.2, wavyFreq: 2.4, wavySpeed: 1.3, wavySlices: 36},
+  river2: { src:'assets/objects/rio2.png', scale:1, collider:null, wavy:true, wavyBorder: 3, wavyAmp: 2.2, wavyFreq: 2.4, wavySpeed: 1.3, wavySlices: 36}
 };
 
  const PLACED = {
@@ -79,7 +80,8 @@ const CATALOG = {
   fence: [{type:'percent',x:15.25,y:99.75}],
   rock:  [{type:'percent',x:60,y:72}],
   bridge:[{type:'percent',x:55,y:65}],
-  river: [{type:'percent', x:7, y:50}]
+  river1: [{type:'percent', x:7, y:50}],
+  river2: [{type:'percent', x:14, y:50}]
 };
 
 /* Obstáculos extra (además de los de props) */
