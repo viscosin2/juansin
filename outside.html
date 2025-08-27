@@ -69,8 +69,9 @@ const CATALOG = {
   fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null },
   house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91,h:21}, depthBand: 1, depthAnchorY: 1},
   bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
-  river1: { src:'assets/objects/rio1.png', scale:1, collider:null, wavy:true,   innerMarginPct: 0.08, patches: 7, amp: 2.0,speed: 1.2, stretch: 0.03},
-  river2: { src:'assets/objects/rio2.png', scale:1, collider:null, wavy:true,   innerMarginPct: 0.08, patches: 7, amp: 2.0,speed: 1.2, stretch: 0.03}
+  river1: { src:'assets/objects/rio1.png', scale:1, collider:null, wavy:true, innerMarginPct:0.08, patches:7, amp:1.5, speed:1.0 },
+  river2: { src:'assets/objects/rio2.png', scale:1, collider:null, wavy:true, innerMarginPct:0.08, patches:7, amp:1.5, speed:1.0 },
+
 };
 
  const PLACED = {
@@ -256,49 +257,65 @@ function makeWavyPatches(prop, count=6){
   return (prop._patches = patches);
 }
 
-// Dibuja “parches” wavy usando patrón repetido, con pequeño offset y estiramiento horizontal
 function drawRiverWavy(img, dx,dy,dw,dh, spec, prop, t){
-  // 1) borde intacto: sprite base
+  // 1) Dibuja el sprite base (borde intacto)
   ctx.drawImage(img, 0,0, img.naturalWidth,img.naturalHeight, dx,dy, dw,dh);
 
-  // 2) dentro del marco interior aplicamos los parches
-  const margin = spec.innerMarginPct ?? 0.06;      // 6% por defecto
+  // 2) Marco interior: las orillas quietas
+  const margin = spec.innerMarginPct ?? 0.06;
   const IR = innerRect(dx,dy,dw,dh, margin);
-  const patches = makeWavyPatches(prop, spec.patches ?? 6);
 
-  // Escala del patrón para que coincida exactamente con dw x dh
+  // 3) Parchecitos fijos por prop (se crean 1 vez)
+  const patches = prop._patches ?? (prop._patches = makeWavyPatches(prop, spec.patches ?? 6));
+
+  // Escalado base para que el motivo cubra exactamente dw x dh
   const baseSX = dw / img.naturalWidth;
   const baseSY = dh / img.naturalHeight;
 
-  for(const p of patches){
+  // ¿Soporta setTransform del patrón?
+  const hasPatXform =
+    typeof CanvasPattern !== 'undefined' &&
+    CanvasPattern.prototype &&
+    typeof CanvasPattern.prototype.setTransform === 'function';
+
+  for (const p of patches){
     const px = IR.x + IR.w * p.x;
     const py = IR.y + IR.h * p.y;
     const pw = IR.w * p.w;
     const ph = IR.h * p.h;
 
-    // animación por parche
-    const j = Math.sin(t * (spec.speed ?? 1.2) * p.speed + p.phase);
-    const off  = Math.round(j * (spec.amp ?? 2.0)) * p.dir;     // desplazamiento en px pantalla
-    const sx   = baseSX * (1 + j * (spec.stretch ?? 0.03));     // estiramiento horizontal suave
+    // Desplazamiento “pellizco” por parche
+    const j    = Math.sin(t * (spec.speed ?? 1.2) * p.speed + p.phase);
+    const off  = j * (spec.amp ?? 2.0) * p.dir; // NO redondeamos
 
-    // clip al parche
     ctx.save();
     ctx.beginPath();
-    ctx.rect(Math.floor(px), Math.floor(py), Math.ceil(pw), Math.ceil(ph));
+    ctx.rect(px, py, pw, ph);
     ctx.clip();
 
-    // patrón repetido con transformación (solo mueve la textura)
-    const pat = ctx.createPattern(img, 'repeat');
-    const m = new DOMMatrix();
-    m.a = sx;                 // scaleX (con “estirar”)
-    m.d = baseSY;             // scaleY
-    m.e = off;                // offset X
-    m.f = 0;                  // offset Y
-    pat.setTransform(m);
+    if (hasPatXform){
+      // --- Camino moderno: patrón con transform ---
+      const pat = ctx.createPattern(img, 'repeat');
+      const m = new DOMMatrix();
+      m.a = baseSX;   // scaleX (sin stretch para evitar huecos)
+      m.d = baseSY;   // scaleY
+      m.e = off;      // desplazamiento X
+      m.f = 0;
+      pat.setTransform(m);
 
-    ctx.fillStyle = pat;
-    // rellenamos el marco interior (el clip deja visible solo el parche)
-    ctx.fillRect(Math.floor(IR.x), Math.floor(IR.y), Math.ceil(IR.w), Math.ceil(IR.h));
+      ctx.fillStyle = pat;
+      // Rellenamos TODO el marco interior; el clip limita al parche
+      ctx.fillRect(IR.x, IR.y, IR.w, IR.h);
+    } else {
+      // --- Fallback universal: tiling manual, sin estirar ni redondear ---
+      // Dibujamos varias teselas para que nunca falte relleno
+      const tileW = dw;   // ancho de una “tesela” del motivo ya escalada
+      const start = IR.x + off - tileW; // una a la izquierda por seguridad
+      for (let x = start; x < IR.x + IR.w + tileW; x += tileW){
+        ctx.drawImage(img, 0,0, img.naturalWidth,img.naturalHeight, x, IR.y, tileW, dh);
+      }
+    }
+
     ctx.restore();
   }
 }
