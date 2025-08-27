@@ -68,7 +68,7 @@ const CATALOG = {
   rock:   { src:'assets/objects/piedra.png',       scale:1, collider:{x:-11.5,y:-10,w:23.5,h:10} },
   fence:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null},
   house:  { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91,h:21}, depthBand: 1, depthAnchorY: 1},
-  houseclara:  { src:'assets/objects/casaclara.png',     scale:1, collider:{x:-28,y:-5,w:59,h:21}, depthBand: 1, depthAnchorY: 1},
+  houseclara:  { src:'assets/objects/casaclara.png',     scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand: 1, depthAnchorY: 1},
   bridge: { src:'assets/objects/puente.png',       scale:1, collider:null },
   river1: { src:'assets/objects/rio1.png', scale:1, collider:null, wavy: true},
   river2: { src:'assets/objects/rio2.png', scale:1, collider:null, wavy: true},
@@ -223,21 +223,29 @@ function buildPropsAndObstacles(){
   return {x:ix, y:iy, w:iw, h:ih};
 }
 
-// Parches internos SIN agujeros: patrón repetido + setTransform
-function drawWaterInside(img, dx,dy,dw,dh, {
-  margin=0.08,     // cuánto borde dejas quieto (8% del ancho/alto)
-  amp=1.2,         // desplazamiento horizontal máximo (px pantalla)
-  stretch=0.02,    // estiramiento horizontal ±2%
-  patches=6,       // cuántas “zonas” se mueven
-  speed=1.1,       // velocidad base
-}={}, prop){
+function innerRect(dx,dy,dw,dh, marginPct){
+  const ix = dx + dw*marginPct, iy = dy + dh*marginPct;
+  const iw = dw*(1 - 2*marginPct), ih = dh*(1 - 2*marginPct);
+  return {x:ix, y:iy, w:iw, h:ih};
+}
+
+// Tesela el sprite anclado a (dx,dy). Sin pattern.setTransform → sin “nadar” con la cámara.
+function drawWaterInside(img, dx,dy, dw,dh, opts={}, prop){
+  const {
+    margin = 0.08,   // borde quieto (8%)
+    amp    = 1.2,    // desplazamiento X máx (px pantalla)
+    stretch= 0.02,   // ±2% de estiramiento horizontal
+    patches= 6,
+    speed  = 1.1,
+  } = opts;
+
   // 0) contorno intacto
   ctx.drawImage(img, 0,0, img.naturalWidth,img.naturalHeight, dx,dy, dw,dh);
 
-  // 1) marco interior (lo que se anima)
+  // 1) marco interior
   const IR = innerRect(dx,dy,dw,dh, margin);
 
-  // 2) inicializa parches (fijos por prop)
+  // 2) parches fijos por prop
   if(!prop._patches){
     const arr=[];
     for(let i=0;i<patches;i++){
@@ -250,42 +258,71 @@ function drawWaterInside(img, dx,dy,dw,dh, {
     prop._patches = arr;
   }
 
+  const t = performance.now()/1000;
   const baseSX = dw / img.naturalWidth;
   const baseSY = dh / img.naturalHeight;
-  const t = performance.now()/1000;
 
-  // 3) por cada parche, clipea y rellena con patrón transformado
+  // 3) dibuja cada parche con teselado manual ANCLADO al sprite
   for(const p of prop._patches){
     const px = IR.x + IR.w*p.x;
     const py = IR.y + IR.h*p.y;
     const pw = IR.w*p.w;
     const ph = IR.h*p.h;
 
-    const j = Math.sin(t*speed*p.spd + p.phase);
-    const off = j * amp * p.dir;              // pequeño desplazamiento X
-    const sx  = baseSX * (1 + j * stretch);   // estiramiento leve
+    const j   = Math.sin(t*speed*p.spd + p.phase);
+    const off = j * amp * p.dir;               // pequeño desplazamiento X
+    const sx  = baseSX * (1 + j * stretch);    // leve estiramiento X
+    const sy  = baseSY;
 
+    // Clip del parche
     ctx.save();
     ctx.beginPath();
-    // ojo: sin redondear → evita pequeñas grietas de 1px
     ctx.rect(px, py, pw, ph);
     ctx.clip();
 
-    const pat = ctx.createPattern(img, 'repeat');
-    if (pat.setTransform) {
-      const m = new DOMMatrix();
-      m.a = sx;       // scaleX
-      m.d = baseSY;   // scaleY (sin deformar vertical)
-      m.e = off;      // offset X
-      m.f = 0;
-      pat.setTransform(m);
+    // Sistema local anclado al sprite: (0,0) = dx,dy
+    ctx.save();
+    ctx.translate(dx, dy);
+    ctx.scale(sx, sy);
+    ctx.translate(off/sx, 0); // offset en el eje X (en espacio escalado)
+
+    // En este espacio, cada “tile” del sprite mide (img.naturalWidth x img.naturalHeight)
+    const tileW = img.naturalWidth;
+    const tileH = img.naturalHeight;
+
+    // Convertimos el rect a coordenadas locales (antes de escalar/offset)
+    const localX = (IR.x - dx);
+    const localY = (IR.y - dy);
+    const localW = IR.w;
+    const localH = IR.h;
+
+    // Pasamos a espacio escalado (inverso de scale)
+    const sxInv = 1/sx, syInv = 1/sy;
+    const rx = (localX)*sxInv - off/sx;   // compensamos el translate(off/sx,0)
+    const ry = (localY)*syInv;
+    const rw = localW*sxInv;
+    const rh = localH*syInv;
+
+    // Bucle de teselado para cubrir el marco interior completo
+    const startI = Math.floor(rx / tileW) - 1;
+    const endI   = Math.ceil((rx+rw) / tileW) + 1;
+    const startJ = Math.floor(ry / tileH) - 1;
+    const endJ   = Math.ceil((ry+rh) / tileH) + 1;
+
+    for(let jIdx=startJ; jIdx<=endJ; jIdx++){
+      for(let iIdx=startI; iIdx<=endI; iIdx++){
+        const tx = iIdx * tileW;
+        const ty = jIdx * tileH;
+        // Nota: en este espacio ya estamos escalados; drawImage usa px de textura → 1:1
+        ctx.drawImage(img, 0,0, tileW,tileH, tx,ty, tileW,tileH);
+      }
     }
-    ctx.fillStyle = pat;
-    // Rellena TODO el marco interior: el clip deja ver solo el parche
-    ctx.fillRect(IR.x, IR.y, IR.w, IR.h);
-    ctx.restore();
+
+    ctx.restore(); // escala/translate local
+    ctx.restore(); // clip
   }
 }
+
 
 
  function cornerSlide(targetX, targetY, vx, vy){
