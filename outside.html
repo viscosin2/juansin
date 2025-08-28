@@ -103,13 +103,13 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
 // ===== LINTERNA / REALCE (no oscurece, solo ilumina) =====
 const LIGHT = {
   enabled: true,
-  mode: 'both',          // 'circle' | 'cone' | 'both'
+  mode: 'cone',          // 'circle' | 'cone' | 'both'
   radius: 70,            // radio base en px "mundo" relativo (ajusta)
   feather: 0.45,         // 0..1 borde suave del círculo
   coneLen: 150,          // largo del haz
   coneWidth: Math.PI/5,  // apertura del haz
   flicker: 0.03,         // 0..~0.1 pequeño parpadeo
-  brightness: 0.9,       // 0..1 fuerza del realce
+  brightness: 0.4,       // 0..1 fuerza del realce
   tint: '255,230,180'    // tinte cálido (RGB) de la luz
 };
 
