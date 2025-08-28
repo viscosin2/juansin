@@ -24,6 +24,36 @@
   .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
   .img-act{ width:120px; height:120px; filter:drop-shadow(0 5px 6px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
+  /* Toast */
+.toast{
+  position:absolute; top:19px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease;
+  white-space:nowrap; pointer-events:none; z-index:6;
+}
+.toast.show{ opacity:1; }
+
+/* Diálogo */
+.dialog{
+  position:absolute; left:50%; bottom:10px; transform:translateX(-50%) scaleX(0); transform-origin:center bottom;
+  width:calc(100% - 24px); max-width:460px; min-height:20px; box-sizing:border-box;
+  padding:12px 16px 16px; display:flex; gap:10px; border-radius:10px; flex-direction:column; text-align:left;
+  image-rendering:pixelated; z-index:7; transition:transform .22s ease;
+  background:rgba(12,12,24,0.9); border-top:2px solid #3cf;
+}
+.dialog.show{ transform:translateX(-50%) scaleX(1); }
+
+.dialog-name{ font-family:'Press Start 2P',system-ui; font-size:10px; color:#8df; margin-bottom:4px; text-shadow:0 1px 0 #000; }
+.dialog-text{ font-family:'VT323',monospace; font-size:18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
+.dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
+.dialog.ready .dialog-hint{ opacity:.9; }
+
+/* Botón acción con imagen (opcional si ya lo tienes) */
+.img-act::before{
+  content:""; display:block; width:100%; height:100%;
+  background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02);
+}
+
 </style>
 </head>
 <body>
@@ -36,8 +66,16 @@
       <button id="btn-right" class="img-btn arrow btn-right" aria-label="Derecha"></button><div></div>
       <button id="btn-down" class="img-btn arrow btn-down" aria-label="Abajo"></button><div></div>
     </div>
-    <button id="btn-act" class="img-act" aria-label="Acción" disabled></button>
+    <button id="btn-act" class="img-act" aria-label="Acción"></button>
   </div>
+  <div id="toast" class="toast"></div>
+
+<div id="dialog" class="dialog">
+  <div id="dialogName" class="dialog-name"></div>
+  <div id="dialogText" class="dialog-text"></div>
+  <div id="dialogHint" class="dialog-hint">→</div>
+</div>
+
 </div>
 
 <script>
@@ -160,6 +198,108 @@ bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=fa
 bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
+
+
+  /* ====== TOAST ====== */
+function showToast(msg, ms=1800){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._to);
+  showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
+}
+
+/* ====== DIÁLOGO ====== */
+const dialogEl     = document.getElementById('dialog');
+const dialogNameEl = document.getElementById('dialogName');
+const dialogTextEl = document.getElementById('dialogText');
+const dialogHintEl = document.getElementById('dialogHint');
+
+let dialogOpen=false, isTyping=false, typingTimer=null, typingSpeed=22, dialogIndex=0;
+let dialogScript = [];         // se rellena al iniciar la escena
+let preDialogLock = true;      // bloquea movimiento hasta terminar diálogo inicial
+
+// beep por letra
+const DIALOG_BEEP = new Audio("assets/sounds/bip.mp3");
+DIALOG_BEEP.volume = 0.5;
+
+function openDialog(lines, startTyping=true){
+  dialogScript = lines || [];
+  dialogIndex = 0;
+  dialogEl.classList.add('show');
+  dialogEl.classList.remove('ready');
+  dialogOpen = true;
+  renderCurrentLine(startTyping);
+}
+function closeDialog(){
+  dialogEl.classList.remove('show','ready');
+  dialogOpen=false;
+  preDialogLock=false; // desbloquea el movimiento al cerrar
+}
+
+function renderCurrentLine(startTyping=false){
+  const line = dialogScript[dialogIndex] || {speaker:'', text:''};
+  dialogNameEl.textContent = line.speaker || '';
+  dialogTextEl.textContent = '';
+  dialogHintEl.style.opacity = 0;
+  if(startTyping) startTypingEffect(line.text);
+  else { dialogTextEl.textContent = line.text; dialogEl.classList.add('ready'); }
+}
+function startTypingEffect(text){
+  clearInterval(typingTimer);
+  isTyping = true; let i=0;
+  typingTimer = setInterval(()=>{
+    if(i < text.length){
+      const ch = text[i++]; dialogTextEl.textContent += ch;
+      // beep cada 2-3 letras (suave)
+      if(i % 2 === 0){
+        try { DIALOG_BEEP.currentTime = 0; DIALOG_BEEP.play(); } catch(e){}
+      }
+    } else {
+      clearInterval(typingTimer);
+      isTyping=false; dialogEl.classList.add('ready'); dialogHintEl.style.opacity=1;
+    }
+  }, typingSpeed);
+}
+function advanceDialog(){
+  if(!dialogOpen) return;
+  const full = dialogScript[dialogIndex]?.text ?? '';
+  if(isTyping){
+    clearInterval(typingTimer);
+    isTyping=false;
+    dialogTextEl.textContent = full;
+    dialogEl.classList.add('ready'); dialogHintEl.style.opacity=1;
+    return;
+  }
+  dialogIndex++;
+  if(dialogIndex < dialogScript.length){
+    dialogEl.classList.remove('ready'); dialogHintEl.style.opacity=0;
+    renderCurrentLine(true);
+  } else {
+    closeDialog();
+  }
+}
+
+  function bindPressVisual(el){
+  const on=()=>el.classList.add('pressed'), off=()=>el.classList.remove('pressed');
+  el.addEventListener('mousedown',on); el.addEventListener('mouseup',off); el.addEventListener('mouseleave',off);
+  el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});
+  el.addEventListener('touchend',off,{passive:false}); el.addEventListener('touchcancel',off,{passive:false});
+}
+bindPressVisual(document.getElementById('btn-act'));
+
+
+/* ====== ACCIÓN (botón/teclado) ====== */
+function handleAction(){
+  if(dialogOpen) { advanceDialog(); return; }
+  // aquí podrás meter más acciones del outside si quieres en el futuro
+}
+document.getElementById('btn-act').addEventListener('click', e=>{ e.preventDefault(); handleAction(); });
+document.getElementById('btn-act').addEventListener('touchstart', e=>{ e.preventDefault(); handleAction(); }, {passive:false});
+window.addEventListener('keydown', e=>{
+  if(e.code === 'Space' || e.code === 'Enter'){
+    e.preventDefault(); handleAction();
+  }
+}, {passive:false});
 
 /* ========== UTILS ========== */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -314,6 +454,13 @@ function nudgeOut(){
 function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
+  // Bloqueo por diálogo inicial o mientras el diálogo está abierto
+if (preDialogLock || dialogOpen) {
+  player.moving = false; player.frame = 0;
+  centerCameraOnPlayer();
+  return;
+}
+
   player.moving = !!(vx||vy);
 
   if (player.moving){
@@ -535,6 +682,13 @@ async function init(){
 
   buildPropsAndObstacles();
   centerCameraOnPlayer();
+
+  // Diálogo de arranque
+preDialogLock = true;   // asegura bloqueo antes de abrir
+openDialog([
+  { speaker: 'Juan', text: 'Se está haciendo tarde...' }
+], true);
+
   requestAnimationFrame(loop);
 }
 init();
