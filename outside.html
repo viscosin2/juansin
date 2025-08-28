@@ -113,13 +113,13 @@ const LIGHT = {
   tint: '255,230,180'
 };
 
-/* ========== AMBIENTE (rehecho: crossfade paleta→paleta) ========== */
+/* ========== AMBIENTE (alphas por paleta, sin saltos) ========== */
 const AMBIENT = {
-  k: 0,                        // intensidad global (sube en la intro)
-  current: 'peach',            // paleta “objetivo” actual
-  fx: { from:'peach', to:'peach', t:1, dur:2000 }, // transición 0→1
-  introMs: 1200,               // fade-in inicial de k
-  dialogMixMs: 2000,           // duración por defecto del cambio de paleta
+  k: 0,            // intensidad global (sube en la intro)
+  introMs: 1200,   // fade-in inicial de k
+  fadeMs: 2000,    // duración del crossfade entre paletas
+  alphas:  { peach: 1, bluehour: 0, hell: 0 },
+  targets: { peach: 1, bluehour: 0, hell: 0 }
 };
 
 const AMBIENT_ZONES = [
@@ -688,18 +688,28 @@ function update(dt){
       }
     }
 
-    // Siempre arrancar transición de paleta (2000 ms)
-    const fromPal = prevZone ? prevZone.palette : 'peach';
-    const toPal   = newZone ? newZone.palette   : 'peach';
-    AMBIENT.fx = { from: fromPal, to: toPal, t: 0, dur: AMBIENT.dialogMixMs };
+    // Objetivos de paleta (crossfade sin saltos)
+const targetPal = newZone ? newZone.palette : 'peach';
+AMBIENT.targets.peach    = (targetPal === 'peach')    ? 1 : 0;
+AMBIENT.targets.bluehour = (targetPal === 'bluehour') ? 1 : 0;
+AMBIENT.targets.hell     = (targetPal === 'hell')     ? 1 : 0;
 
     _ambientCurrentZone = newZone;
   }
 
-  // Avanzar crossfade de paletas
-  if (AMBIENT.fx.t < 1){
-    AMBIENT.fx.t = lerpT(AMBIENT.fx.t, dt, AMBIENT.fx.dur);
-  }
+ // Sube la intensidad global durante la intro
+// (si prefieres que solo suba en intro, deja como lo tenías)
+AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
+
+// Interpolar alphas hacia sus objetivos (crossfade continuo)
+for (const key of Object.keys(AMBIENT.alphas)) {
+  const a = AMBIENT.alphas[key];
+  const t = AMBIENT.targets[key];
+  AMBIENT.alphas[key] = (AMBIENT.fadeMs <= 0)
+    ? t
+    : a + (t - a) * Math.min(1, (dt * 1000) / AMBIENT.fadeMs);
+}
+
 }
 
 /* ========== DRAW ========== */
@@ -769,18 +779,15 @@ function draw(){
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   ctx.restore();
 
-  /* --- AMBIENT OVERLAYS (paleta→paleta) --- */
-  if (AMBIENT.k > 0.001){
-    const t = AMBIENT.fx.t;
-    // capa FROM con 1-t y capa TO con t (ambas moduladas por k)
-    if (t < 1){
-      drawPalette(AMBIENT.fx.from, (1 - t) * AMBIENT.k);
-      drawPalette(AMBIENT.fx.to,   t * AMBIENT.k);
-    } else {
-      drawPalette(AMBIENT.fx.to, AMBIENT.k);
-    }
+  /* --- AMBIENT OVERLAYS (alphas por paleta) --- */
+if (AMBIENT.k > 0.001){
+  // Orden estable por modos de mezcla
+  const order = ['peach','bluehour','hell'];
+  for (const pal of order){
+    const a = AMBIENT.alphas[pal] || 0;
+    if (a > 0.001) drawPalette(pal, a * AMBIENT.k);
   }
-
+}
   /* --- LINTERNA encima --- */
   drawFlashlightEnhance();
 
@@ -844,8 +851,8 @@ async function init(){
 
   // Arranque del ambiente base desde 0 con fade
   AMBIENT.k = 0;
-  AMBIENT.fx = { from:'peach', to:'peach', t:1, dur:AMBIENT.dialogMixMs };
-
+AMBIENT.alphas  = { peach:1, bluehour:0, hell:0 };
+AMBIENT.targets = { peach:1, bluehour:0, hell:0 };
   requestAnimationFrame(loop);
 }
 init();
