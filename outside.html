@@ -517,15 +517,15 @@ function makePaletteGradient(palette){
   }
   if (palette === 'hell'){
     // Evitamos rojo puro con multiply (apagaba todo). Usamos screen y tonos cálidos.
-    g.addColorStop(0.00, '#FF8A3A');
-    g.addColorStop(0.55, '#FF6A2A');
-    g.addColorStop(1.00, '#E33A1A');
-    return { gradient:g, mode:'screen', alpha:0.70 };
+    g.addColorStop(0.00, '#EB9460');
+    g.addColorStop(0.55, '#DF5800');
+    g.addColorStop(1.00, '#DF5800');
+    return { gradient:g, mode:'screen', alpha:0.55 };
   }
   // peach (base)
-  g.addColorStop(0.00, '#FFA460');
-  g.addColorStop(0.55, '#FFA460');
-  g.addColorStop(1.00, '#F38F00');
+  g.addColorStop(0.00, '#EB9460');
+  g.addColorStop(0.55, '#EB9460');
+  g.addColorStop(1.00, '#E87F18');
   return { gradient:g, mode:'multiply', alpha:0.85 };
 }
 
