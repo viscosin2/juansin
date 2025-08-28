@@ -715,7 +715,7 @@ if (newZone){
   ms = ( _ambientCurrentZone?.mixOutMs ?? _ambientCurrentZone?.outMs ?? AMBIENT.sunset.mixOutMs );
 }
 AMBIENT.sunset.mix = lerpByMs(AMBIENT.sunset.mix, targetMix, dt, ms);
-if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null;
+if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null;}
 /* ========== DRAW ========== */
 function draw(){
   if(!bgImg) return;
