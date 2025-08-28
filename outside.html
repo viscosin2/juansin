@@ -500,20 +500,15 @@ function nudgeOut(){
 function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
-  // Bloqueo por diálogo inicial o mientras el diálogo está abierto
 
-    if(phase === 'sunset'){
-    // nada de mover; sólo dejamos que el loop progrese
-    player.moving = false;
-    player.frame = 0;
-    return;
-  }
-  
-if (preDialogLock || dialogOpen) {
-  player.moving = false; player.frame = 0;
+  // Bloqueos especiales (sunset o diálogo)
+if (phase === 'sunset' || preDialogLock || dialogOpen) {
+  player.moving = false;
+  player.frame = 0;
   centerCameraOnPlayer();
   return;
 }
+
 
   player.moving = !!(vx||vy);
 
