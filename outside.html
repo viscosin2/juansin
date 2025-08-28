@@ -113,13 +113,14 @@ let _prevFeet = null;
 let _wasInsideZone = false;
 const FOG_ZONES = [{type:'percent', x:2, y:33, w:30, h:25}];
 
-  // --- Sunset intro (bloquea input hasta acabar) ---
-let phase = 'sunset'; // 'sunset' -> 'dialog' -> 'play'
-const SUNSET = {
-  ms: 1100,          // duración del fade (ajusta)
-  maxA: 0.35,        // opacidad máxima del tinte
-  t0: 0              // marca de tiempo de inicio
-};
+// ========== SUNSET ==========
+const SUNSET_IN  = 1.2;   // segundos para fundir a atardecer
+const SUNSET_OUT = 0.8;   // segundos para desvanecerlo
+let sunsetK = 0;          // 0=sin filtro, 1=filtro completo
+
+// Fases
+let phase = 'sunset';     // 'sunset' -> 'dialog' -> 'sunset_fade' -> 'play'
+
 
   
 /* ========== CATALOGO / PLACEMENT ========== */
@@ -160,7 +161,7 @@ const PLACED = {
   arbustoclaro: [{type:'percent',x:3.2,y:97},{type:'percent',x:18.5,y:89},{type:'percent',x:25,y:67},{type:'percent',x:17,y:63},{type:'percent',x:9,y:62.5},{type:'percent',x:27.8,y:52},{type:'percent',x:5.3,y:54},
                  {type:'percent',x:23,y:40},{type:'percent',x:22,y:35.5},{type:'percent',x:23.5,y:10}],
   arbustomedio: [{type:'percent',x:27.5,y:33.5},{type:'percent',x:30,y:12},{type:'percent',x:46,y:20},{type:'percent',x:57,y:31},{type:'percent',x:37,y:31},{type:'percent',x:68,y:16},{type:'percent',x:84.5,y:13},
-                 {type:'percent',x:72,y:11},{type:'percent',x:76,y:12},{type:'percent',x:80,y:12},{type:'percent',x:86,y:9},{type:'percent',x:90,y:12},{type:'percent',x:97,y:11}],
+                 {type:'percent',x:72,y:11},{type:'percent',x:74,y:13.5},{type:'percent',x:80,y:12},{type:'percent',x:86,y:9},{type:'percent',x:90,y:12},{type:'percent',x:97,y:11},{type:'percent',x:76,y:25}],
   valla_clara:  [{type:'percent',x:15.25,y:99.75}],
   valla_media:  [{type:'percent',x:53.61,y:31.9}],
   valla_oscura: [{type:'percent',x:80.17,y:99.15}],
