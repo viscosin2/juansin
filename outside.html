@@ -471,7 +471,7 @@ function drawSunsetOverlay(k){
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  ctx.globalAlpha = 0.70 * k;
+  ctx.globalAlpha = 0.85 * k;
   ctx.globalCompositeOperation = 'multiply';
 
   const g = ctx.createLinearGradient(
@@ -701,7 +701,7 @@ function draw(){
   list.forEach(it=>it.debug && it.debug());
 
   // ===== NIEBLA A PANTALLA COMPLETA (fade con FOG.alpha)
-  if (FOG.alpha > 0.001) {
+  /*if (FOG.alpha > 0.001) {
     ctx.save();
     ctx.beginPath();
     ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
@@ -710,7 +710,7 @@ function draw(){
     ctx.fillStyle = FOG.color;
     ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
     ctx.restore();
-  }
+  }*/
   
 // --- SUNSET overlay ---
 if (sunsetK > 0) {
