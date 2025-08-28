@@ -129,10 +129,11 @@ const AMBIENT = {
 // Zonas que cambian la paleta a 'bluehour'
 const AMBIENT_ZONES = [
   { name:'Bluehour zone', palette:'bluehour', inMs:2000, outMs:2000, dialogOnEnter: [{ speaker:'Juan', text:'...' }, { speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }],
-    dialogDelayMs: 500, rect:{type:'percent', x:23, y:0, w:200, h:35} }
+    dialogDelayMs: 500, lockMs: 1000, rect:{type:'percent', x:23, y:0, w:200, h:35} }
 ];
 
-let ambientLock = false;          // bloquea movimiento mientras esperamos el diálogo de zona
+let ambientLock = false;
+let ambientLockOwner = null;   // qué zona activó el bloqueo
 let _ambientDialogTO = null;      // id del timeout para no duplicar
 let AMBIENT_BUILT = [];
 let _ambientCurrentZone = null; // zona en la que estás ahora (o null)
@@ -289,6 +290,13 @@ function openDialog(lines, startTyping=true){
 function closeDialog(){
   dialogEl.classList.remove('show','ready');
   dialogOpen=false;
+  
+  // si el bloqueo lo puso la zona actual, suéltalo al cerrar diálogo
+  if (ambientLock && ambientLockOwner){
+    ambientLock = false;
+    ambientLockOwner = null;
+  }
+
 }
 function renderCurrentLine(startTyping=false){
   const line = dialogScript[dialogIndex] || {speaker:'', text:''};
@@ -662,27 +670,49 @@ if (newZone){
 
 // ---- DETECCIÓN DE ENTRADA A ZONA (cambio respecto al frame anterior)
 if (newZone !== _ambientCurrentZone){
-  // Entramos en nueva zona
-  if (newZone && newZone.palette === 'bluehour' && !newZone._dialogShown && !dialogOpen && !introActive){
-    newZone._dialogShown = true;
-
-    // activa bloqueo inmediato
-    ambientLock = true;
-
-    // limpia un posible timeout previo
-    if (_ambientDialogTO) { clearTimeout(_ambientDialogTO); _ambientDialogTO = null; }
-
-    const lines = newZone.dialogOnEnter || [
-      { speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }
-    ];
-    const delay = newZone.dialogDelayMs ?? 1000; // <- 1s por defecto
-
-    _ambientDialogTO = setTimeout(()=>{
-      openDialog(lines, true);
-      ambientLock = false;
-      _ambientDialogTO = null;
-    }, delay);
+  // Salida de la zona anterior: si ella era la dueña del candado, lo soltamos
+  if (_ambientCurrentZone && ambientLockOwner === _ambientCurrentZone){
+    ambientLock = false;
+    ambientLockOwner = null;
+    clearTimeout(_ambientCurrentZone._lockTO);
+    clearTimeout(_ambientCurrentZone._dialogTO);
   }
+
+  // Entrada a nueva zona
+  if (newZone){
+    // prepara timers limpios por si re-entras
+    clearTimeout(newZone._lockTO);
+    clearTimeout(newZone._dialogTO);
+
+    // BLOQUEO previo al diálogo (si se pide)
+    const lockMs   = newZone.lockMs ?? 0;
+    const talkWait = (newZone.dialogDelayMs ?? 0);
+
+    if (lockMs > 0){
+      ambientLock = true;
+      ambientLockOwner = newZone;
+
+      // tras lockMs lanzamos el diálogo (si no se ha mostrado) y seguimos bloqueados
+      newZone._lockTO = setTimeout(()=>{
+        if (!newZone._dialogShown){
+          newZone._dialogShown = true;
+          const lines = newZone.dialogOnEnter || [{speaker:'Juan', text:'Qué azul…'}];
+
+          newZone._dialogTO = setTimeout(()=>{
+            openDialog(lines, true);
+          }, talkWait);
+        }
+      }, lockMs);
+    } else {
+      // sin bloqueo: dispara diálogo con su delay normal si no se ha mostrado
+      if (!newZone._dialogShown){
+        newZone._dialogShown = true;
+        const lines = newZone.dialogOnEnter || [{speaker:'Juan', text:'Qué azul…'}];
+        newZone._dialogTO = setTimeout(()=> openDialog(lines, true), talkWait);
+      }
+    }
+  }
+
   _ambientCurrentZone = newZone;
 }
 
