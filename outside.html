@@ -1,9 +1,9 @@
-ch<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum=1, user-scalable=no" />
-<title>Juansin — props por capas + colisiones + debug</title>
+<title>Juansin — outside</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -24,48 +24,52 @@ ch<!DOCTYPE html>
   .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
   .img-act{ width:120px; height:120px; filter:drop-shadow(0 5px 6px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
+
   /* Toast */
-.toast{
-  position:absolute; top:19px; left:50%; transform:translateX(-50%);
-  background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease;
-  white-space:nowrap; pointer-events:none; z-index:6;
-}
-.toast.show{ opacity:1; }
+  .toast{
+    position:absolute; top:19px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,.8); color:#fff; font:600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    padding:6px 10px; border-radius:8px; opacity:0; transition:opacity .2s ease;
+    white-space:nowrap; pointer-events:none; z-index:6;
+  }
+  .toast.show{ opacity:1; }
 
-/* Diálogo */
-.dialog{
-  position:absolute; left:50%; bottom:10px; transform:translateX(-50%) scaleX(0); transform-origin:center bottom;
-  width:calc(100% - 24px); max-width:460px; min-height:20px; box-sizing:border-box;
-  padding:12px 16px 16px; display:flex; gap:10px; border-radius:10px; flex-direction:column; text-align:left;
-  image-rendering:pixelated; z-index:7; transition:transform .22s ease;
-  background:rgba(12,12,24,0.9); border-top:2px solid #3cf;
-}
-.dialog.show{ transform:translateX(-50%) scaleX(1); }
+  /* Diálogo */
+  .dialog{
+    position:absolute; left:50%; bottom:10px; transform:translateX(-50%) scaleX(0); transform-origin:center bottom;
+    width:calc(100% - 24px); max-width:460px; min-height:20px; box-sizing:border-box;
+    padding:12px 16px 16px; display:flex; gap:10px; border-radius:10px; flex-direction:column; text-align:left;
+    image-rendering:pixelated; z-index:7; transition:transform .22s ease;
+    background:rgba(12,12,24,0.9); border-top:2px solid #3cf;
+  }
+  .dialog.show{ transform:translateX(-50%) scaleX(1); }
+  .dialog-name{ font-family:'Press Start 2P',system-ui; font-size:10px; color:#8df; margin-bottom:4px; text-shadow:0 1px 0 #000; }
+  .dialog-text{ font-family:'VT323',monospace; font-size:18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
+  .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
+  .dialog.ready .dialog-hint{ opacity:.9; }
 
-.dialog-name{ font-family:'Press Start 2P',system-ui; font-size:10px; color:#8df; margin-bottom:4px; text-shadow:0 1px 0 #000; }
-.dialog-text{ font-family:'VT323',monospace; font-size:18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
-.dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
-.dialog.ready .dialog-hint{ opacity:.9; }
-
-/* Botón acción con imagen (opcional si ya lo tienes) */
-.img-act::before{
-  content:""; display:block; width:100%; height:100%;
-  background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02);
-}
-
+  .img-act::before{
+    content:""; display:block; width:100%; height:100%;
+    background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02);
+  }
 </style>
 </head>
 <body>
 <div class="gameboy">
-  <div class="screen-container"><div class="screen">
-    <div id="toast" class="toast"></div>
+  <div class="screen-container">
+    <div class="screen">
+      <div id="toast" class="toast"></div>
 
-<div id="dialog" class="dialog">
-  <div id="dialogName" class="dialog-name"></div>
-  <div id="dialogText" class="dialog-text"></div>
-  <div id="dialogHint" class="dialog-hint">→</div>
-</div><canvas id="game"></canvas></div></div>
+      <div id="dialog" class="dialog">
+        <div id="dialogName" class="dialog-name"></div>
+        <div id="dialogText" class="dialog-text"></div>
+        <div id="dialogHint" class="dialog-hint">→</div>
+      </div>
+
+      <canvas id="game"></canvas>
+    </div>
+  </div>
+
   <div class="controls">
     <div class="dpad">
       <div></div><button id="btn-up" class="img-btn arrow btn-up" aria-label="Arriba"></button><div></div>
@@ -75,7 +79,6 @@ ch<!DOCTYPE html>
     </div>
     <button id="btn-act" class="img-act" aria-label="Acción"></button>
   </div>
-
 </div>
 
 <script>
@@ -83,9 +86,7 @@ ch<!DOCTYPE html>
 const ROOM = { w:512, h:350 };
 const ZOOM = 2.1;
 const START = { mode:'percent', x:7, y:81 };
-const FEET_RADIUS_X = 7;
-const FEET_RADIUS_Y = 4;
-const FEET_OFFSET_Y = 8;
+const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
 const DEBUG_OBS = false, DEBUG_PROPS = false;
 const DEPTH_BAND = 12;
 
@@ -99,51 +100,36 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
         right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"]}
 };
 
-// ========== NIEBLA ==========
-const FOG = {
-  alpha: 0,
-  target: 0,
-  speed: 2.5,
-  color: 'rgba(220, 230, 255, 0.65)',
-  clearOnExitDirs: ['top','right'],
-  forceClearIfOutside: true
+/* ========== AMBIENTE (solo SUNSET) ========== */
+const AMBIENT = {
+  sunset: {
+    k: 0,                // intensidad 0..1
+    palette: 'peach',    // paleta actual
+    basePalette: 'peach',// paleta por defecto (siempre)
+    inMs: 1200,          // fade in
+    outMs: 600           // fade out (cuando sales de zona bluehour)
+  }
 };
-let _fogZonesBuilt = [];
-let _prevFeet = null;
-let _wasInsideZone = false;
-const FOG_ZONES = [{type:'percent', x:2, y:33, w:30, h:25}];
-
-// ========== SUNSET ==========
-// SUNSET config
-const SUNSET = {
-  inMs: 1200,       // duración del fade-in (antes usabas SUNSET_IN)
-  delayMs: 300,     // pausa antes de abrir el diálogo
-  palette: 'peach', // 'peach' | 'neon' | 'bluehour' | 'custom'
-  done: false
-};
-
-const SUNSET_PALETTES = {
-  peach:   ['#FF8866', '#FF6A88', '#FD6051'],
-  neon:    ['#FFD166', '#EF476F', '#118AB2'],
-  bluehour:['#1B51A6', '#0D0548', '#000000'],
-  custom:  ['#FAD961', '#F76B1C', '#5B2C83'] // cámbiala a tu gusto
-};
-
-let sunsetK = 0;         // 0..1 (se quedará en 1)
-let phase = 'sunset';    // 'sunset' -> 'dialog' -> 'play'
+// Zonas que cambian la paleta a 'bluehour'
+const AMBIENT_ZONES = [
+  { palette:'bluehour', inMs:900, outMs:600, rect:{type:'percent', x:20, y:15, w:25, h:20} }
+];
+let AMBIENT_BUILT = [];
+let introActive = true;            // bloquea movimiento durante el fade inicial
+let initialDialogShown = false;    // evitar dobles lanzamientos
 
 /* ========== CATALOGO / PLACEMENT ========== */
 const CATALOG = {
   arbolclaro:   { src:'assets/objects/arbolclaro.png',   scale:1, collider:{x:-12,y:-6,w:23.8,h:6} },
   arbolmedio:   { src:'assets/objects/arbolmedio.png',   scale:1, collider:{x:-12,y:-6,w:23.8,h:6} },
-  arboloscuro:   { src:'assets/objects/arboloscuro.png',   scale:1, collider:{x:-12,y:-6,w:23.8,h:6} },
+  arboloscuro:  { src:'assets/objects/arboloscuro.png',  scale:1, collider:{x:-12,y:-6,w:23.8,h:6} },
   arbustoclaro: { src:'assets/objects/arbustoclaro.png', scale:1, collider:{x:-16,y:-6,w:32,h:16} },
   arbustomedio: { src:'assets/objects/arbustomedio.png', scale:1, collider:{x:-16,y:-6,w:32,h:16} },
-  arbustooscuro: { src:'assets/objects/arbustooscuro.png', scale:1, collider:{x:-16,y:-6,w:32,h:16} },
-  arbustooscuroescondite: { src:'assets/objects/arbustooscuro.png', scale:1, collider:null },
-  piedra:         { src:'assets/objects/piedra.png',       scale:1, collider:{x:-28,y:-4,w:55,h:27} },
-  piedraFlip:         { src:'assets/objects/piedra.png',       scale:1, collider:{x:-28,y:-4,w:55,h:27}, flipX:true },
-  piedraBig:         { src:'assets/objects/piedra.png',       scale:1.2, collider:{x:-28,y:-4,w:55,h:27} },
+  arbustooscuro:{ src:'assets/objects/arbustooscuro.png',scale:1, collider:{x:-16,y:-6,w:32,h:16} },
+  arbustooscuroescondite:{ src:'assets/objects/arbustooscuro.png', scale:1, collider:null },
+  piedra:       { src:'assets/objects/piedra.png',       scale:1, collider:{x:-28,y:-4,w:55,h:27} },
+  piedraFlip:   { src:'assets/objects/piedra.png',       scale:1, collider:{x:-28,y:-4,w:55,h:27}, flipX:true },
+  piedraBig:    { src:'assets/objects/piedra.png',       scale:1.2, collider:{x:-28,y:-4,w:55,h:27} },
   valla_clara:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null },
   valla_media:  { src:'assets/objects/valla_media.png',  scale:1, collider:{x:-50,y:3,w:50,h:1} },
   valla_oscura: { src:'assets/objects/valla_oscura.png', scale:1, collider:{x:-210,y:-4.5,w:500,h:1}},
@@ -155,13 +141,13 @@ const CATALOG = {
   casamedia_roja:{ src:'assets/objects/casamedia_roja.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
   casamedia_rosa:{ src:'assets/objects/casamedia_rosa.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, flipX:true, depthBand:1, depthAnchorY:1},
   casaoscura:    { src:'assets/objects/casaoscura.png',    scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
-  casaoscura_roja:    { src:'assets/objects/casaoscura_roja.png',    scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
-  casaoscura_rosa:    { src:'assets/objects/casaoscura_rosa.png',    scale:1, collider:{x:-28,y:-5,w:58, h:21}, flipX:true, depthBand:1, depthAnchorY:1},
+  casaoscura_roja:{ src:'assets/objects/casaoscura_roja.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
+  casaoscura_rosa:{ src:'assets/objects/casaoscura_rosa.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, flipX:true, depthBand:1, depthAnchorY:1},
   puente:       { src:'assets/objects/puente.png', scale:1, collider:{x:-33.5,y:0,w:67.8, h:11} },
-  puente2:       { src:'assets/objects/puente2.png', scale:1, collider:null},
+  puente2:      { src:'assets/objects/puente2.png', scale:1, collider:null},
   river1:       { src:'assets/objects/rio1.png',   scale:1, collider:null, forceBack: true},
   river2:       { src:'assets/objects/rio2.png',   scale:1, collider:null, forceBack: true},
-  super:       { src:'assets/objects/super.png',   scale:1, collider:{x:-63,y:-5,w:120, h:23}, depthBand:1, depthAnchorY:1}
+  super:        { src:'assets/objects/super.png',  scale:1, collider:{x:-63,y:-5,w:120, h:23}, depthBand:1, depthAnchorY:1}
 };
 
 const PLACED = {
@@ -174,12 +160,12 @@ const PLACED = {
   casaclara_amarilla:[{type:'percent',x:24.5,y:90}],
   casaclara_azul:    [{type:'percent',x:5.5,y:45}],
   casaclara:         [{type:'percent',x:7,y:20}],
-  casamedia_roja:         [{type:'percent',x:42,y:17}],
-  casamedia_rosa:         [{type:'percent',x:62,y:17}],
+  casamedia_roja:    [{type:'percent',x:42,y:17}],
+  casamedia_rosa:    [{type:'percent',x:62,y:17}],
   casamedia:         [{type:'percent',x:52,y:17}],
-  casaoscura_roja:         [{type:'percent',x:95.5,y:62}],
-  casaoscura_rosa:         [{type:'percent',x:65,y:92}],
-  casaoscura:         [{type:'percent',x:95.5,y:85}],
+  casaoscura_roja:   [{type:'percent',x:95.5,y:62}],
+  casaoscura_rosa:   [{type:'percent',x:65,y:92}],
+  casaoscura:        [{type:'percent',x:95.5,y:85}],
   arbustoclaro: [{type:'percent',x:3.2,y:97},{type:'percent',x:18.5,y:89},{type:'percent',x:25,y:66},{type:'percent',x:17,y:63},{type:'percent',x:9,y:62.5},{type:'percent',x:27.8,y:52},{type:'percent',x:5.3,y:54},
                  {type:'percent',x:23,y:40},{type:'percent',x:22,y:35.5},{type:'percent',x:23.5,y:10}],
   arbustomedio: [{type:'percent',x:27.5,y:33.5},{type:'percent',x:30,y:12},{type:'percent',x:46,y:20},{type:'percent',x:57,y:31},{type:'percent',x:37,y:31},{type:'percent',x:68,y:16},{type:'percent',x:84.5,y:13},
@@ -191,30 +177,30 @@ const PLACED = {
   valla_media:  [{type:'percent',x:53.61,y:31.9}],
   valla_oscura: [{type:'percent',x:80.17,y:99.15}],
   piedra:       [{type:'percent',x:84.66,y:44}],
-  piedraFlip:       [{type:'percent',x:80.35,y:41}],
-  piedraBig:       [{type:'percent',x:96.1,y:43}],
+  piedraFlip:   [{type:'percent',x:80.35,y:41}],
+  piedraBig:    [{type:'percent',x:96.1,y:43}],
   puente:       [{type:'percent',x:23.97,y:20.95}],
   puente2:      [{type:'percent',x:23.97,y:13.23}],
   river1:       [{type:'percent', x:5.73,  y:62.37}],
   river2:       [{type:'percent', x:22.91, y:62.37}],
-  super:       [{type:'percent', x:72.9, y:77}]
+  super:        [{type:'percent', x:72.9, y:77}]
 };
 
 /* Obstáculos extra */
 const OBSTACLE_DEFS = [
   {type:'percent', x:29.4, y:30.6, w:31.85, h:80,   name:'zona bloqueada 1'},
   {type:'percent', x:60,   y:30.6, w:17.9,  h:24.5, name:'zona bloqueada 2'},
-  {type:'percent', x:-4,   y:52, w:15.5,  h:9.7, name:'zona bloqueada rio 1'},
-  {type:'percent', x:15.3,   y:51, w:22,  h:8.5, name:'zona bloqueada rio 2'},
-  {type:'percent', x:20.6,   y:11.5, w:6.5,  h:1.5, name:'zona bloqueada puente 5'},
-  {type:'percent', x:21.8,   y:36.5, w:12,  h:1, name:'zona bloqueada valla pequeña clara'},
-  {type:'percent', x:24,   y:20.4, w:0.5,  h:15.7, name:'zona bloqueada valla pequeña clara 2'},
-  {type:'percent', x:24,   y:0, w:0.5,  h:10, name:'zona bloqueada valla pequeña clara 3'},
-  {type:'percent', x:0,   y:1, w:1,  h:110, name:'zona bloqueada valla izquiera larga'},
-  {type:'percent', x:77.5,   y:45.5, w:4,  h:9.5, name:'zona bloqueada pequeña final bosque'},
-  {type:'percent', x:87.3,   y:34.8, w:0.8,  h:10.2, name:'zona bloqueada puente oscuro 1'},
-  {type:'percent', x:92.1,   y:34.8, w:0.8,  h:10.2, name:'zona bloqueada puente oscuro 2'},
-  {type:'percent', x:81,   y:45.5, w:0.7,  h:32, name:'zona bloqueada valla oscura central'}
+  {type:'percent', x:-4,   y:52,   w:15.5,  h:9.7,  name:'zona bloqueada rio 1'},
+  {type:'percent', x:15.3, y:51,   w:22,    h:8.5,  name:'zona bloqueada rio 2'},
+  {type:'percent', x:20.6, y:11.5, w:6.5,   h:1.5,  name:'zona bloqueada puente 5'},
+  {type:'percent', x:21.8, y:36.5, w:12,    h:1,    name:'zona bloqueada valla pequeña clara'},
+  {type:'percent', x:24,   y:20.4, w:0.5,   h:15.7, name:'zona bloqueada valla pequeña clara 2'},
+  {type:'percent', x:24,   y:0,    w:0.5,   h:10,   name:'zona bloqueada valla pequeña clara 3'},
+  {type:'percent', x:0,    y:1,    w:1,     h:110,  name:'zona bloqueada valla izquiera larga'},
+  {type:'percent', x:77.5, y:45.5, w:4,     h:9.5,  name:'zona bloqueada pequeña final bosque'},
+  {type:'percent', x:87.3, y:34.8, w:0.8,   h:10.2, name:'zona bloqueada puente oscuro 1'},
+  {type:'percent', x:92.1, y:34.8, w:0.8,   h:10.2, name:'zona bloqueada puente oscuro 2'},
+  {type:'percent', x:81,   y:45.5, w:0.7,   h:32,   name:'zona bloqueada valla oscura central'}
 ];
 
 /* ========== STATE BÁSICO ========== */
@@ -223,7 +209,6 @@ const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
 
 let bgImg=null, sprites=null, world={w:0,h:0};
 let PROP_IMAGES={}, PROPS=[], OBSTACLES=[];
-
 let cam={x:0,y:0,w:ROOM.w/ZOOM|0,h:ROOM.h/ZOOM|0};
 let screenRect={dx:0,dy:0,dw:0,dh:0}, mapScaleX=1, mapScaleY=1;
 
@@ -242,8 +227,7 @@ bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
 
-
-  /* ====== TOAST ====== */
+/* ====== TOAST ====== */
 function showToast(msg, ms=1800){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -258,10 +242,8 @@ const dialogTextEl = document.getElementById('dialogText');
 const dialogHintEl = document.getElementById('dialogHint');
 
 let dialogOpen=false, isTyping=false, typingTimer=null, typingSpeed=22, dialogIndex=0;
-let dialogScript = [];         // se rellena al iniciar la escena
-let preDialogLock = true;      // bloquea movimiento hasta terminar diálogo inicial
+let dialogScript = [];
 
-// beep por letra
 const DIALOG_BEEP = new Audio("assets/sounds/bip.mp3");
 DIALOG_BEEP.volume = 0.5;
 
@@ -276,9 +258,7 @@ function openDialog(lines, startTyping=true){
 function closeDialog(){
   dialogEl.classList.remove('show','ready');
   dialogOpen=false;
-  phase='play';
 }
-
 function renderCurrentLine(startTyping=false){
   const line = dialogScript[dialogIndex] || {speaker:'', text:''};
   dialogNameEl.textContent = line.speaker || '';
@@ -293,10 +273,7 @@ function startTypingEffect(text){
   typingTimer = setInterval(()=>{
     if(i < text.length){
       const ch = text[i++]; dialogTextEl.textContent += ch;
-      // beep cada 2-3 letras (suave)
-      if(i % 2 === 0){
-        try { DIALOG_BEEP.currentTime = 0; DIALOG_BEEP.play(); } catch(e){}
-      }
+      if(i % 2 === 0){ try { DIALOG_BEEP.currentTime = 0; DIALOG_BEEP.play(); } catch(e){} }
     } else {
       clearInterval(typingTimer);
       isTyping=false; dialogEl.classList.add('ready'); dialogHintEl.style.opacity=1;
@@ -321,34 +298,25 @@ function advanceDialog(){
     closeDialog();
   }
 }
-
-  function bindPressVisual(el){
+function bindPressVisual(el){
   const on=()=>el.classList.add('pressed'), off=()=>el.classList.remove('pressed');
   el.addEventListener('mousedown',on); el.addEventListener('mouseup',off); el.addEventListener('mouseleave',off);
   el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});
   el.addEventListener('touchend',off,{passive:false}); el.addEventListener('touchcancel',off,{passive:false});
 }
 bindPressVisual(document.getElementById('btn-act'));
-
-
-/* ====== ACCIÓN (botón/teclado) ====== */
 function handleAction(){
   if(dialogOpen) { advanceDialog(); return; }
-  // aquí podrás meter más acciones del outside si quieres en el futuro
 }
 document.getElementById('btn-act').addEventListener('click', e=>{ e.preventDefault(); handleAction(); });
 document.getElementById('btn-act').addEventListener('touchstart', e=>{ e.preventDefault(); handleAction(); }, {passive:false});
 window.addEventListener('keydown', e=>{
-  if(e.code === 'Space' || e.code === 'Enter'){
-    e.preventDefault(); handleAction();
-  }
+  if(e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); handleAction(); }
 }, {passive:false});
 
 /* ========== UTILS ========== */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const loadImage=src=>new Promise(r=>{
-  const i=new Image(); i.onload=()=>r(i); i.onerror=()=>{console.warn('No carga',src); r(null)}; i.src=src;
-});
+const loadImage=src=>new Promise(r=>{ const i=new Image(); i.onload=()=>r(i); i.onerror=()=>{console.warn('No carga',src); r(null)}; i.src=src; });
 async function preloadSprites(map){
   const out={idle:{},walk:{},size:map.size,scale:map.scale};
   for(const s of ['idle','walk']) for(const d of Object.keys(map[s])) out[s][d]=await Promise.all(map[s][d].map(loadImage));
@@ -370,7 +338,6 @@ function resize(){
   cam.x=clamp(cam.x,0,world.w-cam.w); cam.y=clamp(cam.y,0,world.h-cam.h);
 }
 addEventListener('resize',resize);
-
 function centerCameraOnPlayer(){
   cam.x=clamp(player.x-cam.w/2,0,world.w-cam.w);
   cam.y=clamp(player.y-cam.h/2,0,world.h-cam.h);
@@ -397,99 +364,78 @@ async function preloadCatalog(){
 }
 function buildPropsAndObstacles(){
   PROPS=[]; OBSTACLES=[];
-
   for(const [type,list] of Object.entries(PLACED)){
     const spec=CATALOG[type]; const img=PROP_IMAGES[type];
     if(!spec || !list?.length) continue;
-
     for (const p of list) {
       const pos = (p.type === 'percent') ? percentToWorld(p) : { x: p.x, y: p.y };
-      const prop = {
-        type, img,
-        x: pos.x, y: pos.y,
-        iw: img ? img.naturalWidth : 32,
-        ih: img ? img.naturalHeight : 32,
-        scale: spec.scale || 1,
-      };
-
-      if (spec.collider) {
+      const prop = { type, img, x: pos.x, y: pos.y,
+        iw: img ? img.naturalWidth : 32, ih: img ? img.naturalHeight : 32, scale: spec.scale || 1 };
+      if (spec.collider){
         const c = spec.collider, s = prop.scale;
-        const col = {
-          x: prop.x + c.x * s,
-          y: prop.y + (c.y * s) - (c.h * s),
-          w: c.w * s,
-          h: c.h * s
-        };
-        prop.collider = col;
-        OBSTACLES.push({ ...col, name: type });
+        const col = { x: prop.x + c.x*s, y: prop.y + (c.y*s) - (c.h*s), w: c.w*s, h: c.h*s };
+        prop.collider = col; OBSTACLES.push({ ...col, name: type });
       }
-
       PROPS.push(prop);
     }
   }
-
   for(const o of OBSTACLE_DEFS){
     const r=(o.type==='percent') ? { ...percentToWorld(o), w:Math.round(world.w*(o.w/100)), h:Math.round(world.h*(o.h/100)) } : o;
     OBSTACLES.push({x:r.x,y:r.y,w:r.w,h:r.h,name:o.name||'extra'});
   }
 }
 
-/* ========== HELPERS NIEBLA ========== */
-function feetWorld() { return { x: player.x, y: player.y + FEET_OFFSET_Y }; }
-function pointInRect(px, py, r) { return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h; }
-function exitSide(prev, now, zone) {
-  const cx = Math.min(Math.max(now.x, zone.x), zone.x + zone.w);
-  const cy = Math.min(Math.max(now.y, zone.y), zone.y + zone.h);
-  const dx = now.x - cx, dy = now.y - cy;
-  if (Math.abs(dx) > Math.abs(dy)) return (dx > 0) ? 'right' : 'left';
-  return (dy > 0) ? 'bottom' : 'top';
-}
-function buildFogZones() {
-  const out = [];
-  for (const z of FOG_ZONES) {
-    if (z.type === 'percent') {
+/* ========== AMBIENTE: zonas helper + overlay ========== */
+function buildAmbientZones(){
+  const out=[];
+  for (const z of AMBIENT_ZONES){
+    if (z.rect?.type==='percent'){
       out.push({
-        x: Math.round(world.w * (z.x/100)),
-        y: Math.round(world.h * (z.y/100)),
-        w: Math.round(world.w * (z.w/100)),
-        h: Math.round(world.h * (z.h/100))
+        ...z,
+        x: Math.round(world.w*(z.rect.x/100)),
+        y: Math.round(world.h*(z.rect.y/100)),
+        w: Math.round(world.w*(z.rect.w/100)),
+        h: Math.round(world.h*(z.rect.h/100)),
       });
-    } else out.push({ ...z });
+    } else out.push({...z, x:z.rect.x, y:z.rect.y, w:z.rect.w, h:z.rect.h});
   }
   return out;
 }
-/* ========== HELPERS SUNSET ========== */
-  // Easing suave
-function easeInOutQuad(x){ return x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2; }
+function feetWorld(){ return { x: player.x, y: player.y + FEET_OFFSET_Y }; }
+function pointInRect(px,py,r){return px>=r.x && px<=r.x+r.w && py>=r.y && py<=r.y+r.h;}
+function lerpByMs(v,target,dt,ms){ if(!ms||ms<=0) return target; const rate=Math.min(1,(dt*1000)/ms); return v + (target-v)*rate; }
 
-// Dibuja el filtro de atardecer dentro de screenRect
-function drawSunsetOverlay(k){
-  const [c0, c1, c2] = SUNSET_PALETTES[SUNSET.palette] || SUNSET_PALETTES.peach;
-
+function drawSunsetOverlay(k, palette='peach'){
   ctx.save();
   ctx.beginPath();
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  ctx.globalAlpha = 0.85 * k;
+  ctx.globalAlpha = 0.85 * k;               // sube/baja opacidad global aquí
   ctx.globalCompositeOperation = 'multiply';
 
-  const g = ctx.createLinearGradient(
-    screenRect.dx, screenRect.dy,
-    screenRect.dx, screenRect.dy + screenRect.dh
-  );
-  g.addColorStop(0.00, c0);
-  g.addColorStop(0.55, c1);
-  g.addColorStop(1.00,  c2);
+  const g = ctx.createLinearGradient(screenRect.dx, screenRect.dy, screenRect.dx, screenRect.dy + screenRect.dh);
+  switch (palette) {
+    case 'bluehour':
+      g.addColorStop(0.00, '#9FC5FF');
+      g.addColorStop(0.45, '#6E7CE1');
+      g.addColorStop(1.00, '#151A34');
+      break;
+    case 'peach':
+    default:
+      g.addColorStop(0.00, '#FFB36A');
+      g.addColorStop(0.55, '#FF6A88');
+      g.addColorStop(1.00, '#3B3E8C');
+      break;
+  }
 
   ctx.fillStyle = g;
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-
   ctx.globalCompositeOperation = 'source-over';
   ctx.restore();
 }
 
-/* ========== MOVIMIENTO Y UPDATE ========== */
+/* ========== MOVIMIENTO / UPDATE ========== */
 function cornerSlide(targetX, targetY, vx, vy){
   const SLIDE = 3;
   if(Math.abs(vx) > Math.abs(vy)){
@@ -528,48 +474,45 @@ function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
 
-// === SUNSET: sube el filtro y, cuando llega a 1, lanza el diálogo una vez ===
-if (phase === 'sunset') {
-  // usa SUNSET.inMs
-  sunsetK = Math.min(1, sunsetK + dt / (SUNSET.inMs / 1000));
-  player.moving = false; player.frame = 0;
-  centerCameraOnPlayer();
+  // --- Intro: subir sunset peach y, al llegar, lanzar diálogo tras 300 ms
+  if (introActive){
+    AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
+    AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
 
-  if (sunsetK >= 1 && !SUNSET.done) {
-    SUNSET.done = true;
-    setTimeout(() => {
-      openDialog([{ speaker:'Juan', text:'Se está haciendo tarde...' }], true);
-      phase = 'dialog';
-    }, SUNSET.delayMs); // <-- la pausa
+    // bloquear movimiento durante la intro y mientras haya diálogo
+    player.moving = false; player.frame = 0;
+    centerCameraOnPlayer();
+
+    if (AMBIENT.sunset.k >= 0.999 && !initialDialogShown){
+      initialDialogShown = true;
+      setTimeout(()=> openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true), 300);
+      introActive = false; // a partir de ahora el player podrá moverse (tras cerrar diálogo)
+    }
+    return; // no seguir con movimiento mientras intro
   }
-  return;
-}
 
-// === DIALOG: bloquea movimiento mientras está abierto ===
-if (phase === 'dialog' && dialogOpen) {
-  player.moving = false; player.frame = 0;
-  centerCameraOnPlayer();
-  return;
-}
+  // Si hay diálogo abierto, bloquear
+  if (dialogOpen){
+    player.moving = false; player.frame = 0;
+    centerCameraOnPlayer();
+    return;
+  }
 
+  // Movimiento normal
   player.moving = !!(vx||vy);
-
   if (player.moving){
     player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
     const len = Math.hypot(vx,vy)||1;
     const stepx = (vx/len)*player.speed*dt;
     const stepy = (vy/len)*player.speed*dt;
 
-    const sw=JUAN.size.w, sh=JUAN.size.h, s=JUAN.scale;
-    const halfW=Math.round(sw*s)/2, halfH=Math.round(sh*s)/2;
-
+    const s=JUAN.scale, halfW=Math.round(JUAN.size.w*s)/2, halfH=Math.round(JUAN.size.h*s)/2;
     const nx = clamp(player.x + stepx, halfW, world.w - halfW);
     const ny = clamp(player.y + stepy, halfH, world.h - halfH);
 
     let blockedX=false, blockedY=false;
     for (const ob of OBSTACLES) if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX=true; break; }
     if (!blockedX) player.x = nx;
-
     for (const ob of OBSTACLES) if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY=true; break; }
     if (!blockedY) player.y = ny;
 
@@ -586,29 +529,16 @@ if (phase === 'dialog' && dialogOpen) {
   nudgeOut();
   centerCameraOnPlayer();
 
-  // ===== NIEBLA: entrada/salida y target =====
+  // --- Sunset por zonas: cambia a bluehour al entrar, vuelve a peach al salir
   const feet = feetWorld();
-  const insideNow = _fogZonesBuilt.some(z => pointInRect(feet.x, feet.y, z));
-
-  if (insideNow) {
-    FOG.target = 1;
+  const z = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
+  if (z){
+    AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, z.inMs ?? AMBIENT.sunset.inMs);
+    AMBIENT.sunset.palette = z.palette || 'bluehour';
   } else {
-    if (FOG.forceClearIfOutside) {
-      FOG.target = 0;
-    } else if (_wasInsideZone) {
-      const z = _fogZonesBuilt.find(z => pointInRect(_prevFeet.x, _prevFeet.y, z));
-      if (z) {
-        const side = exitSide(_prevFeet, feet, z);
-        if (FOG.clearOnExitDirs.includes(side)) FOG.target = 0;
-      } else {
-        FOG.target = 0;
-      }
-    }
+    AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs); // mantenemos encendido
+    AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
   }
-
-  FOG.alpha += (FOG.target - FOG.alpha) * Math.min(1, dt * FOG.speed);
-  _prevFeet = feet;
-  _wasInsideZone = insideNow;
 }
 
 /* ========== DRAW ========== */
@@ -626,7 +556,7 @@ function draw(){
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  // ——— jugador en coords pantalla
+  // jugador en coords pantalla
   const sw = JUAN.size.w, sh = JUAN.size.h, s = JUAN.scale;
   const jw = Math.round(sw*s), jh = Math.round(sh*s);
   const jx = Math.round(screenRect.dx + (player.x - cam.x) * mapScaleX);
@@ -634,7 +564,6 @@ function draw(){
   const jFoot = jy + jh/2;
 
   const list = [];
-
   // props
   for(const p of PROPS){
     const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
@@ -648,26 +577,16 @@ function draw(){
     const pyCut = py + anchor;
 
     const sortY = spec.forceBack ? -9999 :
-              (jFoot < pyCut - band) ? (py + 0.5) :
-              (jFoot > pyCut + band) ? (py - 0.5) :
-              py;
+                  (jFoot < pyCut - band) ? (py + 0.5) :
+                  (jFoot > pyCut + band) ? (py - 0.5) :
+                  py;
 
     list.push({
       y: sortY,
       draw: ()=>{
-        if(!p.img){
-          ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh);
-          ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh);
-          return;
-        }
-        if(spec.flipX){
-          ctx.save();
-          ctx.scale(-1,1);
-          ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh);
-          ctx.restore();
-        } else {
-          ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
-        }
+        if(!p.img){ ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh); ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh); return; }
+        if(spec.flipX){ ctx.save(); ctx.scale(-1,1); ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh); ctx.restore(); }
+        else { ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh); }
       },
       debug: ()=>{
         if(DEBUG_PROPS && p.collider){
@@ -700,29 +619,16 @@ function draw(){
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   list.forEach(it=>it.debug && it.debug());
 
-  // ===== NIEBLA A PANTALLA COMPLETA (fade con FOG.alpha)
-  /*if (FOG.alpha > 0.001) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-    ctx.clip();
-    ctx.globalAlpha = FOG.alpha;
-    ctx.fillStyle = FOG.color;
-    ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-    ctx.restore();
-  }*/
-  
-// --- SUNSET overlay ---
-if (sunsetK > 0) {
-  drawSunsetOverlay(sunsetK);
-}
+  // SUNSET overlay (siempre activo: peach o bluehour por zona)
+  if (AMBIENT.sunset.k > 0.001){
+    drawSunsetOverlay(AMBIENT.sunset.k, AMBIENT.sunset.palette);
+  }
 
-  // ===== DEBUG: obstáculos + pies
+  // DEBUG obstáculos
   if(DEBUG_OBS){
     ctx.save();
     ctx.globalAlpha = .95; ctx.fillStyle = '#00e0ff'; ctx.font = 'bold 12px monospace';
     ctx.fillText('DEBUG ON', screenRect.dx + 8, screenRect.dy + 14);
-
     ctx.globalAlpha = .5; ctx.fillStyle = '#ff3366'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
     for(const ob of OBSTACLES){
       const dx = screenRect.dx + (ob.x - cam.x) * mapScaleX;
@@ -731,23 +637,10 @@ if (sunsetK > 0) {
       ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
       ctx.strokeRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
     }
-
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#ffff00';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.ellipse(
-      jx,
-      jy + FEET_OFFSET_Y * mapScaleY,
-      FEET_RADIUS_X * mapScaleX,
-      FEET_RADIUS_Y * mapScaleY,
-      0, 0, Math.PI * 2
-    );
-    ctx.stroke();
     ctx.restore();
   }
 
-  ctx.restore(); // fin del clip de pantalla
+  ctx.restore();
 }
 
 /* ========== LOOP / INIT ========== */
@@ -759,27 +652,21 @@ async function init(){
   await preloadCatalog();
 
   world.w=bgImg.naturalWidth; world.h=bgImg.naturalHeight;
-  _fogZonesBuilt = buildFogZones();
+  AMBIENT_BUILT = buildAmbientZones();
   resize();
 
-  const sw=JUAN.size.w, sh=JUAN.size.h, ss=JUAN.scale;
-  const halfW=Math.round(sw*ss)/2, halfH=Math.round(sh*ss)/2;
-  if(START.mode==='percent'){ player.x=world.w*(START.x/100); player.y=world.h*(START.y/100); }
-  else { player.x=START.x; player.y=START.y; }
-  player.x=clamp(player.x,halfW,world.w-halfW);
-  player.y=clamp(player.y,halfH,world.h-halfH);
-
-  // postura inicial mirando abajo
-  player.dir = 'down';
-  player.moving = false;
-  player.frame = 0;
-  player.frameTime = 0;
-  keys.up = keys.down = keys.left = keys.right = false;
+  const s=JUAN.scale; const halfW=Math.round(JUAN.size.w*s)/2, halfH=Math.round(JUAN.size.h*s)/2;
+  if(START.mode==='percent'){ player.x=world.w*(START.x/100); player.y=world.h*(START.y/100); } else { player.x=START.x; player.y=START.y; }
+  player.x=clamp(player.x,halfW,world.w-halfW); player.y=clamp(player.y,halfH,world.h-halfH);
+  player.dir='down'; player.moving=false; player.frame=0; player.frameTime=0;
+  keys.up=keys.down=keys.left=keys.right=false;
 
   buildPropsAndObstacles();
   centerCameraOnPlayer();
 
-  phase = 'sunset';
+  // Arranque del sunset peach desde 0
+  AMBIENT.sunset.k = 0;
+  AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
 
   requestAnimationFrame(loop);
 }
