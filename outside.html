@@ -685,9 +685,11 @@ async function init(){
 
   // Diálogo de arranque
 preDialogLock = true;   // asegura bloqueo antes de abrir
-openDialog([
-  { speaker: 'Juan', text: 'Se está haciendo tarde...' }
-], true);
+setTimeout(()=>{
+  openDialog([
+    { speaker: 'Juan', text: 'Se está haciendo tarde...' }
+  ], true); 
+}, 300);
 
   requestAnimationFrame(loop);
 }
