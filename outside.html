@@ -103,7 +103,7 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
 /* ========== LUZ / LINTERNA ========== */
 const LIGHT = {
   enabled: true,      // ponlo a false para quitarlo rápido
-  mode: 'circle',     // 'circle' | 'cone' | 'both'
+  mode: 'cone',     // 'circle' | 'cone' | 'both'
   intensity: 0.92,    // oscuridad global (0.85–0.96 va bien)
   radius: 90,         // radio base en px “mundo” (se escala en pantalla)
   feather: 0.65,      // 0..1, porcentaje de radio que es suave (penumbra)
@@ -649,76 +649,6 @@ function draw(){
     drawSunsetOverlay(AMBIENT.sunset.k, AMBIENT.sunset.palette);
   }
   
-  // ===== LINTERNA / OSCURIDAD =====
-if (LIGHT.enabled){
-  ctx.save();
-  // capa de oscuridad encima de todo el juego
-  ctx.beginPath();
-  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-  ctx.clip();
-  ctx.globalAlpha = LIGHT.intensity;
-  ctx.fillStyle = '#000';
-  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-
-  // ahora “recortamos” con destination-out para crear luz
-  ctx.globalCompositeOperation = 'destination-out';
-
-  // coords pantalla del player (ya las tienes arriba)
-  const sw = JUAN.size.w, sh = JUAN.size.h, s = JUAN.scale;
-  const jw = Math.round(sw*s), jh = Math.round(sh*s);
-  const jx = Math.round(screenRect.dx + (player.x - cam.x) * mapScaleX);
-  const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
-
-  // pequeño flicker de radio
-  const t = performance.now() * 0.003;
-  const flick = 1 + (Math.sin(t*2.3)+Math.sin(t*1.7))*0.5*LIGHT.flicker;
-
-  // ——— 1) círculo suave alrededor (antorcha)
-  if (LIGHT.mode === 'circle' || LIGHT.mode === 'both'){
-    const baseR = LIGHT.radius * Math.max(mapScaleX, mapScaleY);
-    const R = baseR * flick;
-    const inner = R * (1 - LIGHT.feather); // núcleo claro
-    const g = ctx.createRadialGradient(jx, jy, inner, jx, jy, R);
-    // con destination-out, alpha alta “excava” más
-    g.addColorStop(0.0, 'rgba(255,255,255,1)');           // centro totalmente “transparente”
-    g.addColorStop(0.4, 'rgba(255,255,255,0.65)');        // penumbra
-    g.addColorStop(1.0, 'rgba(255,255,255,0)');           // borde sin recorte
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(jx, jy, R, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  // ——— 2) haz cónico en dirección de mirada (opcional)
-  if (LIGHT.mode === 'cone' || LIGHT.mode === 'both'){
-    const ang = dirToAngle(player.dir);
-    const len = LIGHT.coneLen * Math.max(mapScaleX, mapScaleY);
-    const half = LIGHT.coneWidth * 0.5;
-
-    // Triángulo/sector del haz
-    ctx.save();
-    ctx.translate(jx, jy);
-    ctx.rotate(ang);
-
-    // degradado lineal a lo largo del haz (más fuerte cerca del centro)
-    const lg = ctx.createLinearGradient(0, 0, len, 0);
-    lg.addColorStop(0.00, 'rgba(255,255,255,0.90)'); // cerca más “agujero”
-    lg.addColorStop(0.35, 'rgba(255,255,255,0.55)');
-    lg.addColorStop(1.00, 'rgba(255,255,255,0.05)');
-
-    ctx.fillStyle = lg;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(len,  Math.tan(half)*len);
-    ctx.lineTo(len, -Math.tan(half)*len);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // vuelve a pintar normal
-  ctx.restore();
-}
 
   // DEBUG: zonas de ambiente
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
