@@ -309,7 +309,7 @@ function advanceDialog(){
   }
 }
 // Botón acción en pantalla
-document.getElementById('btn-act').addEventListener('click', e=>{ e.preventDefault(); if(dialogOpen){ advanceDialog(); } });
+document.getElementById('btn-act').addEventListener('touchstart', e=>{ e.preventDefault(); if(dialogOpen){ advanceDialog(); } }, {passive: false});
 
 /* ========== UTILS ========== */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -418,6 +418,7 @@ function drawSunsetOverlay(k, palette='peach'){
       g.addColorStop(0.45, '#6E7CE1');
       g.addColorStop(1.00, '#151A34');
       break;
+      
     case 'peach':
     default:
       g.addColorStop(0.00, '#FFB36A');
@@ -471,24 +472,27 @@ function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
 
-  // --- Intro: subir sunset peach y, al llegar, lanzar diálogo tras 300 ms
-  if (introActive){
-    AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
-    AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
+  // --- Intro: subir sunset (lineal) y lanzar diálogo tras 300 ms
+if (introActive){
+  // avance lineal: dt / (ms/1000)
+  AMBIENT.sunset.k = Math.min(1, AMBIENT.sunset.k + dt / (AMBIENT.sunset.inMs / 1000));
+  AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
 
-    // bloquear movimiento durante intro / diálogo
-    player.moving = false; player.frame = 0;
-    centerCameraOnPlayer();
+  // bloquear movimiento durante intro
+  player.moving = false; player.frame = 0;
+  centerCameraOnPlayer();
 
-    if (AMBIENT.sunset.k >= 0.999 && !initialDialogShown){
-      initialDialogShown = true;
-      setTimeout(()=> openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true), 300);
-      // tras abrir diálogo, dejamos de estar en "intro" (el bloqueo lo hace dialogOpen)
+  if (AMBIENT.sunset.k >= 1 && !initialDialogShown){
+    initialDialogShown = true;
+    setTimeout(()=>{
+      openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true);
+      // soltamos la intro justo cuando abrimos el diálogo;
+      // el bloqueo continúa porque dialogOpen === true
       introActive = false;
-    }
-    return; // no mover todavía
+    }, 300);
   }
-
+  return; // no mover todavía
+}
   // Si hay diálogo abierto, bloquear
   if (dialogOpen){
     player.moving = false; player.frame = 0;
