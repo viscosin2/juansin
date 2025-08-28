@@ -434,6 +434,78 @@ function buildAmbientZones(){
 function feetWorld(){ return { x: player.x, y: player.y + FEET_OFFSET_Y }; }
 function pointInRect(px,py,r){return px>=r.x && px<=r.x+r.w && py>=r.y && py<=r.y+r.h;}
 
+/* === LINTERNA: helpers + draw === */
+function dirToAngle(dir){
+  switch(dir){
+    case 'up': return -Math.PI/2;
+    case 'down': return  Math.PI/2;
+    case 'left': return  Math.PI;
+    case 'right': return  0;
+    default: return 0;
+  }
+}
+
+function drawFlashlightEnhance(){
+  if (!LIGHT.enabled) return;
+
+  // tamaño y posición del jugador en pantalla
+  const sw = JUAN.size.w, sh = JUAN.size.h, s = JUAN.scale;
+  const jw = Math.round(sw*s), jh = Math.round(sh*s);
+  const jx = Math.round(screenRect.dx + (player.x - cam.x) * mapScaleX);
+  const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
+
+  const t = performance.now() * 0.003;
+  const flick = 1 + (Math.sin(t*2.3)+Math.sin(t*1.7))*0.5*LIGHT.flicker;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = LIGHT.brightness;
+
+  // halo circular
+  if (LIGHT.mode === 'circle' || LIGHT.mode === 'both'){
+    const baseR = LIGHT.radius * Math.max(mapScaleX, mapScaleY);
+    const R = baseR * flick;
+    const inner = R * (1 - LIGHT.feather);
+    const g = ctx.createRadialGradient(jx, jy, inner, jx, jy, R);
+    g.addColorStop(0.00, `rgba(${LIGHT.tint}, 0.95)`);
+    g.addColorStop(0.50, `rgba(${LIGHT.tint}, 0.35)`);
+    g.addColorStop(1.00,  'rgba(255,255,255, 0.00)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(jx, jy, R, 0, Math.PI*2); ctx.fill();
+  }
+
+  // haz cónico
+  if (LIGHT.mode === 'cone' || LIGHT.mode === 'both'){
+    const ang = dirToAngle(player.dir);
+    const len = LIGHT.coneLen * Math.max(mapScaleX, mapScaleY);
+    const half = LIGHT.coneWidth * 0.5;
+
+    ctx.save();
+    ctx.translate(jx, jy);
+    ctx.rotate(ang);
+
+    const lg = ctx.createLinearGradient(0, 0, len, 0);
+    lg.addColorStop(0.00, `rgba(${LIGHT.tint}, 0.70)`);
+    lg.addColorStop(0.25, `rgba(${LIGHT.tint}, 0.38)`);
+    lg.addColorStop(1.00,  'rgba(255,255,255, 0.00)');
+    ctx.fillStyle = lg;
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(len,  Math.tan(half)*len);
+    ctx.lineTo(len, -Math.tan(half)*len);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
 /* Gradientes por paleta */
 function makePaletteGradient(palette){
   const g = ctx.createLinearGradient(screenRect.dx, screenRect.dy, screenRect.dx, screenRect.dy + screenRect.dh);
