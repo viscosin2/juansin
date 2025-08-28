@@ -114,15 +114,10 @@ let _wasInsideZone = false;
 const FOG_ZONES = [{type:'percent', x:2, y:33, w:30, h:25}];
 
 // ========== SUNSET ==========
-const SUNSET_IN  = 1.2;   // segundos para fundir a atardecer
-const SUNSET_OUT = 0.8;   // segundos para desvanecerlo
-let sunsetK = 0;          // 0=sin filtro, 1=filtro completo
+const SUNSET_IN = 1.2;   // tiempo de entrada
+let sunsetK = 0;         // 0..1 (se quedará en 1)
+let phase = 'sunset';    // 'sunset' -> 'dialog' -> 'play'
 
-// Fases
-let phase = 'sunset';     // 'sunset' -> 'dialog' -> 'sunset_fade' -> 'play'
-
-
-  
 /* ========== CATALOGO / PLACEMENT ========== */
 const CATALOG = {
   arbolclaro:   { src:'assets/objects/arbolclaro.png',   scale:1, collider:{x:-12,y:-6,w:23.8,h:6} },
@@ -244,7 +239,7 @@ function openDialog(lines, startTyping=true){
 function closeDialog(){
   dialogEl.classList.remove('show','ready');
   dialogOpen=false;
-  preDialogLock=false; // desbloquea el movimiento al cerrar
+  phase='play';
 }
 
 function renderCurrentLine(startTyping=false){
@@ -431,37 +426,29 @@ function buildFogZones() {
 function easeInOutQuad(x){ return x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2; }
 
 // Dibuja el filtro de atardecer dentro de screenRect
-function drawSunsetOverlay(alpha){
-  if(alpha<=0) return;
-  const {dx,dy,dw,dh} = screenRect;
-
-  // Capa 1: gradiente vertical cálido (multiply) para teñir
+function drawSunsetOverlay(k){
   ctx.save();
-  ctx.beginPath(); ctx.rect(dx,dy,dw,dh); ctx.clip();
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
 
-  const g = ctx.createLinearGradient(dx,dy,dx,dy+dh);
-  g.addColorStop(0.00, `rgba(255,130,120,${alpha*0.95})`); // rosado
-  g.addColorStop(0.45, `rgba(255,170,100,${alpha*0.75})`); // naranja
-  g.addColorStop(1.00, `rgba(240,220,160,${alpha*0.55})`); // dorado
-
+  ctx.globalAlpha = 0.70 * k;
   ctx.globalCompositeOperation = 'multiply';
-  ctx.fillStyle = g;
-  ctx.fillRect(dx,dy,dw,dh);
 
-  // Capa 2: leve brillo en horizonte (screen)
-  ctx.globalCompositeOperation = 'screen';
-  const rg = ctx.createRadialGradient(
-    dx+dw*0.5, dy+dh*0.2, 10,
-    dx+dw*0.5, dy+dh*0.2, dh*0.8
+  const g = ctx.createLinearGradient(
+    screenRect.dx, screenRect.dy,
+    screenRect.dx, screenRect.dy + screenRect.dh
   );
-  rg.addColorStop(0,   `rgba(255,180,140,${alpha*0.25})`);
-  rg.addColorStop(1.0, `rgba(255,180,140,0)`);
-  ctx.fillStyle = rg;
-  ctx.fillRect(dx,dy,dw,dh);
+  g.addColorStop(0.00, '#FFB36A');
+  g.addColorStop(0.55, '#FF6A88');
+  g.addColorStop(1.00, '#3B3E8C');
 
+  ctx.fillStyle = g;
+  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+
+  ctx.globalCompositeOperation = 'source-over';
   ctx.restore();
 }
-
 
 /* ========== MOVIMIENTO Y UPDATE ========== */
 function cornerSlide(targetX, targetY, vx, vy){
@@ -502,14 +489,25 @@ function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
 
-  // Bloqueos especiales (sunset o diálogo)
-if (phase === 'sunset' || preDialogLock || dialogOpen) {
-  player.moving = false;
-  player.frame = 0;
+// === SUNSET: sube el filtro y, cuando llega a 1, lanza el diálogo una vez ===
+if (phase === 'sunset') {
+  sunsetK = Math.min(1, sunsetK + dt / SUNSET_IN);
+  player.moving = false; player.frame = 0;
   centerCameraOnPlayer();
+
+  if (sunsetK >= 1 && !dialogOpen) {
+    openDialog([{ speaker:'Juan', text:'Se está haciendo tarde...' }], true);
+    phase = 'dialog';
+  }
   return;
 }
 
+// === DIALOG: bloquea movimiento mientras está abierto ===
+if (phase === 'dialog' && dialogOpen) {
+  player.moving = false; player.frame = 0;
+  centerCameraOnPlayer();
+  return;
+}
 
   player.moving = !!(vx||vy);
 
@@ -671,21 +669,10 @@ function draw(){
     ctx.restore();
   }
   
-  // --- SUNSET overlay ---
-  if(phase === 'sunset'){
-    if(!SUNSET.t0) SUNSET.t0 = performance.now();
-    const p = Math.min(1, (performance.now() - SUNSET.t0) / SUNSET.ms);
-    const a = easeInOutQuad(p) * SUNSET.maxA;
-    drawSunsetOverlay(a);
-
-    // cuando termina, lanzamos el diálogo y pasamos a 'dialog'
-    if(p >= 1){
-      phase = 'dialog';
-      setTimeout(()=>{
-        openDialog([{ speaker:'Juan', text:'Se está haciendo tarde...' }], true);
-      }, 120); // micro-pausa tras el fade (táctil)
-    }
-  }
+// --- SUNSET overlay ---
+if (sunsetK > 0) {
+  drawSunsetOverlay(sunsetK);
+}
 
   // ===== DEBUG: obstáculos + pies
   if(DEBUG_OBS){
