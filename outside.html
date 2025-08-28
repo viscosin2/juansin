@@ -408,7 +408,7 @@ function drawSunsetOverlay(k, palette='peach'){
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  ctx.globalAlpha = 0.85 * k;               // opacidad global del filtro
+  ctx.globalAlpha = 0.65 * k;               // opacidad global del filtro
   ctx.globalCompositeOperation = 'multiply';
 
   const g = ctx.createLinearGradient(screenRect.dx, screenRect.dy, screenRect.dx, screenRect.dy + screenRect.dh);
