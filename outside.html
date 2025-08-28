@@ -86,8 +86,8 @@ const ROOM = { w:512, h:350 };
 const ZOOM = 2.1;
 const START = { mode:'percent', x:7, y:81 };
 const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
-const DEBUG_OBS = false;           // obstáculos
-const DEBUG_AMBIENT = false;        // dibuja zonas de ambiente
+const DEBUG_OBS = false;
+const DEBUG_AMBIENT = false;
 const DEPTH_BAND = 12;
 
 /* ========== ASSETS ========== */
@@ -100,37 +100,31 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
         right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"]}
 };
 
-// ===== LINTERNA / REALCE (no oscurece, solo ilumina) =====
+/* ========== LINTERNA (opcional) ========== */
 const LIGHT = {
   enabled: false,
-  mode: 'cone',          // 'circle' | 'cone' | 'both'
-  radius: 70,            // radio base en px "mundo" relativo (ajusta)
-  feather: 0.45,         // 0..1 borde suave del círculo
-  coneLen: 150,          // largo del haz
-  coneWidth: Math.PI/5,  // apertura del haz
-  flicker: 0.03,         // 0..~0.1 pequeño parpadeo
-  brightness: 0.4,       // 0..1 fuerza del realce
-  tint: '255,230,180'    // tinte cálido (RGB) de la luz
+  mode: 'cone',
+  radius: 70,
+  feather: 0.45,
+  coneLen: 150,
+  coneWidth: Math.PI/5,
+  flicker: 0.03,
+  brightness: 0.4,
+  tint: '255,230,180'
 };
 
-
-/* ========== AMBIENTE (solo SUNSET) ========== */
+/* ========== AMBIENTE (rehecho: crossfade paleta→paleta) ========== */
 const AMBIENT = {
-  sunset: {
-    k: 0,
-    basePalette: 'peach',
-    zonePalette: null,
-    mix: 0,
-    inMs: 1200,          // fade-in inicial de la capa global
-    mixInMs: 2000,       // crossfade SIEMPRE 2000
-    mixOutMs: 2000
-  }
+  k: 0,                        // intensidad global (sube en la intro)
+  current: 'peach',            // paleta “objetivo” actual
+  fx: { from:'peach', to:'peach', t:1, dur:2000 }, // transición 0→1
+  introMs: 1200,               // fade-in inicial de k
+  dialogMixMs: 2000,           // duración por defecto del cambio de paleta
 };
 
 const AMBIENT_ZONES = [
   {
     name:'Bluehour zone', palette:'bluehour',
-    inMs:2000, outMs:2000,                      // (puedes dejarlos, pero el mix usa los globales)
     dialogOnEnter:[
       { speaker:'Juan', text:'...' },
       { speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }
@@ -140,18 +134,16 @@ const AMBIENT_ZONES = [
   },
   {
     name:'Infierno super', palette:'hell',
-    inMs:2000, outMs:2000,
     rect:{type:'percent', x:60, y:35, w:50, h:100}
   }
 ];
 
 let ambientLock = false;
-let ambientLockOwner = null;   // qué zona activó el bloqueo
-let _ambientDialogTO = null;      // id del timeout para no duplicar
+let ambientLockOwner = null;
 let AMBIENT_BUILT = [];
-let _ambientCurrentZone = null; // zona en la que estás ahora (o null)
-let introActive = true;           // bloquea movimiento durante el fade inicial
-let initialDialogShown = false;   // evita dobles lanzamientos
+let _ambientCurrentZone = null;
+let introActive = true;
+let initialDialogShown = false;
 
 /* ========== CATALOGO / PLACEMENT ========== */
 const CATALOG = {
@@ -264,7 +256,6 @@ bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=fa
 bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
-// Acción (sólo botón en pantalla)
 function bindPressVisual(el){
   const on=()=>el.classList.add('pressed'), off=()=>el.classList.remove('pressed');
   el.addEventListener('mousedown',on); el.addEventListener('mouseup',off); el.addEventListener('mouseleave',off);
@@ -273,7 +264,7 @@ function bindPressVisual(el){
 }
 bindPressVisual(document.getElementById('btn-act'));
 
-/* ====== TOAST (por si quieres usarlo) ====== */
+/* ====== TOAST ====== */
 function showToast(msg, ms=1800){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -302,15 +293,12 @@ function openDialog(lines, startTyping=true){
 }
 function closeDialog(){
   dialogEl.classList.remove('show','ready');
-  dialogOpen = false;
-
-  // suelta bloqueo si lo puso la zona que estaba activa
+  dialogOpen=false;
   if (ambientLock && ambientLockOwner){
     ambientLock = false;
     ambientLockOwner = null;
   }
 }
-
 function renderCurrentLine(startTyping=false){
   const line = dialogScript[dialogIndex] || {speaker:'', text:''};
   dialogNameEl.textContent = line.speaker || '';
@@ -350,8 +338,10 @@ function advanceDialog(){
     closeDialog();
   }
 }
-// Botón acción en pantalla
-document.getElementById('btn-act').addEventListener('touchstart', e=>{ e.preventDefault(); if(dialogOpen){ advanceDialog(); } }, {passive: false});
+document.getElementById('btn-act').addEventListener('touchstart', e=>{
+  e.preventDefault();
+  if(dialogOpen){ advanceDialog(); }
+}, {passive:false});
 
 /* ========== UTILS ========== */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -362,6 +352,7 @@ async function preloadSprites(map){
   return out;
 }
 const percentToWorld=(p)=>({x:Math.round(world.w*(p.x/100)), y:Math.round(world.h*(p.y/100))});
+const lerpT=(t,dt,ms)=> (ms<=0?1: Math.min(1, t + (dt*1000)/ms));
 
 /* ========== LAYOUT / CÁMARA ========== */
 function resize(){
@@ -425,84 +416,6 @@ function buildPropsAndObstacles(){
 }
 
 /* ========== AMBIENTE: zonas + overlay ========== */
-function dirToAngle(dir){
-  switch(dir){
-    case 'up': return -Math.PI/2;
-    case 'down': return  Math.PI/2;
-    case 'left': return  Math.PI;
-    case 'right': return  0;
-    default: return 0;
-  }
-}
-
-function drawFlashlightEnhance(){
-  if(!LIGHT.enabled) return;
-
-  // coords pantalla del player
-  const sw = JUAN.size.w, sh = JUAN.size.h, s = JUAN.scale;
-  const jw = Math.round(sw*s), jh = Math.round(sh*s);
-  const jx = Math.round(screenRect.dx + (player.x - cam.x) * mapScaleX);
-  const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
-
-  const t = performance.now() * 0.003;
-  const flick = 1 + (Math.sin(t*2.3)+Math.sin(t*1.7))*0.5*LIGHT.flicker;
-
-  ctx.save();
-  // limita a la pantalla y pinta por encima en aditivo
-  ctx.beginPath();
-  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-  ctx.clip();
-  ctx.globalCompositeOperation = 'lighter'; // o 'screen' si tu navegador lo soporta bien
-  ctx.globalAlpha = LIGHT.brightness;
-
-  // 1) halo circular suave
-  if (LIGHT.mode === 'circle' || LIGHT.mode === 'both'){
-    const baseR = LIGHT.radius * Math.max(mapScaleX, mapScaleY);
-    const R = baseR * flick;
-    const inner = R * (1 - LIGHT.feather);
-
-    const g = ctx.createRadialGradient(jx, jy, inner, jx, jy, R);
-    // En aditivo, colores “claros” suman luz; fuera 100% transparente
-    g.addColorStop(0.00, `rgba(${LIGHT.tint}, 0.95)`);
-    g.addColorStop(0.50, `rgba(${LIGHT.tint}, 0.35)`);
-    g.addColorStop(1.00,  'rgba(255,255,255, 0.00)');
-
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(jx, jy, R, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  // 2) haz cónico en dirección de la mirada
-  if (LIGHT.mode === 'cone' || LIGHT.mode === 'both'){
-    const ang = dirToAngle(player.dir);
-    const len = LIGHT.coneLen * Math.max(mapScaleX, mapScaleY);
-    const half = LIGHT.coneWidth * 0.5;
-
-    ctx.save();
-    ctx.translate(jx, jy);
-    ctx.rotate(ang);
-
-    // degradado a lo largo del haz (fuerte al inicio, se disipa)
-    const lg = ctx.createLinearGradient(0, 0, len, 0);
-    lg.addColorStop(0.00, `rgba(${LIGHT.tint}, 0.70)`);
-    lg.addColorStop(0.25, `rgba(${LIGHT.tint}, 0.38)`);
-    lg.addColorStop(1.00,  'rgba(255,255,255, 0.00)');
-    ctx.fillStyle = lg;
-
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(len,  Math.tan(half)*len);
-    ctx.lineTo(len, -Math.tan(half)*len);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  ctx.restore();
-}
-
 function buildAmbientZones(){
   const out=[];
   for (const z of AMBIENT_ZONES){
@@ -520,41 +433,43 @@ function buildAmbientZones(){
 }
 function feetWorld(){ return { x: player.x, y: player.y + FEET_OFFSET_Y }; }
 function pointInRect(px,py,r){return px>=r.x && px<=r.x+r.w && py>=r.y && py<=r.y+r.h;}
-function lerpByMs(v,target,dt,ms){ if(!ms||ms<=0) return target; const rate=Math.min(1,(dt*1000)/ms); return v + (target-v)*rate; }
 
-function drawSunsetOverlay(palette='peach', alpha=1){
-  if (alpha <= 0) return;
+/* Gradientes por paleta */
+function makePaletteGradient(palette){
+  const g = ctx.createLinearGradient(screenRect.dx, screenRect.dy, screenRect.dx, screenRect.dy + screenRect.dh);
+  if (palette === 'bluehour'){
+    g.addColorStop(0.00, '#0A516B');
+    g.addColorStop(0.50, '#164D8C');
+    g.addColorStop(1.00, '#0C3F62');
+    return { gradient:g, mode:'multiply', alpha:0.85 };
+  }
+  if (palette === 'hell'){
+    // Evitamos rojo puro con multiply (apagaba todo). Usamos screen y tonos cálidos.
+    g.addColorStop(0.00, '#FF8A3A');
+    g.addColorStop(0.55, '#FF6A2A');
+    g.addColorStop(1.00, '#E33A1A');
+    return { gradient:g, mode:'screen', alpha:0.70 };
+  }
+  // peach (base)
+  g.addColorStop(0.00, '#FFA460');
+  g.addColorStop(0.55, '#FFA460');
+  g.addColorStop(1.00, '#F38F00');
+  return { gradient:g, mode:'multiply', alpha:0.85 };
+}
+
+function drawPalette(palette, alphaScale){
+  if (alphaScale <= 0) return;
   ctx.save();
   ctx.beginPath();
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  ctx.globalAlpha = 0.85 * alpha;           // punch global del filtro
-  ctx.globalCompositeOperation = 'multiply';
-
-  const g = ctx.createLinearGradient(screenRect.dx, screenRect.dy, screenRect.dx, screenRect.dy + screenRect.dh);
-  switch (palette) {
-    case 'bluehour':
-      g.addColorStop(0.00, '#004B57');
-      g.addColorStop(0.45, '#004F92');
-      g.addColorStop(1.00, '#003F5D');
-      break;
-    case 'hell':
-      g.addColorStop(0.00, '#FFA460');
-      g.addColorStop(0.55, '#FFA460');
-      g.addColorStop(1.00, '#FF0000');
-      break;
-    case 'peach':
-    default:
-      g.addColorStop(0.00, '#FFA460');
-      g.addColorStop(0.55, '#FFA460');
-      g.addColorStop(1.00, '#F38F00');
-      break;
-  }
-
-  ctx.fillStyle = g;
+  const { gradient, mode, alpha } = makePaletteGradient(palette);
+  ctx.globalCompositeOperation = mode;
+  ctx.globalAlpha = Math.min(1, alpha * alphaScale);
+  ctx.fillStyle = gradient;
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-  ctx.globalCompositeOperation = 'source-over';
+
   ctx.restore();
 }
 
@@ -597,151 +512,123 @@ function update(dt){
   const vx = (keys.left?-1:0) + (keys.right?1:0);
   const vy = (keys.up?-1:0) + (keys.down?1:0);
 
+  if (!dialogOpen && ambientLock && !ambientLockOwner) ambientLock = false;
 
-if (!dialogOpen && ambientLock && !ambientLockOwner) {
-  ambientLock = false;
-}
+  // Intro: sube intensidad global y lanza primer diálogo
+  if (introActive){
+    AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
+    player.moving = false; player.frame = 0;
+    centerCameraOnPlayer();
 
-  // --- Intro: subir sunset (lineal) y lanzar diálogo tras 300 ms
-if (introActive){
-  // avance lineal: dt / (ms/1000)
-  AMBIENT.sunset.k = Math.min(1, AMBIENT.sunset.k + dt / (AMBIENT.sunset.inMs / 1000));
-  AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
-
-  // bloquear movimiento durante intro
-  player.moving = false; player.frame = 0;
-  centerCameraOnPlayer();
-
-  if (AMBIENT.sunset.k >= 1 && !initialDialogShown){
-    initialDialogShown = true;
-    setTimeout(()=>{
-      openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true);
-      // soltamos la intro justo cuando abrimos el diálogo;
-      // el bloqueo continúa porque dialogOpen === true
-      introActive = false;
-    }, 300);
-  }
-  return; // no mover todavía
-}
-
-  // Si hay diálogo abierto, bloquear
-if (dialogOpen){
-  player.moving = false; player.frame = 0;
-  centerCameraOnPlayer();
-  return;
-}
-
-// >>> BLOQUEO TEMPORAL POR ENTRAR EN ZONA
-if (ambientLock){
-  player.moving = false; player.frame = 0;
-  centerCameraOnPlayer();
-  // OJO: NO return; para que el resto (fade, overlays) siga actualizando
-} 
-
-  // Movimiento normal (respetando ambientLock)
-const wantsToMove = !!(vx || vy);
-player.moving = !ambientLock && wantsToMove;
-
-if (player.moving){
-  player.dir = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : (vy < 0 ? 'up' : 'down');
-  const len   = Math.hypot(vx, vy) || 1;
-  const stepx = (vx/len) * player.speed * dt;
-  const stepy = (vy/len) * player.speed * dt;
-
-  const s = JUAN.scale, halfW = Math.round(JUAN.size.w*s)/2, halfH = Math.round(JUAN.size.h*s)/2;
-  const nx = clamp(player.x + stepx, halfW, world.w - halfW);
-  const ny = clamp(player.y + stepy, halfH, world.h - halfH);
-
-  let blockedX = false, blockedY = false;
-  for (const ob of OBSTACLES) if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX = true; break; }
-  if (!blockedX) player.x = nx;
-  for (const ob of OBSTACLES) if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY = true; break; }
-  if (!blockedY) player.y = ny;
-
-  if (blockedX && blockedY){
-    if (!cornerSlide(nx, ny, stepx, stepy)) nudgeOut();
-  }
-
-  player.frameTime += dt;
-  if (player.frameTime >= 0.12){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
-} else {
-  // bloqueado o sin input: quieto
-  player.frame = 0;
-}
-
-// Empujoncito fuera de colisiones si procede (solo si no está bloqueado)
-if (!ambientLock) nudgeOut();
-  centerCameraOnPlayer();
-
-// --- dónde están los pies y qué zona toca ahora
-const feet = feetWorld();
-const newZone = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
-const prevZone = _ambientCurrentZone; // 👈 guarda la anterior
-
-// la capa base siempre sube a 1
-AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
-
-// --- cambio de zona (entrada/salida)
-if (newZone !== prevZone){
-  // 1) SALIDA de la anterior
-  if (prevZone){
-    if (ambientLockOwner === prevZone){
-      ambientLock = false;
-      ambientLockOwner = null;
+    if (AMBIENT.k >= 1 && !initialDialogShown){
+      initialDialogShown = true;
+      setTimeout(()=>{
+        openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true);
+        introActive = false;
+      }, 300);
     }
-    clearTimeout(prevZone._lockTO);
-    clearTimeout(prevZone._dialogTO);
+    return;
   }
 
-  // 2) ENTRADA a la nueva
-  if (newZone){
-    clearTimeout(newZone._lockTO);
-    clearTimeout(newZone._dialogTO);
+  if (dialogOpen){
+    player.moving = false; player.frame = 0;
+    centerCameraOnPlayer();
+    return;
+  }
 
-    const willShowDialog =
-      Array.isArray(newZone.dialogOnEnter) &&
-      newZone.dialogOnEnter.length > 0 &&
-      !newZone._dialogShown;
+  if (ambientLock){
+    player.moving = false; player.frame = 0;
+    centerCameraOnPlayer();
+  }
 
-    const lockMs   = newZone.lockMs ?? 0;
-    const talkWait = newZone.dialogDelayMs ?? 0;
+  // Movimiento
+  const wantsToMove = !!(vx || vy);
+  player.moving = !ambientLock && wantsToMove;
 
-    if (willShowDialog && lockMs > 0){
-      ambientLock = true;
-      ambientLockOwner = newZone;
-      newZone._lockTO = setTimeout(() => {
-        if (!newZone._dialogShown){
-          newZone._dialogShown = true;
-          newZone._dialogTO = setTimeout(() => openDialog(newZone.dialogOnEnter, true), talkWait);
-        }
-      }, lockMs);
-    } else if (willShowDialog){
-      newZone._dialogShown = true;
-      newZone._dialogTO = setTimeout(() => openDialog(newZone.dialogOnEnter, true), talkWait);
+  if (player.moving){
+    player.dir = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : (vy < 0 ? 'up' : 'down');
+    const len   = Math.hypot(vx, vy) || 1;
+    const stepx = (vx/len) * player.speed * dt;
+    const stepy = (vy/len) * player.speed * dt;
+
+    const s = JUAN.scale, halfW = Math.round(JUAN.size.w*s)/2, halfH = Math.round(JUAN.size.h*s)/2;
+    const nx = clamp(player.x + stepx, halfW, world.w - halfW);
+    const ny = clamp(player.y + stepy, halfH, world.h - halfH);
+
+    let blockedX = false, blockedY = false;
+    for (const ob of OBSTACLES) if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX = true; break; }
+    if (!blockedX) player.x = nx;
+    for (const ob of OBSTACLES) if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY = true; break; }
+    if (!blockedY) player.y = ny;
+
+    if (blockedX && blockedY){
+      if (!cornerSlide(nx, ny, stepx, stepy)) nudgeOut();
     }
-    // si NO hay diálogo: no bloqueamos NUNCA
+
+    player.frameTime += dt;
+    if (player.frameTime >= 0.12){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
+  } else {
+    player.frame = 0;
   }
 
-  _ambientCurrentZone = newZone; // 👈 actualiza al final
+  if (!ambientLock) nudgeOut();
+  centerCameraOnPlayer();
+
+  // Zonas
+  const feet = feetWorld();
+  const newZone = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
+  const prevZone = _ambientCurrentZone;
+
+  // Cambio de zona
+  if (newZone !== prevZone){
+    // limpiar anterior
+    if (prevZone){
+      if (ambientLockOwner === prevZone){
+        ambientLock = false;
+        ambientLockOwner = null;
+      }
+      clearTimeout(prevZone._lockTO);
+      clearTimeout(prevZone._dialogTO);
+    }
+
+    // bloqueo SOLO si habrá diálogo y solo primera vez
+    if (newZone){
+      const willShowDialog =
+        Array.isArray(newZone.dialogOnEnter) &&
+        newZone.dialogOnEnter.length > 0 &&
+        !newZone._dialogShown;
+
+      const lockMs   = newZone.lockMs ?? 0;
+      const talkWait = newZone.dialogDelayMs ?? 0;
+
+      if (willShowDialog && lockMs > 0){
+        ambientLock = true;
+        ambientLockOwner = newZone;
+        newZone._lockTO = setTimeout(() => {
+          if (!newZone._dialogShown){
+            newZone._dialogShown = true;
+            newZone._dialogTO = setTimeout(() => openDialog(newZone.dialogOnEnter, true), talkWait);
+          }
+        }, lockMs);
+      } else if (willShowDialog){
+        newZone._dialogShown = true;
+        newZone._dialogTO = setTimeout(() => openDialog(newZone.dialogOnEnter, true), talkWait);
+      }
+    }
+
+    // Siempre arrancar transición de paleta (2000 ms)
+    const fromPal = prevZone ? prevZone.palette : 'peach';
+    const toPal   = newZone ? newZone.palette   : 'peach';
+    AMBIENT.fx = { from: fromPal, to: toPal, t: 0, dur: AMBIENT.dialogMixMs };
+
+    _ambientCurrentZone = newZone;
+  }
+
+  // Avanzar crossfade de paletas
+  if (AMBIENT.fx.t < 1){
+    AMBIENT.fx.t = lerpT(AMBIENT.fx.t, dt, AMBIENT.fx.dur);
+  }
 }
-
-// --- CROSSFADE entre paletas (2000 ms fijo)
-let targetMix, ms;
-if (newZone){
-  AMBIENT.sunset.zonePalette = newZone.palette || 'bluehour';
-  targetMix = 1;
-  ms = AMBIENT.sunset.mixInMs;      // 2000
-} else {
-  targetMix = 0;
-  ms = AMBIENT.sunset.mixOutMs;     // 2000
-}
-AMBIENT.sunset.mix = lerpByMs(AMBIENT.sunset.mix, targetMix, dt, ms);
-
-// cuando el mix es casi 0, “apaga” la paleta de zona
-if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null;
-
-}
-
 
 /* ========== DRAW ========== */
 function draw(){
@@ -789,17 +676,6 @@ function draw(){
         if(!p.img){ ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh); ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh); return; }
         if(spec.flipX){ ctx.save(); ctx.scale(-1,1); ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh); ctx.restore(); }
         else { ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh); }
-      },
-      debug: ()=>{
-        if(DEBUG_OBS && p.collider){
-          const c=p.collider;
-          const cx=screenRect.dx+(c.x-cam.x)*mapScaleX, cy=screenRect.dy+(c.y-cam.y)*mapScaleY;
-          const cw=c.w*mapScaleX, ch=c.h*mapScaleY;
-          ctx.save(); ctx.globalAlpha=.45; ctx.fillStyle='#33ff66'; ctx.strokeStyle='#003300';
-          ctx.fillRect(Math.round(cx),Math.round(cy),Math.round(cw),Math.round(ch));
-          ctx.strokeRect(Math.round(cx),Math.round(cy),Math.round(cw),Math.round(ch));
-          ctx.restore();
-        }
       }
     });
   }
@@ -819,23 +695,24 @@ function draw(){
 
   // pintar ordenado
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
-  list.forEach(it=>it.debug && it.debug());
+  ctx.restore();
 
-// SUNSET overlay con crossfade entre paletas
-if (AMBIENT.sunset.k > 0.001){
-  const aBase = AMBIENT.sunset.k * (1 - AMBIENT.sunset.mix);
-  const aZone = AMBIENT.sunset.k * AMBIENT.sunset.mix;
-  // capa base
-  drawSunsetOverlay(AMBIENT.sunset.basePalette, aBase);
-  // capa de zona encima (si existe)
-  if (AMBIENT.sunset.zonePalette) {
-    drawSunsetOverlay(AMBIENT.sunset.zonePalette, aZone);
+  /* --- AMBIENT OVERLAYS (paleta→paleta) --- */
+  if (AMBIENT.k > 0.001){
+    const t = AMBIENT.fx.t;
+    // capa FROM con 1-t y capa TO con t (ambas moduladas por k)
+    if (t < 1){
+      drawPalette(AMBIENT.fx.from, (1 - t) * AMBIENT.k);
+      drawPalette(AMBIENT.fx.to,   t * AMBIENT.k);
+    } else {
+      drawPalette(AMBIENT.fx.to, AMBIENT.k);
+    }
   }
-}
 
-drawFlashlightEnhance();
-  
-  // DEBUG: zonas de ambiente
+  /* --- LINTERNA encima --- */
+  drawFlashlightEnhance();
+
+  // DEBUG AMBIENT
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
     ctx.save();
     ctx.globalAlpha = 0.30;
@@ -870,8 +747,6 @@ drawFlashlightEnhance();
     }
     ctx.restore();
   }
-
-  ctx.restore();
 }
 
 /* ========== LOOP / INIT ========== */
@@ -895,9 +770,9 @@ async function init(){
   buildPropsAndObstacles();
   centerCameraOnPlayer();
 
-  // Arranque del sunset peach desde 0 con fade
-  AMBIENT.sunset.k = 0;
-  AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
+  // Arranque del ambiente base desde 0 con fade
+  AMBIENT.k = 0;
+  AMBIENT.fx = { from:'peach', to:'peach', t:1, dur:AMBIENT.dialogMixMs };
 
   requestAnimationFrame(loop);
 }
