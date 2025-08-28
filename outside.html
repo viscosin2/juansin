@@ -128,9 +128,11 @@ const AMBIENT = {
 };
 // Zonas que cambian la paleta a 'bluehour'
 const AMBIENT_ZONES = [
-  { name:'Bluehour zone', palette:'bluehour', inMs:2000, outMs:2000, rect:{type:'percent', x:23, y:0, w:200, h:35} }
+  { name:'Bluehour zone', palette:'bluehour', inMs:2000, outMs:2000, dialogOnEnter: [{ speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }],
+    dialogDelayMs: 180, rect:{type:'percent', x:23, y:0, w:200, h:35} }
 ];
 let AMBIENT_BUILT = [];
+let _ambientCurrentZone = null; // zona en la que estás ahora (o null)
 let introActive = true;           // bloquea movimiento durante el fade inicial
 let initialDialogShown = false;   // evita dobles lanzamientos
 
@@ -625,9 +627,29 @@ if (introActive){
   nudgeOut();
   centerCameraOnPlayer();
 
-  // --- Sunset por zonas con crossfade de paleta
 const feet = feetWorld();
-const z = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
+const newZone = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
+
+// ---- FADE/PALETA como ya tenías
+if (newZone){
+  AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, newZone.inMs ?? AMBIENT.sunset.inMs);
+  AMBIENT.sunset.palette = newZone.palette || AMBIENT.sunset.basePalette;
+} else {
+  AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
+  AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
+}
+
+// ---- DETECCIÓN DE ENTRADA A ZONA (cambio respecto al frame anterior)
+if (newZone !== _ambientCurrentZone){
+  // hemos entrado en una zona nueva
+  if (newZone && newZone.palette === 'bluehour' && !newZone._dialogShown && !dialogOpen && !introActive){
+    newZone._dialogShown = true; // sólo una vez por zona
+    const lines = newZone.dialogOnEnter || [{ speaker:'Juan', text:'Se hace un azul raro aquí…' }];
+    const delay = newZone.dialogDelayMs ?? 120;
+    setTimeout(()=> openDialog(lines, true), delay);
+  }
+  _ambientCurrentZone = newZone;
+}
 
 // Siempre mantenemos el filtro activo (k -> 1) con la paleta base
 AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
