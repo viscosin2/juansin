@@ -100,17 +100,19 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
         right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"]}
 };
 
-/* ========== LUZ / LINTERNA ========== */
+// ===== LINTERNA / REALCE (no oscurece, solo ilumina) =====
 const LIGHT = {
-  enabled: true,      // ponlo a false para quitarlo rápido
-  mode: 'cone',     // 'circle' | 'cone' | 'both'
-  intensity: 0.92,    // oscuridad global (0.85–0.96 va bien)
-  radius: 90,         // radio base en px “mundo” (se escala en pantalla)
-  feather: 0.65,      // 0..1, porcentaje de radio que es suave (penumbra)
-  flicker: 0.02,      // 0..0.07 variación sutil de radio
-  coneLen: 170,       // largo del haz (si usas 'cone' o 'both')
-  coneWidth: Math.PI/5 // apertura del haz (radianes)
+  enabled: true,
+  mode: 'both',          // 'circle' | 'cone' | 'both'
+  radius: 70,            // radio base en px "mundo" relativo (ajusta)
+  feather: 0.45,         // 0..1 borde suave del círculo
+  coneLen: 150,          // largo del haz
+  coneWidth: Math.PI/5,  // apertura del haz
+  flicker: 0.03,         // 0..~0.1 pequeño parpadeo
+  brightness: 0.9,       // 0..1 fuerza del realce
+  tint: '255,230,180'    // tinte cálido (RGB) de la luz
 };
+
 
 /* ========== AMBIENTE (solo SUNSET) ========== */
 const AMBIENT = {
@@ -399,12 +401,80 @@ function buildPropsAndObstacles(){
 /* ========== AMBIENTE: zonas + overlay ========== */
 function dirToAngle(dir){
   switch(dir){
-    case 'up':    return -Math.PI/2;
-    case 'down':  return  Math.PI/2;
-    case 'left':  return  Math.PI;
+    case 'up': return -Math.PI/2;
+    case 'down': return  Math.PI/2;
+    case 'left': return  Math.PI;
     case 'right': return  0;
-    default:      return  0;
+    default: return 0;
   }
+}
+
+function drawFlashlightEnhance(){
+  if(!LIGHT.enabled) return;
+
+  // coords pantalla del player
+  const sw = JUAN.size.w, sh = JUAN.size.h, s = JUAN.scale;
+  const jw = Math.round(sw*s), jh = Math.round(sh*s);
+  const jx = Math.round(screenRect.dx + (player.x - cam.x) * mapScaleX);
+  const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
+
+  const t = performance.now() * 0.003;
+  const flick = 1 + (Math.sin(t*2.3)+Math.sin(t*1.7))*0.5*LIGHT.flicker;
+
+  ctx.save();
+  // limita a la pantalla y pinta por encima en aditivo
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
+  ctx.globalCompositeOperation = 'lighter'; // o 'screen' si tu navegador lo soporta bien
+  ctx.globalAlpha = LIGHT.brightness;
+
+  // 1) halo circular suave
+  if (LIGHT.mode === 'circle' || LIGHT.mode === 'both'){
+    const baseR = LIGHT.radius * Math.max(mapScaleX, mapScaleY);
+    const R = baseR * flick;
+    const inner = R * (1 - LIGHT.feather);
+
+    const g = ctx.createRadialGradient(jx, jy, inner, jx, jy, R);
+    // En aditivo, colores “claros” suman luz; fuera 100% transparente
+    g.addColorStop(0.00, `rgba(${LIGHT.tint}, 0.95)`);
+    g.addColorStop(0.50, `rgba(${LIGHT.tint}, 0.35)`);
+    g.addColorStop(1.00,  'rgba(255,255,255, 0.00)');
+
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(jx, jy, R, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // 2) haz cónico en dirección de la mirada
+  if (LIGHT.mode === 'cone' || LIGHT.mode === 'both'){
+    const ang = dirToAngle(player.dir);
+    const len = LIGHT.coneLen * Math.max(mapScaleX, mapScaleY);
+    const half = LIGHT.coneWidth * 0.5;
+
+    ctx.save();
+    ctx.translate(jx, jy);
+    ctx.rotate(ang);
+
+    // degradado a lo largo del haz (fuerte al inicio, se disipa)
+    const lg = ctx.createLinearGradient(0, 0, len, 0);
+    lg.addColorStop(0.00, `rgba(${LIGHT.tint}, 0.70)`);
+    lg.addColorStop(0.25, `rgba(${LIGHT.tint}, 0.38)`);
+    lg.addColorStop(1.00,  'rgba(255,255,255, 0.00)');
+    ctx.fillStyle = lg;
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(len,  Math.tan(half)*len);
+    ctx.lineTo(len, -Math.tan(half)*len);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  ctx.restore();
 }
 
 function buildAmbientZones(){
@@ -667,6 +737,8 @@ if (AMBIENT.sunset.k > 0.001){
     drawSunsetOverlay(AMBIENT.sunset.zonePalette, aZone);
   }
 }
+
+drawFlashlightEnhance();
   
   // DEBUG: zonas de ambiente
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
