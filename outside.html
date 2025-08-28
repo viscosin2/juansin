@@ -58,7 +58,14 @@
 </head>
 <body>
 <div class="gameboy">
-  <div class="screen-container"><div class="screen"><canvas id="game"></canvas></div></div>
+  <div class="screen-container"><div class="screen">
+    <div id="toast" class="toast"></div>
+
+<div id="dialog" class="dialog">
+  <div id="dialogName" class="dialog-name"></div>
+  <div id="dialogText" class="dialog-text"></div>
+  <div id="dialogHint" class="dialog-hint">→</div>
+</div><canvas id="game"></canvas></div></div>
   <div class="controls">
     <div class="dpad">
       <div></div><button id="btn-up" class="img-btn arrow btn-up" aria-label="Arriba"></button><div></div>
@@ -68,13 +75,6 @@
     </div>
     <button id="btn-act" class="img-act" aria-label="Acción"></button>
   </div>
-  <div id="toast" class="toast"></div>
-
-<div id="dialog" class="dialog">
-  <div id="dialogName" class="dialog-name"></div>
-  <div id="dialogText" class="dialog-text"></div>
-  <div id="dialogHint" class="dialog-hint">→</div>
-</div>
 
 </div>
 
