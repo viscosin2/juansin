@@ -130,7 +130,7 @@ const AMBIENT = {
 const AMBIENT_ZONES = [
   { name:'Bluehour zone', palette:'bluehour', inMs:2000, outMs:2000, dialogOnEnter: [{ speaker:'Juan', text:'...' }, { speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }],
     dialogDelayMs: 500, lockMs: 1000, rect:{type:'percent', x:23, y:0, w:100, h:35} },
-    { name:'Infierno super', palette:'hell', inMs:2000, outMs:2000, rect:{type:'percent', x:60, y:35, w:50, h:100} }
+    { name:'Infierno super', palette:'hell', inMs:2000, outMs:2000, mixInMs:2200, mixOutMs:1200, rect:{type:'percent', x:60, y:35, w:50, h:100} }
 ];
 
 let ambientLock = false;
@@ -658,15 +658,7 @@ if (!ambientLock) nudgeOut();
 
 const feet = feetWorld();
 const newZone = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
-
-// ---- FADE/PALETA como ya tenías
-if (newZone){
-  AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, newZone.inMs ?? AMBIENT.sunset.inMs);
-  AMBIENT.sunset.palette = newZone.palette || AMBIENT.sunset.basePalette;
-} else {
-  AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
-  AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
-}
+AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
 
 // ---- DETECCIÓN DE ENTRADA A ZONA (cambio respecto al frame anterior)
 if (newZone !== _ambientCurrentZone){
@@ -716,14 +708,14 @@ let targetMix, ms;
 if (newZone){
   AMBIENT.sunset.zonePalette = newZone.palette || 'bluehour';
   targetMix = 1;
-  ms = newZone.inMs ?? AMBIENT.sunset.mixInMs;
+  // usa primero overrides de la zona, si no global:
+  ms = (newZone.mixInMs ?? newZone.inMs ?? AMBIENT.sunset.mixInMs);
 } else {
   targetMix = 0;
-  ms = AMBIENT.sunset.mixOutMs;
+  ms = ( _ambientCurrentZone?.mixOutMs ?? _ambientCurrentZone?.outMs ?? AMBIENT.sunset.mixOutMs );
 }
 AMBIENT.sunset.mix = lerpByMs(AMBIENT.sunset.mix, targetMix, dt, ms);
 if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null;
-}
 /* ========== DRAW ========== */
 function draw(){
   if(!bgImg) return;
