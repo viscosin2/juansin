@@ -129,7 +129,7 @@ const AMBIENT = {
 // Zonas que cambian la paleta a 'bluehour'
 const AMBIENT_ZONES = [
   { name:'Bluehour zone', palette:'bluehour', inMs:2000, outMs:2000, dialogOnEnter: [{ speaker:'Juan', text:'...' }, { speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }],
-    dialogDelayMs: 500, lockMs: 1000, rect:{type:'percent', x:23, y:0, w:100, h:35} },
+    dialogDelayMs: 500, lockMs: 1000, rect:{type:'percent', x:22, y:0, w:100, h:35} },
     { name:'Infierno super', palette:'hell', inMs:2000, outMs:2000, mixInMs:2200, mixOutMs:1200, rect:{type:'percent', x:60, y:35, w:50, h:100} }
 ];
 
@@ -658,64 +658,68 @@ if (!ambientLock) nudgeOut();
 
 const feet = feetWorld();
 const newZone = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
-AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
 
-// ---- DETECCIÓN DE ENTRADA A ZONA (cambio respecto al frame anterior)
-if (newZone !== _ambientCurrentZone){
-  // Salida de zona anterior: limpia y suelta bloqueo si era la dueña
-  if (_ambientCurrentZone && ambientLockOwner === _ambientCurrentZone){
+
+// ---- DETECCIÓN DE ENTRADA A ZONA
+const prevZone = _ambientCurrentZone;
+if (newZone !== prevZone){
+  // Salida: si la zona que dejas era la dueña del lock, suéltalo y limpia timers
+  if (prevZone && ambientLockOwner === prevZone){
     ambientLock = false;
     ambientLockOwner = null;
-    clearTimeout(_ambientCurrentZone._lockTO);
-    clearTimeout(_ambientCurrentZone._dialogTO);
+    clearTimeout(prevZone._lockTO);
+    clearTimeout(prevZone._dialogTO);
   }
 
   if (newZone){
     clearTimeout(newZone._lockTO);
     clearTimeout(newZone._dialogTO);
 
-    const hasDialog = Array.isArray(newZone.dialogOnEnter) && newZone.dialogOnEnter.length > 0;
-    const lockMs    = newZone.lockMs ?? 0;
-    const talkWait  = newZone.dialogDelayMs ?? 0;
+    const willShowDialog = Array.isArray(newZone.dialogOnEnter) &&
+                           newZone.dialogOnEnter.length > 0 &&
+                           !newZone._dialogShown;
+    const lockMs   = newZone.lockMs ?? 0;
+    const talkWait = newZone.dialogDelayMs ?? 0;
 
-    if (hasDialog){
-      if (lockMs > 0){
-        ambientLock = true;
-        ambientLockOwner = newZone;
-        newZone._lockTO = setTimeout(()=>{
-          if (!newZone._dialogShown){
-            newZone._dialogShown = true;
-            newZone._dialogTO = setTimeout(()=> openDialog(newZone.dialogOnEnter, true), talkWait);
-          }
-        }, lockMs);
-      } else {
+    if (willShowDialog && lockMs > 0){
+      // Bloqueo SOLO si habrá diálogo
+      ambientLock = true;
+      ambientLockOwner = newZone;
+
+      newZone._lockTO = setTimeout(()=>{
         if (!newZone._dialogShown){
           newZone._dialogShown = true;
           newZone._dialogTO = setTimeout(()=> openDialog(newZone.dialogOnEnter, true), talkWait);
         }
-      }
+      }, lockMs);
+
+    } else if (willShowDialog){
+      // Sin bloqueo, pero lanza diálogo una sola vez
+      newZone._dialogShown = true;
+      newZone._dialogTO = setTimeout(()=> openDialog(newZone.dialogOnEnter, true), talkWait);
     }
-    // Si no hay diálogo, no bloqueamos ni mostramos nada.
+    // Si no hay diálogo, nunca bloqueamos.
   }
 
   _ambientCurrentZone = newZone;
 }
 
-// Siempre mantenemos el filtro activo (k -> 1) con la paleta base
+// Mantén k subiendo a 1 tras la intro
 AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
 
 let targetMix, ms;
 if (newZone){
   AMBIENT.sunset.zonePalette = newZone.palette || 'bluehour';
   targetMix = 1;
-  // usa primero overrides de la zona, si no global:
-  ms = (newZone.mixInMs ?? newZone.inMs ?? AMBIENT.sunset.mixInMs);
+  ms = (newZone.inMs ?? AMBIENT.sunset.mixInMs);
 } else {
   targetMix = 0;
-  ms = ( _ambientCurrentZone?.mixOutMs ?? _ambientCurrentZone?.outMs ?? AMBIENT.sunset.mixOutMs );
+  // usa tiempos de salida de la zona PREVIA
+  ms = (prevZone?.outMs ?? AMBIENT.sunset.mixOutMs);
 }
 AMBIENT.sunset.mix = lerpByMs(AMBIENT.sunset.mix, targetMix, dt, ms);
-if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null;}
+if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null;
+}
 /* ========== DRAW ========== */
 function draw(){
   if(!bgImg) return;
