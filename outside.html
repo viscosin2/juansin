@@ -131,6 +131,9 @@ const AMBIENT_ZONES = [
   { name:'Bluehour zone', palette:'bluehour', inMs:2000, outMs:2000, dialogOnEnter: [{ speaker:'Juan', text:'...' }, { speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }],
     dialogDelayMs: 500, rect:{type:'percent', x:23, y:0, w:200, h:35} }
 ];
+
+let ambientLock = false;          // bloquea movimiento mientras esperamos el diálogo de zona
+let _ambientDialogTO = null;      // id del timeout para no duplicar
 let AMBIENT_BUILT = [];
 let _ambientCurrentZone = null; // zona en la que estás ahora (o null)
 let introActive = true;           // bloquea movimiento durante el fade inicial
@@ -595,36 +598,54 @@ if (introActive){
     centerCameraOnPlayer();
     return;
   }
+  
+  // Si hay diálogo abierto, bloquear
+if (dialogOpen){
+  player.moving = false; player.frame = 0;
+  centerCameraOnPlayer();
+  return;
+}
 
-  // Movimiento normal
-  player.moving = !!(vx||vy);
-  if (player.moving){
-    player.dir = Math.abs(vx)>Math.abs(vy) ? (vx<0?'left':'right') : (vy<0?'up':'down');
-    const len = Math.hypot(vx,vy)||1;
-    const stepx = (vx/len)*player.speed*dt;
-    const stepy = (vy/len)*player.speed*dt;
+// >>> BLOQUEO TEMPORAL POR ENTRAR EN ZONA
+if (ambientLock){
+  player.moving = false; player.frame = 0;
+  centerCameraOnPlayer();
+  // OJO: NO return; para que el resto (fade, overlays) siga actualizando
+} 
 
-    const s=JUAN.scale, halfW=Math.round(JUAN.size.w*s)/2, halfH=Math.round(JUAN.size.h*s)/2;
-    const nx = clamp(player.x + stepx, halfW, world.w - halfW);
-    const ny = clamp(player.y + stepy, halfH, world.h - halfH);
+  // Movimiento normal (respetando ambientLock)
+const wantsToMove = !!(vx || vy);
+player.moving = !ambientLock && wantsToMove;
 
-    let blockedX=false, blockedY=false;
-    for (const ob of OBSTACLES) if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX=true; break; }
-    if (!blockedX) player.x = nx;
-    for (const ob of OBSTACLES) if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY=true; break; }
-    if (!blockedY) player.y = ny;
+if (player.moving){
+  player.dir = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : (vy < 0 ? 'up' : 'down');
+  const len   = Math.hypot(vx, vy) || 1;
+  const stepx = (vx/len) * player.speed * dt;
+  const stepy = (vy/len) * player.speed * dt;
 
-    if (blockedX && blockedY){
-      if (!cornerSlide(nx, ny, stepx, stepy)) nudgeOut();
-    }
+  const s = JUAN.scale, halfW = Math.round(JUAN.size.w*s)/2, halfH = Math.round(JUAN.size.h*s)/2;
+  const nx = clamp(player.x + stepx, halfW, world.w - halfW);
+  const ny = clamp(player.y + stepy, halfH, world.h - halfH);
 
-    player.frameTime += dt;
-    if (player.frameTime >= 0.12){ player.frame=(player.frame+1)%2; player.frameTime=0; }
-  } else {
-    player.frame = 0;
+  let blockedX = false, blockedY = false;
+  for (const ob of OBSTACLES) if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX = true; break; }
+  if (!blockedX) player.x = nx;
+  for (const ob of OBSTACLES) if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY = true; break; }
+  if (!blockedY) player.y = ny;
+
+  if (blockedX && blockedY){
+    if (!cornerSlide(nx, ny, stepx, stepy)) nudgeOut();
   }
 
-  nudgeOut();
+  player.frameTime += dt;
+  if (player.frameTime >= 0.12){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
+} else {
+  // bloqueado o sin input: quieto
+  player.frame = 0;
+}
+
+// Empujoncito fuera de colisiones si procede (solo si no está bloqueado)
+if (!ambientLock) nudgeOut();
   centerCameraOnPlayer();
 
 const feet = feetWorld();
@@ -641,12 +662,26 @@ if (newZone){
 
 // ---- DETECCIÓN DE ENTRADA A ZONA (cambio respecto al frame anterior)
 if (newZone !== _ambientCurrentZone){
-  // hemos entrado en una zona nueva
+  // Entramos en nueva zona
   if (newZone && newZone.palette === 'bluehour' && !newZone._dialogShown && !dialogOpen && !introActive){
-    newZone._dialogShown = true; // sólo una vez por zona
-    const lines = newZone.dialogOnEnter || [{ speaker:'Juan', text:'Se hace un azul raro aquí…' }];
-    const delay = newZone.dialogDelayMs ?? 120;
-    setTimeout(()=> openDialog(lines, true), delay);
+    newZone._dialogShown = true;
+
+    // activa bloqueo inmediato
+    ambientLock = true;
+
+    // limpia un posible timeout previo
+    if (_ambientDialogTO) { clearTimeout(_ambientDialogTO); _ambientDialogTO = null; }
+
+    const lines = newZone.dialogOnEnter || [
+      { speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }
+    ];
+    const delay = newZone.dialogDelayMs ?? 1000; // <- 1s por defecto
+
+    _ambientDialogTO = setTimeout(()=>{
+      openDialog(lines, true);
+      ambientLock = false;
+      _ambientDialogTO = null;
+    }, delay);
   }
   _ambientCurrentZone = newZone;
 }
