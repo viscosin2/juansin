@@ -606,13 +606,7 @@ if (introActive){
   }
   return; // no mover todavía
 }
-  // Si hay diálogo abierto, bloquear
-  if (dialogOpen){
-    player.moving = false; player.frame = 0;
-    centerCameraOnPlayer();
-    return;
-  }
-  
+
   // Si hay diálogo abierto, bloquear
 if (dialogOpen){
   player.moving = false; player.frame = 0;
@@ -676,7 +670,7 @@ if (newZone){
 
 // ---- DETECCIÓN DE ENTRADA A ZONA (cambio respecto al frame anterior)
 if (newZone !== _ambientCurrentZone){
-  // Salida de la zona anterior: si ella era la dueña del candado, lo soltamos
+  // Salida de zona anterior: limpia y suelta bloqueo si era la dueña
   if (_ambientCurrentZone && ambientLockOwner === _ambientCurrentZone){
     ambientLock = false;
     ambientLockOwner = null;
@@ -684,39 +678,32 @@ if (newZone !== _ambientCurrentZone){
     clearTimeout(_ambientCurrentZone._dialogTO);
   }
 
-  // Entrada a nueva zona
   if (newZone){
-    // prepara timers limpios por si re-entras
     clearTimeout(newZone._lockTO);
     clearTimeout(newZone._dialogTO);
 
-    // BLOQUEO previo al diálogo (si se pide)
-    const lockMs   = newZone.lockMs ?? 0;
-    const talkWait = (newZone.dialogDelayMs ?? 0);
+    const hasDialog = Array.isArray(newZone.dialogOnEnter) && newZone.dialogOnEnter.length > 0;
+    const lockMs    = newZone.lockMs ?? 0;
+    const talkWait  = newZone.dialogDelayMs ?? 0;
 
-    if (lockMs > 0){
-      ambientLock = true;
-      ambientLockOwner = newZone;
-
-      // tras lockMs lanzamos el diálogo (si no se ha mostrado) y seguimos bloqueados
-      newZone._lockTO = setTimeout(()=>{
+    if (hasDialog){
+      if (lockMs > 0){
+        ambientLock = true;
+        ambientLockOwner = newZone;
+        newZone._lockTO = setTimeout(()=>{
+          if (!newZone._dialogShown){
+            newZone._dialogShown = true;
+            newZone._dialogTO = setTimeout(()=> openDialog(newZone.dialogOnEnter, true), talkWait);
+          }
+        }, lockMs);
+      } else {
         if (!newZone._dialogShown){
           newZone._dialogShown = true;
-          const lines = newZone.dialogOnEnter || [{speaker:'Juan', text:'Qué azul…'}];
-
-          newZone._dialogTO = setTimeout(()=>{
-            openDialog(lines, true);
-          }, talkWait);
+          newZone._dialogTO = setTimeout(()=> openDialog(newZone.dialogOnEnter, true), talkWait);
         }
-      }, lockMs);
-    } else {
-      // sin bloqueo: dispara diálogo con su delay normal si no se ha mostrado
-      if (!newZone._dialogShown){
-        newZone._dialogShown = true;
-        const lines = newZone.dialogOnEnter || [{speaker:'Juan', text:'Qué azul…'}];
-        newZone._dialogTO = setTimeout(()=> openDialog(lines, true), talkWait);
       }
     }
+    // Si no hay diálogo, no bloqueamos ni mostramos nada.
   }
 
   _ambientCurrentZone = newZone;
