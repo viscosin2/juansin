@@ -509,15 +509,15 @@ function drawSunsetOverlay(palette='peach', alpha=1){
   const g = ctx.createLinearGradient(screenRect.dx, screenRect.dy, screenRect.dx, screenRect.dy + screenRect.dh);
   switch (palette) {
     case 'bluehour':
-      g.addColorStop(0.00, '#FF5AA4');
-      g.addColorStop(0.45, '#FF7C39');
-      g.addColorStop(1.00, '#9FC5FF');
+      g.addColorStop(0.00, '#004B57');
+      g.addColorStop(0.45, '#004F92');
+      g.addColorStop(1.00, '#003F5D');
       break;
     case 'peach':
     default:
-      g.addColorStop(0.00, '#FC4b08');
-      g.addColorStop(0.55, '#FF96c5');
-      g.addColorStop(1.00, '#FF1744');
+      g.addColorStop(0.00, '#FF96C5');
+      g.addColorStop(0.55, '#FFA460');
+      g.addColorStop(1.00, '#FC4B08');
       break;
   }
 
