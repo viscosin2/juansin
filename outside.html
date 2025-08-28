@@ -115,11 +115,13 @@ const LIGHT = {
 /* ========== AMBIENTE (solo SUNSET) ========== */
 const AMBIENT = {
   sunset: {
-    k: 0,                  // intensidad 0..1
-    palette: 'peach',      // paleta actual
-    basePalette: 'peach',  // paleta por defecto
-    inMs: 1200,            // fade-in
-    outMs: 600             // fade-out (si hiciera falta)
+    k: 0,                    // intensidad 0..1 (fade global del filtro)
+    basePalette: 'peach',    // paleta por defecto
+    zonePalette: null,       // paleta de la zona activa (bluehour, cotton, etc.)
+    mix: 0,                  // 0 = base 100%, 1 = zona 100% (crossfade)
+    inMs: 1200,              // fade-in inicial (k -> 1)
+    mixInMs: 1000,           // <- AJUSTA ESTO para que entre más lento
+    mixOutMs: 650            // salida de la zona
   }
 };
 // Zonas que cambian la paleta a 'bluehour'
@@ -424,13 +426,14 @@ function feetWorld(){ return { x: player.x, y: player.y + FEET_OFFSET_Y }; }
 function pointInRect(px,py,r){return px>=r.x && px<=r.x+r.w && py>=r.y && py<=r.y+r.h;}
 function lerpByMs(v,target,dt,ms){ if(!ms||ms<=0) return target; const rate=Math.min(1,(dt*1000)/ms); return v + (target-v)*rate; }
 
-function drawSunsetOverlay(k, palette='peach'){
+function drawSunsetOverlay(palette='peach', alpha=1){
+  if (alpha <= 0) return;
   ctx.save();
   ctx.beginPath();
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  ctx.globalAlpha = 0.65 * k;               // opacidad global del filtro
+  ctx.globalAlpha = 0.85 * alpha;           // punch global del filtro
   ctx.globalCompositeOperation = 'multiply';
 
   const g = ctx.createLinearGradient(screenRect.dx, screenRect.dy, screenRect.dx, screenRect.dy + screenRect.dh);
@@ -440,7 +443,6 @@ function drawSunsetOverlay(k, palette='peach'){
       g.addColorStop(0.45, '#6E7CE1');
       g.addColorStop(1.00, '#151A34');
       break;
-      
     case 'peach':
     default:
       g.addColorStop(0.00, '#FC4b08');
@@ -553,17 +555,27 @@ if (introActive){
   nudgeOut();
   centerCameraOnPlayer();
 
-  // --- Sunset por zonas: cambia a bluehour al entrar, vuelve a peach al salir
-  const feet = feetWorld();
-  const z = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
-  if (z){
-    AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, z.inMs ?? AMBIENT.sunset.inMs);
-    AMBIENT.sunset.palette = z.palette || 'bluehour';
-  } else {
-    // mantenemos encendido con la paleta base
-    AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
-    AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
-  }
+  // --- Sunset por zonas con crossfade de paleta
+const feet = feetWorld();
+const z = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
+
+// Siempre mantenemos el filtro activo (k -> 1) con la paleta base
+AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
+
+let targetMix, ms;
+if (z){
+  // Entrando / dentro de zona: mezclamos hacia la paleta de la zona
+  AMBIENT.sunset.zonePalette = z.palette || 'bluehour';
+  targetMix = 1;
+  ms = z.inMs ?? AMBIENT.sunset.mixInMs;
+} else {
+  // Fuera: volvemos a la base
+  targetMix = 0;
+  ms = AMBIENT.sunset.mixOutMs;
+}
+
+AMBIENT.sunset.mix = lerpByMs(AMBIENT.sunset.mix, targetMix, dt, ms);
+if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null; // limpieza
 }
 
 /* ========== DRAW ========== */
@@ -644,12 +656,18 @@ function draw(){
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   list.forEach(it=>it.debug && it.debug());
 
-  // SUNSET overlay (peach o bluehour por zona)
-  if (AMBIENT.sunset.k > 0.001){
-    drawSunsetOverlay(AMBIENT.sunset.k, AMBIENT.sunset.palette);
+// SUNSET overlay con crossfade entre paletas
+if (AMBIENT.sunset.k > 0.001){
+  const aBase = AMBIENT.sunset.k * (1 - AMBIENT.sunset.mix);
+  const aZone = AMBIENT.sunset.k * AMBIENT.sunset.mix;
+  // capa base
+  drawSunsetOverlay(AMBIENT.sunset.basePalette, aBase);
+  // capa de zona encima (si existe)
+  if (AMBIENT.sunset.zonePalette) {
+    drawSunsetOverlay(AMBIENT.sunset.zonePalette, aZone);
   }
+}
   
-
   // DEBUG: zonas de ambiente
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
     ctx.save();
