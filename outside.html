@@ -655,20 +655,16 @@ if (newZone !== _ambientCurrentZone){
 AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
 
 let targetMix, ms;
-if (z){
-  // Entrando / dentro de zona: mezclamos hacia la paleta de la zona
-  AMBIENT.sunset.zonePalette = z.palette || 'bluehour';
+if (newZone){
+  AMBIENT.sunset.zonePalette = newZone.palette || 'bluehour';
   targetMix = 1;
-  ms = z.inMs ?? AMBIENT.sunset.mixInMs;
+  ms = newZone.inMs ?? AMBIENT.sunset.mixInMs;
 } else {
-  // Fuera: volvemos a la base
   targetMix = 0;
   ms = AMBIENT.sunset.mixOutMs;
 }
-
 AMBIENT.sunset.mix = lerpByMs(AMBIENT.sunset.mix, targetMix, dt, ms);
-if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null; // limpieza
-}
+if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null;
 
 /* ========== DRAW ========== */
 function draw(){
