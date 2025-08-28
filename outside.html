@@ -519,7 +519,7 @@ function drawSunsetOverlay(palette='peach', alpha=1){
     default:
       g.addColorStop(0.00, '#FFA460');
       g.addColorStop(0.55, '#FFA460');
-      g.addColorStop(1.00, '#F38F0O');
+      g.addColorStop(1.00, '#F38F00');
       break;
   }
 
@@ -665,7 +665,7 @@ if (newZone){
 }
 AMBIENT.sunset.mix = lerpByMs(AMBIENT.sunset.mix, targetMix, dt, ms);
 if (AMBIENT.sunset.mix < 0.001) AMBIENT.sunset.zonePalette = null;
-
+}
 /* ========== DRAW ========== */
 function draw(){
   if(!bgImg) return;
