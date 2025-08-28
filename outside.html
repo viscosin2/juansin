@@ -114,7 +114,21 @@ let _wasInsideZone = false;
 const FOG_ZONES = [{type:'percent', x:2, y:33, w:30, h:25}];
 
 // ========== SUNSET ==========
-const SUNSET_IN = 1.2;   // tiempo de entrada
+// SUNSET config
+const SUNSET = {
+  inMs: 1200,       // duración del fade-in (antes usabas SUNSET_IN)
+  delayMs: 300,     // pausa antes de abrir el diálogo
+  palette: 'peach', // 'peach' | 'neon' | 'bluehour' | 'custom'
+  done: false
+};
+
+const SUNSET_PALETTES = {
+  peach:   ['#FFB36A', '#FF6A88', '#3B3E8C'],
+  neon:    ['#FFD166', '#EF476F', '#118AB2'],
+  bluehour:['#F8C8DC', '#7CA7E4', '#2F3D6D'],
+  custom:  ['#FAD961', '#F76B1C', '#5B2C83'] // cámbiala a tu gusto
+};
+
 let sunsetK = 0;         // 0..1 (se quedará en 1)
 let phase = 'sunset';    // 'sunset' -> 'dialog' -> 'play'
 
@@ -428,6 +442,8 @@ function easeInOutQuad(x){ return x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2; }
 
 // Dibuja el filtro de atardecer dentro de screenRect
 function drawSunsetOverlay(k){
+  const [c0, c1, c2] = SUNSET_PALETTES[SUNSET.palette] || SUNSET_PALETTES.peach;
+
   ctx.save();
   ctx.beginPath();
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
@@ -440,9 +456,9 @@ function drawSunsetOverlay(k){
     screenRect.dx, screenRect.dy,
     screenRect.dx, screenRect.dy + screenRect.dh
   );
-  g.addColorStop(0.00, '#FFB36A');
-  g.addColorStop(0.55, '#FF6A88');
-  g.addColorStop(1.00, '#3B3E8C');
+  g.addColorStop(0.00, c0);
+  g.addColorStop(0.55, c1);
+  g.addColorStop(1.00,  c2);
 
   ctx.fillStyle = g;
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
@@ -492,13 +508,17 @@ function update(dt){
 
 // === SUNSET: sube el filtro y, cuando llega a 1, lanza el diálogo una vez ===
 if (phase === 'sunset') {
-  sunsetK = Math.min(1, sunsetK + dt / SUNSET_IN);
+  // usa SUNSET.inMs
+  sunsetK = Math.min(1, sunsetK + dt / (SUNSET.inMs / 1000));
   player.moving = false; player.frame = 0;
   centerCameraOnPlayer();
 
-  if (sunsetK >= 1 && !dialogOpen) {
-    openDialog([{ speaker:'Juan', text:'Se está haciendo tarde...' }], true);
-    phase = 'dialog';
+  if (sunsetK >= 1 && !SUNSET.done) {
+    SUNSET.done = true;
+    setTimeout(() => {
+      openDialog([{ speaker:'Juan', text:'Se está haciendo tarde...' }], true);
+      phase = 'dialog';
+    }, SUNSET.delayMs); // <-- la pausa
   }
   return;
 }
