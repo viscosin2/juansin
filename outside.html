@@ -24,6 +24,10 @@
   .btn-up{--rot:180deg} .btn-left{--rot:90deg} .btn-right{--rot:-90deg} .btn-down{--rot:0deg}
   .img-act{ width:120px; height:120px; filter:drop-shadow(0 5px 6px rgba(0,0,0,.85)); margin-top:45px; justify-self:center; }
   .img-btn:active,.img-btn.pressed,.img-act:active,.img-act.pressed{ transform:scale(.95); filter:drop-shadow(0 2px 3px rgba(0,0,0,.7)) brightness(.9); }
+  .img-act::before{
+    content:""; display:block; width:100%; height:100%;
+    background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02);
+  }
 
   /* Toast */
   .toast{
@@ -47,11 +51,6 @@
   .dialog-text{ font-family:'VT323',monospace; font-size:18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
   .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
   .dialog.ready .dialog-hint{ opacity:.9; }
-
-  .img-act::before{
-    content:""; display:block; width:100%; height:100%;
-    background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02);
-  }
 </style>
 </head>
 <body>
@@ -87,7 +86,8 @@ const ROOM = { w:512, h:350 };
 const ZOOM = 2.1;
 const START = { mode:'percent', x:7, y:81 };
 const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
-const DEBUG_OBS = false, DEBUG_PROPS = false;
+const DEBUG_OBS = false;           // obstáculos
+const DEBUG_AMBIENT = true;        // dibuja zonas de ambiente
 const DEPTH_BAND = 12;
 
 /* ========== ASSETS ========== */
@@ -103,20 +103,20 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
 /* ========== AMBIENTE (solo SUNSET) ========== */
 const AMBIENT = {
   sunset: {
-    k: 0,                // intensidad 0..1
-    palette: 'peach',    // paleta actual
-    basePalette: 'peach',// paleta por defecto (siempre)
-    inMs: 1200,          // fade in
-    outMs: 600           // fade out (cuando sales de zona bluehour)
+    k: 0,                  // intensidad 0..1
+    palette: 'peach',      // paleta actual
+    basePalette: 'peach',  // paleta por defecto
+    inMs: 1200,            // fade-in
+    outMs: 600             // fade-out (si hiciera falta)
   }
 };
 // Zonas que cambian la paleta a 'bluehour'
 const AMBIENT_ZONES = [
-  { palette:'bluehour', inMs:900, outMs:600, rect:{type:'percent', x:20, y:15, w:25, h:20} }
+  { name:'Bluehour zone', palette:'bluehour', inMs:900, outMs:600, rect:{type:'percent', x:20, y:15, w:25, h:20} }
 ];
 let AMBIENT_BUILT = [];
-let introActive = true;            // bloquea movimiento durante el fade inicial
-let initialDialogShown = false;    // evitar dobles lanzamientos
+let introActive = true;           // bloquea movimiento durante el fade inicial
+let initialDialogShown = false;   // evita dobles lanzamientos
 
 /* ========== CATALOGO / PLACEMENT ========== */
 const CATALOG = {
@@ -214,20 +214,31 @@ let screenRect={dx:0,dy:0,dw:0,dh:0}, mapScaleX=1, mapScaleY=1;
 
 const player={x:0,y:0,dir:'down',speed:150,moving:false,frame:0,frameTime:0};
 
-/* ========== INPUT (D-PAD) ========== */
+/* ========== INPUT (SOLO D-PAD EN PANTALLA) ========== */
 const keys={up:false,down:false,left:false,right:false};
-function bindHold(btn,on,off){ const start=e=>{e.preventDefault();on();}; const end=e=>{e.preventDefault();off();};
+function bindHold(btn,on,off){
+  const start=e=>{e.preventDefault();on();};
+  const end=e=>{e.preventDefault();off();};
   btn.addEventListener('touchstart',start,{passive:false});
   btn.addEventListener('touchend',end,{passive:false});
   btn.addEventListener('touchcancel',end,{passive:false});
-  btn.addEventListener('mousedown',start); window.addEventListener('mouseup',end);
+  btn.addEventListener('mousedown',start);
+  window.addEventListener('mouseup',end);
 }
 bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
 bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
+// Acción (sólo botón en pantalla)
+function bindPressVisual(el){
+  const on=()=>el.classList.add('pressed'), off=()=>el.classList.remove('pressed');
+  el.addEventListener('mousedown',on); el.addEventListener('mouseup',off); el.addEventListener('mouseleave',off);
+  el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});
+  el.addEventListener('touchend',off,{passive:false}); el.addEventListener('touchcancel',off,{passive:false});
+}
+bindPressVisual(document.getElementById('btn-act'));
 
-/* ====== TOAST ====== */
+/* ====== TOAST (por si quieres usarlo) ====== */
 function showToast(msg, ms=1800){
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -243,7 +254,6 @@ const dialogHintEl = document.getElementById('dialogHint');
 
 let dialogOpen=false, isTyping=false, typingTimer=null, typingSpeed=22, dialogIndex=0;
 let dialogScript = [];
-
 const DIALOG_BEEP = new Audio("assets/sounds/bip.mp3");
 DIALOG_BEEP.volume = 0.5;
 
@@ -298,21 +308,8 @@ function advanceDialog(){
     closeDialog();
   }
 }
-function bindPressVisual(el){
-  const on=()=>el.classList.add('pressed'), off=()=>el.classList.remove('pressed');
-  el.addEventListener('mousedown',on); el.addEventListener('mouseup',off); el.addEventListener('mouseleave',off);
-  el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});
-  el.addEventListener('touchend',off,{passive:false}); el.addEventListener('touchcancel',off,{passive:false});
-}
-bindPressVisual(document.getElementById('btn-act'));
-function handleAction(){
-  if(dialogOpen) { advanceDialog(); return; }
-}
-document.getElementById('btn-act').addEventListener('click', e=>{ e.preventDefault(); handleAction(); });
-document.getElementById('btn-act').addEventListener('touchstart', e=>{ e.preventDefault(); handleAction(); }, {passive:false});
-window.addEventListener('keydown', e=>{
-  if(e.code === 'Space' || e.code === 'Enter'){ e.preventDefault(); handleAction(); }
-}, {passive:false});
+// Botón acción en pantalla
+document.getElementById('btn-act').addEventListener('click', e=>{ e.preventDefault(); if(dialogOpen){ advanceDialog(); } });
 
 /* ========== UTILS ========== */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -385,7 +382,7 @@ function buildPropsAndObstacles(){
   }
 }
 
-/* ========== AMBIENTE: zonas helper + overlay ========== */
+/* ========== AMBIENTE: zonas + overlay ========== */
 function buildAmbientZones(){
   const out=[];
   for (const z of AMBIENT_ZONES){
@@ -411,7 +408,7 @@ function drawSunsetOverlay(k, palette='peach'){
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  ctx.globalAlpha = 0.85 * k;               // sube/baja opacidad global aquí
+  ctx.globalAlpha = 0.85 * k;               // opacidad global del filtro
   ctx.globalCompositeOperation = 'multiply';
 
   const g = ctx.createLinearGradient(screenRect.dx, screenRect.dy, screenRect.dx, screenRect.dy + screenRect.dh);
@@ -479,16 +476,17 @@ function update(dt){
     AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
     AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
 
-    // bloquear movimiento durante la intro y mientras haya diálogo
+    // bloquear movimiento durante intro / diálogo
     player.moving = false; player.frame = 0;
     centerCameraOnPlayer();
 
     if (AMBIENT.sunset.k >= 0.999 && !initialDialogShown){
       initialDialogShown = true;
       setTimeout(()=> openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true), 300);
-      introActive = false; // a partir de ahora el player podrá moverse (tras cerrar diálogo)
+      // tras abrir diálogo, dejamos de estar en "intro" (el bloqueo lo hace dialogOpen)
+      introActive = false;
     }
-    return; // no seguir con movimiento mientras intro
+    return; // no mover todavía
   }
 
   // Si hay diálogo abierto, bloquear
@@ -536,7 +534,8 @@ function update(dt){
     AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, z.inMs ?? AMBIENT.sunset.inMs);
     AMBIENT.sunset.palette = z.palette || 'bluehour';
   } else {
-    AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs); // mantenemos encendido
+    // mantenemos encendido con la paleta base
+    AMBIENT.sunset.k = lerpByMs(AMBIENT.sunset.k, 1, dt, AMBIENT.sunset.inMs);
     AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
   }
 }
@@ -589,7 +588,7 @@ function draw(){
         else { ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh); }
       },
       debug: ()=>{
-        if(DEBUG_PROPS && p.collider){
+        if(DEBUG_OBS && p.collider){
           const c=p.collider;
           const cx=screenRect.dx+(c.x-cam.x)*mapScaleX, cy=screenRect.dy+(c.y-cam.y)*mapScaleY;
           const cw=c.w*mapScaleX, ch=c.h*mapScaleY;
@@ -619,16 +618,36 @@ function draw(){
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   list.forEach(it=>it.debug && it.debug());
 
-  // SUNSET overlay (siempre activo: peach o bluehour por zona)
+  // SUNSET overlay (peach o bluehour por zona)
   if (AMBIENT.sunset.k > 0.001){
     drawSunsetOverlay(AMBIENT.sunset.k, AMBIENT.sunset.palette);
+  }
+
+  // DEBUG: zonas de ambiente
+  if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
+    ctx.save();
+    ctx.globalAlpha = 0.30;
+    for (const z of AMBIENT_BUILT){
+      const dx = screenRect.dx + (z.x - cam.x) * mapScaleX;
+      const dy = screenRect.dy + (z.y - cam.y) * mapScaleY;
+      const dw = z.w * mapScaleX, dh = z.h * mapScaleY;
+      ctx.fillStyle = (z.palette==='bluehour') ? '#66a3ff' : '#ff66aa';
+      ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = '#ffffff';
+      ctx.strokeRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText(z.name || z.palette || 'zone', Math.round(dx)+4, Math.round(dy)+14);
+      ctx.globalAlpha = 0.30;
+    }
+    ctx.restore();
   }
 
   // DEBUG obstáculos
   if(DEBUG_OBS){
     ctx.save();
-    ctx.globalAlpha = .95; ctx.fillStyle = '#00e0ff'; ctx.font = 'bold 12px monospace';
-    ctx.fillText('DEBUG ON', screenRect.dx + 8, screenRect.dy + 14);
     ctx.globalAlpha = .5; ctx.fillStyle = '#ff3366'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
     for(const ob of OBSTACLES){
       const dx = screenRect.dx + (ob.x - cam.x) * mapScaleX;
@@ -664,7 +683,7 @@ async function init(){
   buildPropsAndObstacles();
   centerCameraOnPlayer();
 
-  // Arranque del sunset peach desde 0
+  // Arranque del sunset peach desde 0 con fade
   AMBIENT.sunset.k = 0;
   AMBIENT.sunset.palette = AMBIENT.sunset.basePalette;
 
