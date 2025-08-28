@@ -520,7 +520,7 @@ function makePaletteGradient(palette){
     g.addColorStop(0.00, '#EB9460');
     g.addColorStop(0.55, '#DF5800');
     g.addColorStop(1.00, '#DF5800');
-    return { gradient:g, mode:'screen', alpha:0.45 };
+    return { gradient:g, mode:'multiply', alpha:0.45 };
   }
   // peach (base)
   g.addColorStop(0.00, '#FB557C');
