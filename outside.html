@@ -1375,7 +1375,7 @@ function spawnTempGandalfAhead(targetCamY){
     // ✅ usar tFill (existe), no fillT
     FOG.tFill = (1 - k) * FOG.tFill;
 
-    for (const p of FOG.parts) p.alpha *= (1 - 0.85*k);
+    for (const p of FOG.parts) {}
     if (k<1) requestAnimationFrame(tick);
     else {
       fogStop();
