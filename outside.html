@@ -1241,7 +1241,7 @@ function phaseFogFill(){
 
   const g = NPCS.find(n => n.id === 'gandalf_temp');
   const anchorWorld = g
-    ? { x: g.x, y: g.y - 40 }
+    ? { x: g.x, y: g.y - 45 }
     : { x: player.x, y: cam.y + cam.h*0.25 };  // coords de mundo
 
   fogUseWorld(anchorWorld);   // <<<<< NIEBLA EN MUNDO (no se mueve con cámara)
@@ -1280,7 +1280,7 @@ function phaseFogFill(){
 
 function spawnTempGandalfAhead(targetCamY){
   const gx = player.x;
-  const gy = targetCamY + cam.h/2 - 40; // más cerca del centro → seguro en pantalla
+  const gy = targetCamY + cam.h/2 - 35; // más cerca del centro → seguro en pantalla
   const iw = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalWidth  : 32;
   const ih = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalHeight : 32;
 
