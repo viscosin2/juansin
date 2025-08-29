@@ -1211,7 +1211,11 @@ function update(dt){
   if (introActive){
     AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
     player.moving = false; player.frame = 0;
-    centerCameraOnPlayer();
+    const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
+if (canCenterCam) centerCameraOnPlayer();
+
+
+
 
     if (AMBIENT.k >= 1 && !initialDialogShown){
       initialDialogShown = true;
@@ -1235,13 +1239,17 @@ function update(dt){
 
   if (dialogOpen){
     player.moving = false; player.frame = 0;
-    centerCameraOnPlayer();
+    const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
+if (canCenterCam) centerCameraOnPlayer();
+
     return;
   }
 
   if (ambientLock){
     player.moving = false; player.frame = 0;
-    centerCameraOnPlayer();
+    const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
+if (canCenterCam) centerCameraOnPlayer();
+
   }
 
 
@@ -1287,7 +1295,9 @@ if (CAM_TWEEN.on){
 
   if (!ambientLock) nudgeOut();
 
-  centerCameraOnPlayer();
+  const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
+if (canCenterCam) centerCameraOnPlayer();
+
   fogUpdate(dt);
 
   // Zonas
