@@ -179,17 +179,19 @@ let NPC_IMAGES = {}, NPCS = [];
 // Catálogo de tipos de NPC (sprite, escala, collider, etc.)
 const NPC_CATALOG = {
   abuela: { 
-    src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:-4, w:20, h:8 },depthBand: 8, depthAnchorY: 1}
+    src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:-4, w:20, h:8 },depthBand: 8, depthAnchorY: 1},
+  gato1: { 
+    src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:-4, w:20, h:8 },depthBand: 8, depthAnchorY: 1}
 };
 
 const NPC_PLACED = {
   abuela: [
-    {type:'percent', x: 2.5, y: 8, interact: { x:-14, y: 8, w:28, h:16 }, 
-     dialog: [{ speaker:'Abuelita', text:'Buenas, Juan. ¿Has visto a mi gato?' }, { speaker:'Juan',text:'Mmm… creo que estaba por el río.' }]
+    {type:'percent', x: 2.5, y: 9, interact: { x:-14, y: 8, w:28, h:16 }, 
+     dialog: [{ speaker:'Abuelita', text:'Buenas tardes, Juan. ¿Has visto a mi gato?' }, { speaker:'Juan',text:'Mmm… creo que estaba por el río.' }]
     }],
   gato1: [
     {type:'percent', x: 14, y: 87, interact: { x:-14, y: 8, w:28, h:16 }, 
-     dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/abuela.mp3"
+     dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
     }]
 };
 
@@ -343,7 +345,8 @@ function buildNPCs(){
         scale: s,
         depthBand: spec.depthBand ?? DEPTH_BAND,
         depthAnchorY: spec.depthAnchorY ?? 0,
-        dialog: Array.isArray(p.dialog) ? p.dialog : null
+        dialog: Array.isArray(p.dialog) ? p.dialog : null,
+        sound: p.sound ? new Audio(p.sound) : null
       };
 
       // collider opcional (bloquea como obstáculo)
@@ -361,7 +364,8 @@ function buildNPCs(){
           x: npc.x + i.x*s,
           y: npc.y + (i.y*s) - (i.h*s),
           w: i.w*s, h: i.h*s,
-          dialog: npc.dialog
+          dialog: npc.dialog,
+          sound: npc.sound
         }];
       }
 
@@ -444,10 +448,15 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
     return;
   }
 
-  // 1) NPCs con diálogo
+  // 1) NPCs con diálogo/sonido
   const npcHit = getNPCInteractHit();
-  if (npcHit && npcHit.dialog && npcHit.dialog.length){
-    openDialog(npcHit.dialog, true);
+  if (npcHit){
+    if (npcHit.sound){
+      try { npcHit.sound.currentTime = 0; npcHit.sound.play(); } catch(e){}
+    }
+    if (npcHit.dialog && npcHit.dialog.length){
+      openDialog(npcHit.dialog, true);
+    }
     return;
   }
 
@@ -458,6 +467,7 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
     return;
   }
 }, {passive:false});
+
 
 
 /* ========== UTILS ========== */
