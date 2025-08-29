@@ -158,12 +158,10 @@ const AMBIENT_ZONES = [
       { speaker:'Juan', text:'...' },
       { speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }
     ],
-    dialogDelayMs: 500, lockMs: 1000,
-    rect:{type:'percent', x:24, y:0, w:100, h:35}
+    dialogDelayMs: 500, lockMs: 1000,rect:{type:'percent', x:24, y:0, w:100, h:35}
   },
   {
-    name:'Infierno super', palette:'hell',
-    rect:{type:'percent', x:60, y:35, w:50, h:100}
+    name:'Infierno super', palette:'hell',rect:{type:'percent', x:60, y:35, w:50, h:100}
   }
 ];
 
@@ -179,19 +177,15 @@ let NPC_IMAGES = {}, NPCS = [];
   /* ========== NPCs ========== */
 // Catálogo de tipos de NPC (sprite, escala, collider, etc.)
 const NPC_CATALOG = {
-  abuela: { 
-    src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:-2, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
-  gato1: { 
-    src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:-2, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
+  abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
+  gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
 };
 
 const NPC_PLACED = {
-  abuela: [
-    {type:'percent', x: 2.5, y: 9, interact: { x:-14, y: 8, w:28, h:16 }, 
+  abuela: [{type:'percent', x: 2.5, y: 9, interact: { x:-14, y: 8, w:28, h:16 }, 
      dialog: [{ speaker:'Abuelita', text:'Buenas tardes, Juan. ¿Has visto a mi gato?' }, { speaker:'Juan',text:'Mmm… creo que estaba por el río.' }]
     }],
-  gato1: [
-    {type:'percent', x: 23, y: 62, interact: { x:-14, y: 8, w:28, h:16 }, 
+  gato1: [{type:'percent', x: 23, y: 61, interact: { x:-14, y: 8, w:28, h:16 }, 
      dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
     }]
 };
