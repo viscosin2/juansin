@@ -122,31 +122,17 @@ const CUT = {
   onEnd: null           // callback al terminar
 };
 
-/* ====== FOG (partículas de niebla) ====== */
-const FOG = {
-  active: false,
-  parts: [],              // {x,y, r, vx, vy, alpha, life, side}
-  spawnLeft:  true,
-  spawnRight: true,
-  color: '255,255,255',
-  density: 0.9,           // 0..1
-  zIndex: 'behindChars'   // se dibuja antes que NPC y Juan
-};
+// ===== Fog (partículas + “fill” suave)
+const FOG = { active:false, parts:[], color:'255,255,255',density: 0.9, filling:false,fillT:0,fillDur: 1500,_fillT0: 0};
+
 
 /* ====== CAMERA TWEEN ====== */
-const CAM_TWEEN = {
-  on: false, t:0, dur:1000, sx:0, sy:0, ex:0, ey:0
-};
+const CAM_TWEEN = { on:false, t:0, dur:1000, sx:0, sy:0, ex:0, ey:0 };
 
 /* ====== PORTRAITS (modo cine) ====== */
-const PORTRAITS = {
-  active:false,
-  blurPx: 3,
-  left:  { img:null, x:-9999, targetX:0, y:0, w:0, h:0, side:'left',  name:'', lines:[] },
-  right: { img:null, x: 9999, targetX:0, y:0, w:0, h:0, side:'right', name:'', lines:[] },
-  script: [],    // [{speaker:'Gandalf', text:'...'}, ...]
-  idx: 0
-};
+const PORTRAITS = { active:false, blurPx:3, left:{}, right:{}, script:[], idx:0 };
+let IMG_GANDALF_SMALL=null, IMG_GANDALF=null, IMG_JUAN_BIG=null;
+
   
   const DEFAULT_SHADOW = {
   alpha: 0.30,     // opacidad
@@ -190,10 +176,10 @@ const LIGHT = {
   tint: '255,230,180'
 };
 
-  let IMG_GANDALF = null, IMG_JUAN_BIG = null;
-async function preloadPortraits(){
-  IMG_GANDALF = await loadImage('assets/characters/gandalf_big.PNG');
-  IMG_JUAN_BIG = await loadImage('assets/characters/juan_big.PNG');
+async function preloadCinematicImages(){
+  IMG_GANDALF_SMALL = await loadImage('assets/npcs/gandalf.png');
+  IMG_GANDALF       = await loadImage('assets/characters/gandalf_big.PNG');
+  IMG_JUAN_BIG      = await loadImage('assets/characters/juansin_big.PNG');
 }
 
   // ------------------------ ZONAS CINE
@@ -202,12 +188,14 @@ async function preloadPortraits(){
 ];
   function buildCineZones(){
   return CINE_ZONES.map(z=>{
-    const r = z.rect;
-    const out = (r.type==='percent')
-      ? { x: Math.round(world.w*(r.x/100)), y:Math.round(world.h*(r.y/100)),
-          w: Math.round(world.w*(r.w/100)), h:Math.round(world.h*(r.h/100)) }
-      : { x:r.x, y:r.y, w:r.w, h:r.h };
-    return {...z, ...out};
+    const r=z.rect;
+    if (r.type==='percent'){
+      return { ...z,
+        x: Math.round(world.w*(r.x/100)), y: Math.round(world.h*(r.y/100)),
+        w: Math.round(world.w*(r.w/100)), h: Math.round(world.h*(r.h/100))
+      };
+    }
+    return {...z, x:r.x,y:r.y,w:r.w,h:r.h};
   });
 }
 let CINE_BUILT = [];
@@ -636,104 +624,132 @@ function isNPCFxActive(npc){
 
   // -------------------- FUNCIONES NIEBLA
   
-  function fogStart(){ FOG.active = true; FOG.parts.length = 0; }
-function fogStop(){ FOG.active = false; FOG.parts.length = 0; }
+ function fogStart(){ FOG.active=true; FOG.parts.length=0; }
+function fogStop(){ FOG.active=false; FOG.parts.length=0; FOG.filling=false; FOG.fillT=0; }
 
-function fogSpawn(dt){
-  if (!FOG.active) return;
-  const rate = 120 * FOG.density * dt; // partículas/seg aprox
-  const toSpawn = Math.floor(rate);
-  for (let i=0;i<toSpawn;i++){
-    // lado aleatorio entre los activos
-    const side = (FOG.spawnLeft && FOG.spawnRight) ? (Math.random()<0.5?'L':'R') : (FOG.spawnLeft?'L':'R');
-    const r = 6 + Math.random()*18;
-    const y = screenRect.dy + Math.random()*screenRect.dh;
-    const x = (side==='L') ? screenRect.dx - r*2 : screenRect.dx + screenRect.dw + r*2;
-    const vx = (side==='L') ? (12 + Math.random()*24) : -(12 + Math.random()*24);
-    const vy = (Math.random()-0.5)*6;
-    FOG.parts.push({x,y,r,vx,vy,alpha:0.12+Math.random()*0.20, life: 2.5+Math.random()*2.5, side});
-  }
+function fogBeginFill(ms=FOG.fillDur){
+  FOG.filling = true; FOG.fillT = 0; FOG._fillT0 = performance.now(); FOG.fillDur = ms;
+  if (!FOG.active) fogStart();
 }
 
 function fogUpdate(dt){
   if (!FOG.active) return;
-  fogSpawn(dt);
+
+  // partículas “normales”
+  const rate = 140 * FOG.density * dt;
+  const toSpawn = Math.floor(rate);
+  for (let i=0;i<toSpawn;i++){
+    const r = 6 + Math.random()*18;
+    const y = screenRect.dy + Math.random()*screenRect.dh;
+    const fromLeft = Math.random()<0.5;
+    const x = fromLeft ? screenRect.dx - r*2 : screenRect.dx + screenRect.dw + r*2;
+    const vx = fromLeft ? (14+Math.random()*26) : -(14+Math.random()*26);
+    const vy = (Math.random()-0.5)*6;
+    FOG.parts.push({x,y,r,vx,vy,alpha:0.12+Math.random()*0.20, life: 2.5+Math.random()*2.5});
+  }
   for (let i=FOG.parts.length-1;i>=0;i--){
     const p=FOG.parts[i];
-    p.x += p.vx*dt;
-    p.y += p.vy*dt;
-    p.life -= dt;
-    if(p.life<=0 || p.x < screenRect.dx-60 || p.x > screenRect.dx+screenRect.dw+60){
-      FOG.parts.splice(i,1);
-    }
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt;
+    if (p.life<=0 || p.x < screenRect.dx-80 || p.x > screenRect.dx+screenRect.dw+80) FOG.parts.splice(i,1);
+  }
+
+  // relleno suave (progreso controlado)
+  if (FOG.filling){
+    const elapsed = performance.now() - FOG._fillT0;
+    FOG.fillT = Math.min(1, elapsed / FOG.fillDur);
+    if (FOG.fillT>=1) FOG.filling = false;
   }
 }
 
 function fogDraw(){
-  if (!FOG.active || !FOG.parts.length) return;
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  for (const p of FOG.parts){
-    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-    g.addColorStop(0, `rgba(${FOG.color}, ${p.alpha})`);
-    g.addColorStop(1, `rgba(255,255,255, 0)`);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-    ctx.fill();
+  if (!FOG.active) return;
+
+  // 1) partículas
+  if (FOG.parts.length){
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (const p of FOG.parts){
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0, `rgba(${FOG.color}, ${p.alpha})`);
+      g.addColorStop(1, `rgba(255,255,255, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
   }
-  ctx.restore();
+
+  // 2) velo suave que sube con fillT (para asegurar “pantalla llena” sin ver cuadrados)
+  if (FOG.fillT>0){
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    // Hacemos 3 pasadas con gradientes grandes para que parezca gaseoso
+    const passes = 3;
+    for (let i=0;i<passes;i++){
+      const alpha = 0.12 * FOG.fillT;
+      const cx = screenRect.dx + screenRect.dw * (0.2 + 0.6*Math.random());
+      const cy = screenRect.dy + screenRect.dh * (0.3 + 0.4*Math.random());
+      const R  = Math.max(screenRect.dw, screenRect.dh) * (0.7 + 0.6*Math.random());
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+      g.addColorStop(0, `rgba(${FOG.color}, ${alpha})`);
+      g.addColorStop(1, `rgba(255,255,255, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
 }
 
-
   function portraitsOpen(script){
-  PORTRAITS.active = true;
-  PORTRAITS.script = script.slice();
-  PORTRAITS.idx = 0;
+  PORTRAITS.active = true; PORTRAITS.script = script.slice(); PORTRAITS.idx = 0;
 
-  // posición base
-  const H = screenRect.dh;
-  const centerY = screenRect.dy + H*0.62;
+  const padX = 24, padBottom = 12;
+  const leftImg  = IMG_GANDALF;
+  const rightImg = IMG_JUAN_BIG;
 
-  // imagenes ya precargadas:
-  PORTRAITS.left.img  = IMG_GANDALF;
-  PORTRAITS.left.w    = Math.round(IMG_GANDALF.naturalWidth  * 0.9);
-  PORTRAITS.left.h    = Math.round(IMG_GANDALF.naturalHeight * 0.9);
-  PORTRAITS.left.y    = centerY;
-  PORTRAITS.left.x    = screenRect.dx - PORTRAITS.left.w;         // fuera por la izq
-  PORTRAITS.left.targetX = screenRect.dx + 24;                     // dentro
+  const maxW = Math.floor(screenRect.dw * 0.52); // que no se salga por las bandas
+  const scaleToFit = (img)=> Math.min(1, maxW / img.naturalWidth);
 
-  PORTRAITS.right.img = IMG_JUAN_BIG;
-  PORTRAITS.right.w   = Math.round(IMG_JUAN_BIG.naturalWidth  * 0.9);
-  PORTRAITS.right.h   = Math.round(IMG_JUAN_BIG.naturalHeight * 0.9);
-  PORTRAITS.right.y   = centerY;
-  PORTRAITS.right.x   = screenRect.dx + screenRect.dw + PORTRAITS.right.w; // fuera dcha
-  PORTRAITS.right.targetX = screenRect.dx + screenRect.dw - PORTRAITS.right.w - 24;
+  const sL = scaleToFit(leftImg), sR = scaleToFit(rightImg);
+  PORTRAITS.left  = {
+    img: leftImg,
+    w: Math.round(leftImg.naturalWidth*sL),
+    h: Math.round(leftImg.naturalHeight*sL),
+    x: screenRect.dx - 9999,
+    targetX: screenRect.dx + padX,
+    y: screenRect.dy + screenRect.dh - padBottom, // pegado abajo
+    side:'left', name:'Gandalf'
+  };
+  PORTRAITS.right = {
+    img: rightImg,
+    w: Math.round(rightImg.naturalWidth*sR),
+    h: Math.round(rightImg.naturalHeight*sR),
+    x: screenRect.dx + screenRect.dw + 9999,
+    targetX: screenRect.dx + screenRect.dw - padX - Math.round(rightImg.naturalWidth*sR),
+    y: screenRect.dy + screenRect.dh - padBottom,
+    side:'right', name:'Juan'
+  };
 
-  // primer turno lo “habla” el que toque
   portraitsApplyTurn();
   CUT.hijackAction = portraitsNext;
 }
 
 function portraitsApplyTurn(){
   const line = PORTRAITS.script[PORTRAITS.idx] || {speaker:'', text:''};
-  // pre-slide del que habla
+  // mete el que habla
   if (line.speaker === 'Gandalf'){
-    PORTRAITS.left.x = PORTRAITS.left.x*0.6 + PORTRAITS.left.targetX*0.4; // pequeña entrada instantánea
+    PORTRAITS.left.x = PORTRAITS.left.targetX;
   } else {
-    PORTRAITS.right.x = PORTRAITS.right.x*0.6 + PORTRAITS.right.targetX*0.4;
+    PORTRAITS.right.x = PORTRAITS.right.targetX;
   }
-  // abre diálogo normal con tu UI (reusa openDialog)
   openDialog([line], true);
 }
 
 function portraitsNext(){
-  if (dialogOpen){ advanceDialog(); return; } // cierra tipado primero
+  if (dialogOpen){ advanceDialog(); return; }
   PORTRAITS.idx++;
   if (PORTRAITS.idx < PORTRAITS.script.length){
     portraitsApplyTurn();
   } else {
-    // fin modo cine
     PORTRAITS.active = false;
     CUT.hijackAction = null;
     closeDialog();
@@ -743,43 +759,36 @@ function portraitsNext(){
 
 function portraitsUpdate(dt){
   if (!PORTRAITS.active) return;
-  // deslizar suavemente hacia target
   const lerp = (a,b,k)=> a+(b-a)*Math.min(1,k);
-  PORTRAITS.left.x  = lerp(PORTRAITS.left.x,  PORTRAITS.left.targetX,  dt*4);
-  PORTRAITS.right.x = lerp(PORTRAITS.right.x, PORTRAITS.right.targetX, dt*4);
+  PORTRAITS.left.x  = lerp(PORTRAITS.left.x,  PORTRAITS.left.targetX,  dt*6);
+  PORTRAITS.right.x = lerp(PORTRAITS.right.x, PORTRAITS.right.targetX, dt*6);
 }
 
 function portraitsDrawOverlay(){
   if (!PORTRAITS.active) return;
 
-  // 1) Copia frame actual y dibuja blur encima
+  // blur del frame actual
   BACKCTX.clearRect(0,0,BACKBUF.width,BACKBUF.height);
   BACKCTX.drawImage(canvas,0,0);
   ctx.save();
   ctx.filter = `blur(${PORTRAITS.blurPx}px)`;
   ctx.drawImage(BACKBUF,0,0);
   ctx.filter = 'none';
-
-  // oscurecer un poco
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  // oscurecer suavemente
+  ctx.fillStyle='rgba(0,0,0,0.25)';
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-  ctx.restore();
 
-  // 2) Dibujar retratos
-  // izquierda
-  if (PORTRAITS.left.img){
-    const lx = Math.round(PORTRAITS.left.x);
-    const ly = Math.round(PORTRAITS.left.y - PORTRAITS.left.h);
-    ctx.drawImage(PORTRAITS.left.img, 0,0, PORTRAITS.left.img.naturalWidth, PORTRAITS.left.img.naturalHeight,
-                  lx, ly, PORTRAITS.left.w, PORTRAITS.left.h);
+  // retratos (abajo)
+  const L = PORTRAITS.left, R = PORTRAITS.right;
+  if (L.img){
+    const lx = Math.round(L.x), ly = Math.round(L.y - L.h);
+    ctx.drawImage(L.img, 0,0, L.img.naturalWidth, L.img.naturalHeight, lx, ly, L.w, L.h);
   }
-  // derecha
-  if (PORTRAITS.right.img){
-    const rx = Math.round(PORTRAITS.right.x);
-    const ry = Math.round(PORTRAITS.right.y - PORTRAITS.right.h);
-    ctx.drawImage(PORTRAITS.right.img, 0,0, PORTRAITS.right.img.naturalWidth, PORTRAITS.right.img.naturalHeight,
-                  rx, ry, PORTRAITS.right.w, PORTRAITS.right.h);
+  if (R.img){
+    const rx = Math.round(R.x), ry = Math.round(R.y - R.h);
+    ctx.drawImage(R.img, 0,0, R.img.naturalWidth, R.img.naturalHeight, rx, ry, R.w, R.h);
   }
+  ctx.restore();
 }
 
 
@@ -795,9 +804,7 @@ function resize(){
   cam.h=Math.max(64,Math.round(ROOM.h/ZOOM));
   mapScaleX=screenRect.dw/cam.w; mapScaleY=screenRect.dh/cam.h;
   cam.x=clamp(cam.x,0,world.w-cam.w); cam.y=clamp(cam.y,0,world.h-cam.h);
-  BACKBUF.width  = canvas.width;
-  BACKBUF.height = canvas.height;
-
+  BACKBUF.width = canvas.width; BACKBUF.height = canvas.height;
 }
 addEventListener('resize',resize);
 function centerCameraOnPlayer(){
@@ -1027,7 +1034,138 @@ function drawPalette(palette, alphaScale){
   ctx.restore();
 }
 
-/* ========== MOVIMIENTO / UPDATE ========== */
+  // ========== CINEMÁTICA 1 ==========
+function startCinematic1(){
+  CUT.active = true; CUT.id='cine1'; CUT.phase='lock';
+  ambientLock = true; player.moving=false;
+
+  // F1: bloquea y muestra "¿Qué pasa?"
+  openDialog([{speaker:'Juan', text:'¿Qué pasa?'}], true);
+
+  // Acción → cerrar y pasar a F2 (niebla)
+  CUT.hijackAction = ()=>{
+    closeCurrentDialogNow();
+    CUT.hijackAction = null;
+    phaseFogFill();
+  };
+
+  function phaseFogFill(){
+    CUT.phase='fogFill';
+    fogBeginFill(1500); // llena pantalla en 1.5s
+    const check = ()=>{
+      if (!CUT.active || CUT.id!=='cine1') return;
+      if (FOG.filling) requestAnimationFrame(check);
+      else phaseCameraPan();
+    };
+    requestAnimationFrame(check);
+  }
+
+  function phaseCameraPan(){
+    CUT.phase='pan';
+    // panea solo la cámara (nos "metemos" en la niebla)
+    const targetY = clamp(cam.y - 70, 0, world.h - cam.h);
+    cameraPanTo(cam.x, targetY, 1200);
+
+    // prepara Gandalf sprite pequeño (no afectado por niebla)
+    spawnTempGandalfAhead();
+
+    const waitPan = setInterval(()=>{
+      if (!CAM_TWEEN.on){
+        clearInterval(waitPan);
+        phaseJuanAutoWalk();
+      }
+    },16);
+  }
+
+  function spawnTempGandalfAhead(){
+    const gx = player.x;
+    const gy = cam.y + cam.h/2 - 90;
+    const iw = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalWidth  : 32;
+    const ih = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalHeight : 32;
+    const npc = {
+      id:'gandalf_temp', type:'gandalf_temp', img: IMG_GANDALF_SMALL,
+      x: gx, y: gy, iw, ih, scale: 0.7,
+      depthBand: DEPTH_BAND, depthAnchorY: 1
+    };
+    NPCS.push(npc);
+  }
+
+  function phaseJuanAutoWalk(){
+    CUT.phase='autowalk';
+    // Juan camina solo hasta el centro de cámara
+    const targetY = cam.y + cam.h/2;
+    const startY = player.y;
+    const dy = targetY - startY;
+    const dur = Math.max(400, Math.min(1200, Math.abs(dy)*6));
+    const t0 = performance.now();
+    function step(){
+      if (!CUT.active || CUT.id!=='cine1') return;
+      const t = Math.min(1, (performance.now()-t0)/dur);
+      player.y = startY + dy*t;
+      if (t<1) requestAnimationFrame(step);
+      else phaseWorldDialogue();
+    }
+    requestAnimationFrame(step);
+  }
+
+  function phaseWorldDialogue(){
+    CUT.phase='worldTalk';
+    const script = [
+      {speaker:'Juan', text:'?'},
+      {speaker:'???',  text:'Hola, muchacho.'},
+      {speaker:'Juan', text:'No me digas que eres...'}
+    ];
+    let idx = 0;
+    openDialog([script[idx]], true);
+    CUT.hijackAction = ()=>{
+      if (dialogOpen){ advanceDialog(); return; }
+      idx++;
+      if (idx < script.length){
+        openDialog([script[idx]], true);
+      } else {
+        CUT.hijackAction = null;
+        phasePortraits();
+      }
+    };
+  }
+
+  function phasePortraits(){
+    CUT.phase='cineOverlay';
+    const cineScript = [
+      { speaker:'Gandalf', text:'Gandalf el Gris.' },
+      { speaker:'Juan',    text:'Wow.' }
+    ];
+    portraitsOpen(cineScript);
+    CUT.onEnd = ()=>{ fadeOutFogThenEnd(); };
+  }
+
+  function fadeOutFogThenEnd(){
+    CUT.phase='fadeFog';
+    let t0 = performance.now(), dur=800;
+    function tick(){
+      if (!CUT.active || CUT.id!=='cine1') return;
+      const k = Math.min(1, (performance.now()-t0)/dur);
+      FOG.fillT = (1-k)*FOG.fillT;
+      for (const p of FOG.parts) p.alpha *= (1 - 0.85*k);
+      if (k<1) requestAnimationFrame(tick);
+      else {
+        fogStop();
+        const i = NPCS.findIndex(n=>n.id==='gandalf_temp');
+        if (i>=0) NPCS.splice(i,1);
+        endCine();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function endCine(){
+    CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
+    ambientLock=false;
+  }
+}
+
+  
+/* ========== MOVIMIENTO / MEGAUPDATE ========== */
 function cornerSlide(targetX, targetY, vx, vy){
   const SLIDE = 3;
   if(Math.abs(vx) > Math.abs(vy)){
@@ -1085,6 +1223,16 @@ function update(dt){
     return;
   }
 
+  if (!CUT.active){
+  const feet = feetWorld();
+  const cz = CINE_BUILT.find(z=> !z._done && feet.x>=z.x && feet.x<=z.x+z.w && feet.y>=z.y && feet.y<=z.y+z.h);
+  if (cz && cz.id==='cine1'){
+    cz._done = true;
+    startCinematic1();
+    return;
+  }
+}
+
   if (dialogOpen){
     player.moving = false; player.frame = 0;
     centerCameraOnPlayer();
@@ -1096,121 +1244,16 @@ function update(dt){
     centerCameraOnPlayer();
   }
 
-  //////////////////////////////////// FUNCIONES CINEMATICA 1
 
-  function startCinematic1(){
-  CUT.active = true; CUT.id = 'cine1'; CUT.phase = 'lockAndWait';
-  ambientLock = true; // bloquea movimiento libre
-  player.moving = false;
-
-  // 1) Espera 1s y muestra "¿Qué pasa?"
-setTimeout(()=>{
-  if (!CUT.active || CUT.id!=='cine1') return;
-
-  const line = {speaker:'Juan', text:'¿Qué pasa?'};
-  openDialog([line], true);
-
-  // a) si el jugador toca Acción UNA vez -> cerrar y pasar
-  CUT.hijackAction = ()=>{
-    closeCurrentDialogNow();
-    CUT.hijackAction = null;
-    phaseFogAndPan();
-  };
-
-  // b) auto-avance sin tocar nada (cuando acabe de “tipear” + pequeña pausa)
-  const autoMs = Math.max(800, line.text.length * typingSpeed + 250);
-  setTimeout(()=>{
-    if (!CUT.active || CUT.id!=='cine1') return;         // safety
-    if (CUT.hijackAction === null) return;               // ya avanzamos por acción
-    closeCurrentDialogNow();
-    CUT.hijackAction = null;
-    phaseFogAndPan();
-  }, autoMs);
-
-}, 1000);
-
-
-  function phaseFogAndPan(){
-    CUT.phase = 'fog';
-    fogStart();
-    // paneo hacia adelante (sin mover a Juan) ~ descubre personaje
-    const targetCamY = clamp(cam.y - 40, 0, world.h - cam.h);
-    cameraPanTo(cam.x, targetCamY, 1400);
-
-    // tras 1.6s, hacemos mini-autowalk de Juan frente al personaje
-    setTimeout(()=>{
-      CUT.phase = 'approach';
-      // mueve a Juan un poco hacia adelante (50 px en 700ms)
-      const startY = player.y, endY = player.y - 50;
-      const t0 = performance.now(), dur=700;
-      function step(){
-        if (!CUT.active || CUT.id!=='cine1') return;
-        const t = (performance.now()-t0)/dur;
-        const k = Math.min(1, t);
-        player.y = startY + (endY - startY)*k;
-        if (k<1) requestAnimationFrame(step);
-        else phaseWorldDialogue();
-      }
-      requestAnimationFrame(step);
-    }, 1600);
-  }
-
-  function phaseWorldDialogue(){
-    CUT.phase = 'worldTalk';
-    // personaje misterioso + Juan (mundo pixel)
-    openDialog([
-      {speaker:'???', text:'Hola, muchacho.'},
-      {speaker:'Juan', text:'No me digas que eres...'}
-    ], true);
-
-    CUT.hijackAction = ()=>{
-      advanceDialog();
-      if (!dialogOpen){
-        CUT.hijackAction = null;
-        phasePortraits();
-      }
-    }
-  }
-
-  function phasePortraits(){
-    CUT.phase = 'portraits';
-    // Script de la cine (PNG grandes). Empieza Gandalf a la izquierda
-    const script = [
-      { speaker:'Gandalf', text:'En efecto, soy Gandalf el Gris.' },
-      { speaker:'Juan',    text:'Wow.' }
-    ];
-
-    portraitsOpen(script);
-
-    CUT.onEnd = ()=>{
-      // cerrar cine → desvanecer niebla y fin
-      CUT.onEnd = null;
-      fadeOutFogThenEnd();
-    };
-  }
-
-  function fadeOutFogThenEnd(){
-    // desvanece la niebla en ~800ms
-    let t=0, dur=800; const parts0 = FOG.parts.slice();
-    const tick = (ts0=>{
-      return function raf(ts){
-        const dt = ts - ts0; ts0 = ts;
-        t += dt;
-        const k = Math.min(1, t/dur);
-        for (const p of FOG.parts) p.alpha *= (1 - k*0.9);
-        if (k<1) requestAnimationFrame(rafTick = tick(ts0));
-        else { fogStop(); endCine(); }
-      }
-    })(performance.now());
-    let rafTick = requestAnimationFrame(tick);
-  }
-
-  function endCine(){
-    CUT.active=false; CUT.id=null; CUT.phase=null;
-    ambientLock=false;
-  }
+portraitsUpdate(dt);
+if (CAM_TWEEN.on){
+  CAM_TWEEN.t = Math.min(1, CAM_TWEEN.t + dt*1000 / CAM_TWEEN.dur);
+  const ease = (x)=> x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
+  const k = ease(CAM_TWEEN.t);
+  cam.x = CAM_TWEEN.sx + (CAM_TWEEN.ex - CAM_TWEEN.sx)*k;
+  cam.y = CAM_TWEEN.sy + (CAM_TWEEN.ey - CAM_TWEEN.sy)*k;
+  if (CAM_TWEEN.t>=1) CAM_TWEEN.on=false;
 }
-
 
   // Movimiento
   const wantsToMove = !!(vx || vy);
@@ -1244,30 +1287,8 @@ setTimeout(()=>{
 
   if (!ambientLock) nudgeOut();
 
-  if (!CUT.active){
-  const feet = feetWorld();
-  const trigger = CINE_BUILT.find(z=> !z._done && feet.x>=z.x && feet.x<=z.x+z.w && feet.y>=z.y && feet.y<=z.y+z.h );
-  if (trigger && trigger.id==='cine1'){
-    trigger._done = true;
-    startCinematic1();
-    return;
-  }
-}
-
-if (CAM_TWEEN.on){
-  CAM_TWEEN.t = Math.min(1, CAM_TWEEN.t + dt*1000 / CAM_TWEEN.dur);
-  const ease = (x)=> x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2; // easeInOutQuad
-  const k = ease(CAM_TWEEN.t);
-  cam.x = CAM_TWEEN.sx + (CAM_TWEEN.ex - CAM_TWEEN.sx)*k;
-  cam.y = CAM_TWEEN.sy + (CAM_TWEEN.ey - CAM_TWEEN.sy)*k;
-  if (CAM_TWEEN.t >= 1) CAM_TWEEN.on = false;
-}
-
-  
   centerCameraOnPlayer();
   fogUpdate(dt);
-  portraitsUpdate(dt);
-
 
   // Zonas
   const feet = feetWorld();
@@ -1510,6 +1531,7 @@ if (AMBIENT.k > 0.001){
   /* --- LINTERNA encima --- */
   drawFlashlightEnhance();
 
+
   // DEBUG AMBIENT
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
     ctx.save();
@@ -1587,37 +1609,27 @@ if (DEBUG_INTER){
   // DEBUG zonas de cinemática
 if (DEBUG_CINE && CINE_BUILT.length){
   ctx.save();
-  ctx.globalAlpha = 0.45;
-  ctx.fillStyle   = '#ff00ff'; // fucsia transparente
-  ctx.strokeStyle = '#660066';
-  ctx.lineWidth = 2;
-
-  for (const z of CINE_BUILT){
+  ctx.globalAlpha = 0.45; ctx.fillStyle='#ff00ff'; ctx.strokeStyle='#660066'; ctx.lineWidth=2;
+  for(const z of CINE_BUILT){
     const dx = screenRect.dx + (z.x - cam.x) * mapScaleX;
     const dy = screenRect.dy + (z.y - cam.y) * mapScaleY;
     const dw = z.w * mapScaleX, dh = z.h * mapScaleY;
-
-    ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-    ctx.strokeRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-
-    // texto con el id
-    ctx.globalAlpha = 0.95;
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 12px monospace';
+    ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+    ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+    ctx.globalAlpha=0.95; ctx.fillStyle='#fff'; ctx.font='bold 12px monospace';
     ctx.fillText(z.id, Math.round(dx)+4, Math.round(dy)+14);
-
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle   = '#ff00ff';
+    ctx.globalAlpha=0.45; ctx.fillStyle='#ff00ff';
   }
   ctx.restore();
 }
 
 
 
+
 portraitsDrawOverlay();
 
   }
-/* ========== LOOP / INIT ========== */
+/* ========== LOOP / MEGAINIT ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; _nowSec = t / 1000;  update(dt); draw(); requestAnimationFrame(loop); }
 
 async function init(){
@@ -1625,7 +1637,7 @@ async function init(){
   bgImg=bg; sprites=spr;
   await preloadCatalog();
   await preloadNPCs();
-  await preloadPortraits(); 
+  await preloadCinematicImages();
 
   world.w=bgImg.naturalWidth; world.h=bgImg.naturalHeight;
   CINE_BUILT = buildCineZones();
