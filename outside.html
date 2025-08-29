@@ -115,6 +115,15 @@ const JUAN = { size:{w:36,h:40}, scale:0.9,
         right:["assets/juan_character/walk_right_0_shoes.png","assets/juan_character/walk_right_1_shoes.png"]}
 };
 
+  // justo debajo de: const player={x:0,y:0,dir:'down',speed:150,...};
+const BREATH = {
+  amp: 2.0,       // píxeles de subida/bajada
+  scaleAmp: 0.02, // 2% de zoom al respirar (muy sutil)
+  speed: 2.1      // Hz ~ velocidad del ciclo
+};
+let _nowSec = 0;  // tiempo en segundos (lo llenamos en loop)
+
+
 /* ========== LINTERNA (opcional) ========== */
 const LIGHT = {
   enabled: false,
@@ -127,6 +136,8 @@ const LIGHT = {
   brightness: 0.4,
   tint: '255,230,180'
 };
+
+  
 
 /* ========== AMBIENTE (alphas por paleta, sin saltos) ========== */
 const AMBIENT = {
@@ -809,18 +820,42 @@ function draw(){
     });
   }
 
-  // jugador
-  list.push({
-    y: jFoot,
-    draw: () => {
-      ctx.fillStyle = 'rgba(0,0,0,.3)';
-      ctx.beginPath();
-      ctx.ellipse(jx, jy + Math.round(jh/2) - 4, jw/2.5, jh/6, 0, 0, Math.PI*2);
-      ctx.fill();
-      const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
-      ctx.drawImage(img, 0,0, sw,sh, Math.round(jx - jw/2), Math.round(jy - jh/2), jw, jh);
-    }
-  });
+  // jugador con “respiración” en idle
+list.push({
+  y: jFoot,
+  draw: () => {
+    const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
+
+    // sombra (no se “mueve” con la respiración)
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ctx.beginPath();
+    ctx.ellipse(jx, jy + Math.round(jh/2) - 4, jw/2.5, jh/6, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // respiración sólo cuando está parado y no hay locks/diálogo/intro
+    const canBreathe = !player.moving && !dialogOpen && !ambientLock && !introActive;
+    const breathSin  = Math.sin(_nowSec * BREATH.speed);
+    const breathY    = canBreathe ? breathSin * BREATH.amp : 0;
+    const breathS    = canBreathe ? (1 + breathSin * BREATH.scaleAmp) : 1;
+
+    ctx.save();
+    // trasladamos al centro del sprite, aplicamos escala sutil y desplazamiento vertical
+    const cx = Math.round(jx);
+    const cy = Math.round(jy);
+    ctx.translate(cx, cy + breathY);
+    ctx.scale(breathS, breathS);
+
+    // dibuja el sprite centrado en (0,0) tras la transformación
+    ctx.drawImage(
+      img, 0, 0, sw, sh,
+      Math.round(-jw/2), Math.round(-jh/2),
+      jw, jh
+    );
+
+    ctx.restore();
+  }
+});
+
 
   // pintar ordenado
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
@@ -894,7 +929,7 @@ if (AMBIENT.k > 0.001){
 }
 
 /* ========== LOOP / INIT ========== */
-function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; update(dt); draw(); requestAnimationFrame(loop); }
+function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; _nowSec = t / 1000;  update(dt); draw(); requestAnimationFrame(loop); }
 
 async function init(){
   const [bg,spr] = await Promise.all([loadImage(BG_SRC), preloadSprites(JUAN)]);
