@@ -146,6 +146,10 @@ const FOG = {
   bandBottom: 0.50,_densityScale: 1,  // hasta mitad de pantalla aprox
   _aimAhead: false,     // si true, emite por delante de la cámara
   aheadBias: 0.24,      // cuánto adelantamos el “centro” (0 = centro, 0.24 ≈ 24% hacia arriba)
+  space: 'screen',
+  anchorWorld: null,
+  areaW: 360,
+  areaH: 140
 };
 
 
@@ -653,6 +657,15 @@ function isNPCFxActive(npc){
 
 
   // -------------------- FUNCIONES NIEBLA
+function fogUseWorld(anchor){
+  FOG.space = 'world';
+  FOG.anchorWorld = anchor || { x: player.x, y: player.y - 40 };
+}
+
+function fogUseScreen(){
+  FOG.space = 'screen';
+  FOG.anchorWorld = null;
+}
 
   function fogAimAhead(on=true){ FOG._aimAhead = !!on; }
 function fogResetAim(){ FOG._aimAhead = false; }
@@ -706,37 +719,57 @@ function fogBeginFill(opts = FOG.fillDur){
   if (!FOG.active) fogStart();
 }
 
-
 function spawnFogParticle(side){
-  // banda vertical donde nacen (arriba)
-  const tTop    = FOG._aimAhead ? 0.00 : FOG.bandTop;      // más arriba si aimAhead
-  const tBottom = FOG._aimAhead ? 0.38 : FOG.bandBottom;   // banda más alta y estrecha
-  const yMin = screenRect.dy + screenRect.dh * tTop;
-  const yMax = screenRect.dy + screenRect.dh * tBottom;
+  const fromLeft = side === 'L';
+  const dir = fromLeft ? 1 : -1;
+
+  let yMin, yMax, x, cx, cy;
+
+  if (FOG.space === 'world' && FOG.anchorWorld){
+    // --- WORLD SPACE: emitir alrededor del anchorWorld y no de la cámara ---
+    const halfW = (FOG.areaW || 360) * 0.5;
+    const halfH = (FOG.areaH || 140) * 0.5;
+
+    // banda vertical centrada en el anchorWorld (puedes estrechar si quieres)
+    yMin = FOG.anchorWorld.y - halfH;
+    yMax = FOG.anchorWorld.y + halfH;
+
+    // emite a izquierda/derecha del área (en mundo)
+    x = fromLeft ? (FOG.anchorWorld.x - halfW - 40) : (FOG.anchorWorld.x + halfW + 40);
+
+    // “atractor” = el propio anchorWorld (desplazable con aheadBias si quieres)
+    cx = FOG.anchorWorld.x;
+    cy = FOG.anchorWorld.y - (FOG.aheadBias||0) * halfH; // empuja un poco hacia arriba
+
+  } else {
+    // --- SCREEN SPACE (como antes) ---
+    const tTop    = FOG._aimAhead ? 0.00 : FOG.bandTop;
+    const tBottom = FOG._aimAhead ? 0.38 : FOG.bandBottom;
+    yMin = screenRect.dy + screenRect.dh * tTop;
+    yMax = screenRect.dy + screenRect.dh * tBottom;
+
+    x = fromLeft ? screenRect.dx - 60 : screenRect.dx + screenRect.dw + 60;
+
+    cx = screenRect.dx + screenRect.dw*0.5;
+    const baseCy = 0.42;
+    cy = screenRect.dy + screenRect.dh * (FOG._aimAhead ? (baseCy - FOG.aheadBias) : baseCy);
+  }
+
   const y = yMin + (yMax - yMin) * fogRand();
 
   const r = 16 + fogRand()*24;
   const life = 4.8 + fogRand()*1.6;
   const alpha0 = FOG.baseAlpha * (0.9 + 0.25*fogRand());
 
-  const fromLeft = side === 'L';
-  const x = fromLeft ? screenRect.dx - r*2 : screenRect.dx + screenRect.dw + r*2;
-  const dir = fromLeft ? 1 : -1;
-
-  // centro “atractor”: si aimAhead, empújalo hacia arriba (por delante)
-  const cx = screenRect.dx + screenRect.dw*0.5;
-  const baseCy = 0.42; // tu valor normal
-  const cy = screenRect.dy + screenRect.dh * (FOG._aimAhead ? (baseCy - FOG.aheadBias) : baseCy);
-
-  // velocidades suaves
+  // velocidades suaves hacia el centro
   const vx0 = ((cx - x) * 0.10 + 6*dir) / life;
   const vy0 = ((cy - y) * 0.08 + (fogRand()-0.5)*6) / life;
 
+  // Guarda SIEMPRE las coords en MUNDO; si estás en screen-space, las convertimos en draw()
   FOG.parts.push({
-    x, y, r, life, age:0,
-    alpha0, vx:vx0, vy:vy0,
-    phase: fogRand()*Math.PI*2,
-    side: dir
+    x: (FOG.space==='world') ? x : (cam.x + (x - screenRect.dx)/mapScaleX),
+    y: (FOG.space==='world') ? y : (cam.y + (y - screenRect.dy)/mapScaleY),
+    r, life, age:0, alpha0, vx:vx0, vy:vy0, phase: fogRand()*Math.PI*2, side: dir
   });
 }
 
@@ -744,7 +777,6 @@ function spawnFogParticle(side){
 function fogUpdate(dt){
   if (!FOG.active) return;
 
-  // subir densidad de 0 → target en 3s con ease-in-out
   let spawnScale = 1;
   if (FOG.filling){
     FOG.tFill = Math.min(FOG.fillDur, FOG.tFill + dt*1000);
@@ -754,63 +786,68 @@ function fogUpdate(dt){
   }
   const spawnRate = FOG.targetDensity * (FOG._densityScale || 1) * spawnScale;
 
-
-  // emitir simétrico por lados
+  // emitir alternando lados
   const want = spawnRate * dt;
-  let toSpawn = Math.floor(want);
-  // alterna lados
-  for (let i=0; i<toSpawn; i++){
-    spawnFogParticle(i%2===0?'L':'R');
-  }
+  const toSpawn = Math.floor(want);
+  for (let i=0; i<toSpawn; i++) spawnFogParticle(i%2===0?'L':'R');
 
-  // mover + fuerzas
-  const cx = screenRect.dx + screenRect.dw*0.5;
-  const cy = screenRect.dy + screenRect.dh*0.42;
+  // centro de fuerzas en MUNDO
+  let cx, cy, yMin, yMax;
+  if (FOG.space==='world' && FOG.anchorWorld){
+    cx = FOG.anchorWorld.x;
+    const halfH = (FOG.areaH || 140)*0.5;
+    cy = FOG.anchorWorld.y - (FOG.aheadBias||0)*halfH;
+    yMin = FOG.anchorWorld.y - halfH;
+    yMax = FOG.anchorWorld.y + halfH;
+  } else {
+    cx = cam.x + cam.w*0.5;
+    const baseCy = 0.42;
+    cy = cam.y + cam.h * (FOG._aimAhead ? (baseCy - FOG.aheadBias) : baseCy);
+    yMin = cam.y + cam.h * (FOG._aimAhead ? 0.00 : FOG.bandTop);
+    yMax = cam.y + cam.h * (FOG._aimAhead ? 0.38 : FOG.bandBottom);
+  }
 
   for (let i=FOG.parts.length-1;i>=0;i--){
     const p = FOG.parts[i];
     p.age += dt;
     if (p.age >= p.life){ FOG.parts.splice(i,1); continue; }
 
-   // fuerzas
-const dx = cx - p.x, dy = cy - p.y;
-const len = Math.hypot(dx,dy) || 0.0001;
-const ux = dx/len,    uy = dy/len;
-const tx = -uy,       ty = ux;
+    // fuerzas
+    const dx = cx - p.x, dy = cy - p.y;
+    const len = Math.hypot(dx,dy) || 0.0001;
+    const ux = dx/len,    uy = dy/len;
+    const tx = -uy,       ty = ux;
 
-const ax = ux*FOG.attract + tx*FOG.swirl*p.side;
-const ay = uy*FOG.attract + ty*FOG.swirl*p.side;
+    const ax = ux*FOG.attract + tx*FOG.swirl*p.side;
+    const ay = uy*FOG.attract + ty*FOG.swirl*p.side;
 
-// jitter suave
-const j = Math.sin(p.phase + p.age*FOG.jitterFreq*2*Math.PI) * FOG.jitterAmp;
-const jx = -uy * j * 0.18;
-const jy =  ux * j * 0.18;
+    const j = Math.sin(p.phase + p.age*FOG.jitterFreq*2*Math.PI) * FOG.jitterAmp;
+    const jx = -uy * j * 0.18;
+    const jy =  ux * j * 0.18;
 
-// amortiguado más fuerte (↓ velocidad)
-p.vx = p.vx*0.965 + (ax*0.035);
-p.vy = p.vy*0.965 + (ay*0.035);
+    p.vx = p.vx*0.965 + (ax*0.035);
+    p.vy = p.vy*0.965 + (ay*0.035);
 
-// integra más despacio (antes *16)
-p.x += (p.vx + jx) * dt * 10;
-p.y += (p.vy + jy) * dt * 10;
+    p.x += (p.vx + jx) * dt * 10;
+    p.y += (p.vy + jy) * dt * 10;
 
-const yBandTop    = FOG._aimAhead ? 0.00 : FOG.bandTop;
-const yBandBottom = FOG._aimAhead ? 0.38 : FOG.bandBottom;
-const yMin = screenRect.dy + screenRect.dh * yBandTop;
-const yMax = screenRect.dy + screenRect.dh * yBandBottom;
-if (p.y > yMax) p.vy -= 12 * dt;
-if (p.y < yMin) p.vy +=  8 * dt;
-
-
+    // mantener banda
+    if (p.y > yMax) p.vy -= 12 * dt;
+    if (p.y < yMin) p.vy +=  8 * dt;
   }
 }
 
 function fogDraw(){
   if (!FOG.active || !FOG.parts.length) return;
 
-  // centro usado por las fuerzas (mantenlo igual que en fogUpdate)
-  const cx = screenRect.dx + screenRect.dw*0.5;
-  const cy = screenRect.dy + screenRect.dh*0.42;
+  // centro de fuerzas en mundo (sólo para el bias de gradiente)
+  const cx = (FOG.space==='world' && FOG.anchorWorld) ? FOG.anchorWorld.x : (cam.x + cam.w*0.5);
+  const cy = (FOG.space==='world' && FOG.anchorWorld)
+              ? (FOG.anchorWorld.y - (FOG.aheadBias||0)*( (FOG.areaH||140)*0.5 ))
+              : (cam.y + cam.h*0.42);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
 
   for (const p of FOG.parts){
     const k = p.age / p.life;
@@ -820,30 +857,33 @@ function fogDraw(){
     const alpha = p.alpha0 * fade;
     if (alpha <= 0.002) continue;
 
-    // —— foco desplazado para engordar solo “hacia afuera” ——
+    // proyección mundo -> pantalla
+    const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
+    const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
+    const pr = p.r * Math.max(mapScaleX, mapScaleY);
+
+    // foco desplazado (engorda hacia fuera)
     const vx = p.x - cx, vy = p.y - cy;
     const len = Math.hypot(vx,vy) || 1;
-    const nx = vx / len, ny = vy / len;   // radial unitario
-    const bias = FOG.oneSideBias || 0;    // 0 = simétrico
+    const nx = vx / len, ny = vy / len;
+    const bias = FOG.oneSideBias || 0;
+    const fx = px - nx * pr * bias;
+    const fy = py - ny * pr * bias;
 
-    // Mueve el foco interno hacia el centro (−n) un trozo del radio
-    // → eso deja más “cola” al exterior (lado +n) = más grueso solo fuera
-    const fx = p.x - nx * p.r * bias;
-    const fy = p.y - ny * p.r * bias;
-
-    const g = ctx.createRadialGradient(fx, fy, 0, p.x, p.y, p.r);
+    const g = ctx.createRadialGradient(fx, fy, 0, px, py, pr);
     g.addColorStop(0.00, `rgba(${FOG.color}, ${alpha})`);
     g.addColorStop(0.65, `rgba(${FOG.color}, ${alpha*0.7})`);
     g.addColorStop(1.00, `rgba(${FOG.color}, 0)`);
 
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.arc(px, py, pr, 0, Math.PI*2);
     ctx.fill();
   }
 
   ctx.restore();
 }
+
 
 
   function portraitsOpen(script){
@@ -1198,25 +1238,25 @@ function startCinematic1(){
 
 function phaseFogFill(){
   CUT.phase='fogFill';
-  
 
-  // ancla en Gandalf pequeño si existe
   const g = NPCS.find(n => n.id === 'gandalf_temp');
-  const anchor = g ? { x: g.x, y: g.y - 40 }         // un pelín por encima
-                   : { x: cam.x + cam.w/2, y: cam.y + cam.h*0.25 };
-  fogAimAhead(true); 
+  const anchorWorld = g
+    ? { x: g.x, y: g.y - 40 }
+    : { x: player.x, y: cam.y + cam.h*0.25 };  // coords de mundo
+
+  fogUseWorld(anchorWorld);   // <<<<< NIEBLA EN MUNDO (no se mueve con cámara)
+
   fogBeginFill({
-    anchor,
-    dur: 3000,     // lo que pediste: 3s
-    areaW: 360,    // cubre de lados hacia centro
-    areaH: 140,    // cinturón superior
+    dur: 3000,
+    areaW: 360,
+    areaH: 140,
     density: 1.0
   });
 
-  // cuando acabe el fill, sigue con el paneo
   const check = ()=> (FOG.filling ? requestAnimationFrame(check) : phaseCameraPan());
   requestAnimationFrame(check);
 }
+
 
 
   function phaseCameraPan(){
@@ -1330,6 +1370,8 @@ function spawnTempGandalfAhead(targetCamY){
     CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
     ambientLock=false;
     fogResetAim();   
+    fogUseScreen();   // vuelve al modo normal si lo quieres así tras la cine
+
   }
 }
 
