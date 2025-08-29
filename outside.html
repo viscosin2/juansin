@@ -179,9 +179,9 @@ let NPC_IMAGES = {}, NPCS = [];
 // Catálogo de tipos de NPC (sprite, escala, collider, etc.)
 const NPC_CATALOG = {
   abuela: { 
-    src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:-2, w:20, h:10 },depthBand: 8, depthAnchorY: 1},
+    src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:-2, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
   gato1: { 
-    src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:-2, w:20, h:10 },depthBand: 8, depthAnchorY: 1}
+    src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:-2, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
 };
 
 const NPC_PLACED = {
@@ -190,7 +190,7 @@ const NPC_PLACED = {
      dialog: [{ speaker:'Abuelita', text:'Buenas tardes, Juan. ¿Has visto a mi gato?' }, { speaker:'Juan',text:'Mmm… creo que estaba por el río.' }]
     }],
   gato1: [
-    {type:'percent', x: 14, y: 87, interact: { x:-14, y: 8, w:28, h:16 }, 
+    {type:'percent', x: 23, y: 62, interact: { x:-14, y: 8, w:28, h:16 }, 
      dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
     }]
 };
