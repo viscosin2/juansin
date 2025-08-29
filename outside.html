@@ -932,8 +932,6 @@ if (AMBIENT.k > 0.001){
   ctx.restore();
 }
 
-}
-
 /* ========== LOOP / INIT ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; _nowSec = t / 1000;  update(dt); draw(); requestAnimationFrame(loop); }
 
