@@ -126,6 +126,9 @@ const BREATH = {
 };
 let _nowSec = 0;  // tiempo en segundos (lo llenamos en loop)
 
+const GAME_FLAGS = {
+  talked_gunner: false,   // se activa al hablar con el NPC de la pistola
+};
 
 /* ========== LINTERNA (opcional) ========== */
 const LIGHT = {
@@ -179,7 +182,9 @@ let NPC_IMAGES = {}, NPCS = [];
 const NPC_CATALOG = {
   abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
   gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
-  voldemort: { src: 'assets/npcs/voldemort.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
+  voldemort: { src: 'assets/npcs/voldemort.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
+  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: 10, y: -18 },fireFxMs: 140,
+  soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
 };
 
 const NPC_PLACED = {
@@ -189,8 +194,14 @@ const NPC_PLACED = {
   gato1: [{type:'percent', x: 21, y: 61, interact: { x:-14, y: 8, w:28, h:16 }, 
      dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
     }],
-  voldemort: [{type:'percent', x: 25, y: 87, interact: { x:-14, y: 8, w:28, h:16 }, 
+  voldemort: [{type:'percent', x: 87, y: 25, interact: { x:-14, y: 8, w:28, h:16 }, 
      dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
+    }],
+  soldado1: [{id:'gunner1', type:'percent', x: 12, y: 87, interact: { x:-14, y: 8, w:28, h:16 },onFire:true, 
+     dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
+    }],
+  soldado2: [{id:'guard1', type:'percent', x: 14, y: 87, interact: { x:-14, y: 8, w:28, h:16 },requiresFlag:'talked_gunner', 
+     dialogBlocked:[ {speaker:'Guardia', text:'…No tengo nada que decirte.'}], dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
     }]
 };
 
@@ -337,6 +348,7 @@ function buildNPCs(){
       const pos = (p.type === 'percent') ? percentToWorld(p) : { x:p.x, y:p.y };
       const s   = spec.scale || 1;
       const npc = {
+        id: p.id || `${type}_${Math.random().toString(36).slice(2,7)}`,
         type, img,
         x: pos.x, y: pos.y,
         iw: img ? img.naturalWidth  : 32,
@@ -345,7 +357,14 @@ function buildNPCs(){
         depthBand: spec.depthBand ?? DEPTH_BAND,
         depthAnchorY: spec.depthAnchorY ?? 0,
         dialog: Array.isArray(p.dialog) ? p.dialog : null,
-        sound: p.sound ? new Audio(p.sound) : null
+        sound: p.sound ? new Audio(p.sound) : null,
+        dialogBlocked: Array.isArray(p.dialogBlocked) ? p.dialogBlocked : null,
+        requiresFlag: p.requiresFlag || null,
+        onFire: !!p.onFire,
+        muzzleOffset: spec.muzzleOffset || {x:0,y:0},
+        fireFxMs: spec.fireFxMs || 120,
+        _fxActive: false,
+        _fxUntil: 0
       };
 
       // collider opcional (bloquea como obstáculo)
@@ -452,17 +471,36 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
     return;
   }
 
-  // 1) NPCs con diálogo/sonido
-  const npcHit = getNPCInteractHit();
-  if (npcHit){
-    if (npcHit.sound){
-      try { npcHit.sound.currentTime = 0; npcHit.sound.play(); } catch(e){}
+// 1) NPCs con diálogo / lógica especial
+const npcHit = getNPCInteractHit();
+if (npcHit){
+  // localizar el npc por id
+  const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
+  if (npc){
+    // gating por flag
+    if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
+      if (npc.dialogBlocked && npc.dialogBlocked.length){
+        openDialog(npc.dialogBlocked, true);
+      } else {
+        showToast('No parece querer hablar ahora.', 1400);
+      }
+      return;
     }
-    if (npcHit.dialog && npcHit.dialog.length){
-      openDialog(npcHit.dialog, true);
+
+    // diálogo normal
+    if (npc.dialog && npc.dialog.length){
+      openDialog(npc.dialog, true);
+    }
+
+    // efecto disparo + sonido + flag
+    if (npc.onFire){
+      triggerNPCShot(npc);
+      GAME_FLAGS.talked_gunner = true;
     }
     return;
   }
+}
+
 
   // 2) Props con "say" => toast
   const propHit = getInteractHit();
@@ -484,6 +522,25 @@ async function preloadSprites(map){
 }
 const percentToWorld=(p)=>({x:Math.round(world.w*(p.x/100)), y:Math.round(world.h*(p.y/100))});
 const lerpT=(t,dt,ms)=> (ms<=0?1: Math.min(1, t + (dt*1000)/ms));
+function triggerNPCShot(npc){
+  npc._fxActive = true;
+  npc._fxUntil  = performance.now() + npc.fireFxMs;
+
+  // sonido si existe
+  const snd = NPC_SOUNDS[npc.type];
+  if (snd){
+    try { snd.currentTime = 0; snd.play(); } catch(e){}
+  }
+}
+
+function isNPCFxActive(npc){
+  if (!npc._fxActive) return false;
+  if (performance.now() > npc._fxUntil){
+    npc._fxActive = false;
+    return false;
+  }
+  return true;
+}
 
 /* ========== LAYOUT / CÁMARA ========== */
 function resize(){
@@ -952,31 +1009,45 @@ for (const n of NPCS){
                 (jFoot > pyCut + band) ? (py - 0.5) :
                 py;
 
-  list.push({
-    y: sortY,
-    draw: ()=>{
-  if (!n.img) {
-    ctx.fillStyle = '#999';
-    ctx.fillRect(dx, dy, dw, dh);
-  } else {
-    // sombra bajo los pies
+list.push({
+  y: sortY,
+  draw: ()=>{
+    if(!n.img){ 
+      ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh);
+    } else {
+      ctx.drawImage(n.img, 0,0, n.iw,n.ih, dx,dy, dw,dh);
+    }
+
+    // sombra igual que Juan (rápida)
     const footX = Math.round(px);
-    const footY = Math.round(py);
+    const footY = Math.round(py + dh/2);
     ctx.fillStyle = 'rgba(0,0,0,.3)';
     ctx.beginPath();
-    ctx.ellipse(
-      footX, footY,        // centro
-      dw/2.5, dh/6,        // radios (ajusta a gusto)
-      0, 0, Math.PI*2
-    );
+    ctx.ellipse(footX, footY - 4, (dw/2.5), (dh/6), 0, 0, Math.PI*2);
     ctx.fill();
 
-    // sprite del NPC
-    ctx.drawImage(n.img, 0,0, n.iw,n.ih, dx,dy, dw,dh);
-  }
-}
+    // FX disparo
+    if (isNPCFxActive(n)){
+      // coordenadas del fogonazo
+      const mx = Math.round(px + (n.muzzleOffset.x * mapScaleX));
+      const my = Math.round(py + (n.muzzleOffset.y * mapScaleY));
 
-  });
+      // pequeño flash radial
+      const r = Math.max(10, 18 * Math.max(mapScaleX, mapScaleY));
+      const g = ctx.createRadialGradient(mx, my, 0, mx, my, r);
+      g.addColorStop(0, 'rgba(255, 240, 200, .95)');
+      g.addColorStop(0.5, 'rgba(255, 200, 80, .55)');
+      g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+});
+
+
+  
 }
 
   
