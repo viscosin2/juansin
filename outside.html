@@ -1014,24 +1014,30 @@ for (const n of NPCS){
 
 list.push({
   y: sortY,
-  draw: ()=>{
-    if(!n.img){ 
-      ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh);
+  draw: () => {
+    // --- sombra en el suelo (siempre debajo del sprite) ---
+    const footX = Math.round(px);
+    const footY = Math.round(py); // base real del sprite
+    const shadowW = Math.max(10, Math.round(dw / 2.4)); // ancho sombra estable
+    const shadowH = Math.max(4,  Math.round(dh / 7));   // altura sombra estable
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ctx.beginPath();
+    ctx.ellipse(footX, footY - 3, shadowW, shadowH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // --- sprite encima de su sombra ---
+    if (!n.img) {
+      ctx.fillStyle = '#999';
+      ctx.fillRect(dx, dy, dw, dh);
     } else {
-      ctx.drawImage(n.img, 0,0, n.iw,n.ih, dx,dy, dw,dh);
+      ctx.drawImage(n.img, 0, 0, n.iw, n.ih, dx, dy, dw, dh);
     }
 
-    // sombra en el suelo (siempre en el suelo)
-    const footX = Math.round(px);
-const footY = Math.round(py); // base del sprite
-ctx.fillStyle = 'rgba(0,0,0,.3)';
-ctx.beginPath();
-ctx.ellipse(footX, footY - 4, (dw/2.5), (dh/6), 0, 0, Math.PI*2);
-ctx.fill();
-
-
-    // FX disparo
-    if (isNPCFxActive(n)){
+    // --- FX disparo encima del sprite ---
+    if (isNPCFxActive(n)) {
       // coordenadas del fogonazo
       const mx = Math.round(px + (n.muzzleOffset.x * mapScaleX));
       const my = Math.round(py + (n.muzzleOffset.y * mapScaleY));
@@ -1044,11 +1050,14 @@ ctx.fill();
       g.addColorStop(1, 'rgba(255, 255, 255, 0)');
       ctx.globalCompositeOperation = 'lighter';
       ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.arc(mx, my, r, 0, Math.PI * 2);
+      ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
     }
   }
 });
+
 
 
   
