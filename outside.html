@@ -101,6 +101,7 @@ const ZOOM = 2.1;
 const START = { mode:'percent', x:7, y:81 };
 const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
 const DEBUG_OBS = false;
+const DEBUG_INTER = true;
 const DEBUG_AMBIENT = false;
 const DEPTH_BAND = 12;
 
@@ -874,7 +875,7 @@ if (AMBIENT.k > 0.001){
   }
 
   // DEBUG ZONAS INTERACCÓN
-  if (DEBUG_OBS){
+  if (DEBUG_INTER){
   ctx.save();
   ctx.globalAlpha = .45;
   ctx.fillStyle = '#33ccff';
