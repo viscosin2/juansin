@@ -1661,13 +1661,12 @@ function draw(){
       ctx.restore();
     }
   });
-
+fogDraw();
   /* ---------- PINTADO EN ORDEN ---------- */
   // 1) props detrás del jugador
   propsBack.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
 
   // 2) niebla (screen-space) entre props y actores
-  fogDraw();
 
   // 3) actores (NPCs + Juan)
   actorsList.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
