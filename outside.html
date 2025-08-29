@@ -178,7 +178,8 @@ let NPC_IMAGES = {}, NPCS = [];
 // Catálogo de tipos de NPC (sprite, escala, collider, etc.)
 const NPC_CATALOG = {
   abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
-  gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
+  gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
+  voldemort: { src: 'assets/npcs/voldemort.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
 };
 
 const NPC_PLACED = {
@@ -187,6 +188,9 @@ const NPC_PLACED = {
     }],
   gato1: [{type:'percent', x: 21, y: 61, interact: { x:-14, y: 8, w:28, h:16 }, 
      dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
+    }],
+  voldemort: [{type:'percent', x: 25, y: 87, interact: { x:-14, y: 8, w:28, h:16 }, 
+     dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
     }]
 };
 
