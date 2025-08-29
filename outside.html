@@ -1485,7 +1485,9 @@ function draw(){
   const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
   const jFoot = jy + jh/2;
 
-  const list = [];
+  const propsList = [];
+  const actorsList = []; // NPCs + jugador
+
 
   // props
   for(const p of PROPS){
@@ -1504,7 +1506,7 @@ function draw(){
                   (jFoot > pyCut + band) ? (py - 0.5) :
                   py;
 
-    list.push({
+    propsList.push({
       y: sortY,
       draw: ()=>{
         if(!p.img){ ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh); ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh); return; }
@@ -1514,6 +1516,8 @@ function draw(){
     });
   }
 
+  fogDraw();
+  
   // NPCs
 for (const n of NPCS){
   const px = screenRect.dx + (n.x - cam.x) * mapScaleX;
@@ -1531,7 +1535,7 @@ for (const n of NPCS){
                 (jFoot > pyCut + band) ? (py - 0.5) :
                 py;
 
-list.push({
+actorsList.push({
   y: sortY,
   draw: () => {
 
@@ -1583,7 +1587,7 @@ if (!n.img) {
 }
 
   // jugador con “respiración” en idle (pies pegados al suelo)
-list.push({
+actorsList.push({
   y: jFoot,
   draw: () => {
     const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
@@ -1619,8 +1623,6 @@ list.push({
     ctx.restore();
   }
 });
-
-  fogDraw();
 
   // pintar ordenado
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
