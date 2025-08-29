@@ -494,6 +494,13 @@ function closeDialog(){
     ambientLockOwner = null;
   }
 }
+
+  function closeCurrentDialogNow(){
+  if (!dialogOpen) return;
+  if (isTyping) advanceDialog();  // termina de escribir
+  if (dialogOpen) advanceDialog(); // y cierra
+}
+
 function renderCurrentLine(startTyping=false){
   const line = dialogScript[dialogIndex] || {speaker:'', text:''};
   dialogNameEl.textContent = line.speaker || '';
@@ -1097,16 +1104,31 @@ function update(dt){
   player.moving = false;
 
   // 1) Espera 1s y muestra "¿Qué pasa?"
+setTimeout(()=>{
+  if (!CUT.active || CUT.id!=='cine1') return;
+
+  const line = {speaker:'Juan', text:'¿Qué pasa?'};
+  openDialog([line], true);
+
+  // a) si el jugador toca Acción UNA vez -> cerrar y pasar
+  CUT.hijackAction = ()=>{
+    closeCurrentDialogNow();
+    CUT.hijackAction = null;
+    phaseFogAndPan();
+  };
+
+  // b) auto-avance sin tocar nada (cuando acabe de “tipear” + pequeña pausa)
+  const autoMs = Math.max(800, line.text.length * typingSpeed + 250);
   setTimeout(()=>{
-    if (!CUT.active || CUT.id!=='cine1') return;
-    openDialog([{speaker:'Juan', text:'¿Qué pasa?'}], true);
-    // Avance con acción: cerrar ese diálogo y seguir
-    CUT.hijackAction = ()=>{
-      if (dialogOpen){ advanceDialog(); return; }
-      CUT.hijackAction = null;
-      phaseFogAndPan();
-    };
-  }, 1000);
+    if (!CUT.active || CUT.id!=='cine1') return;         // safety
+    if (CUT.hijackAction === null) return;               // ya avanzamos por acción
+    closeCurrentDialogNow();
+    CUT.hijackAction = null;
+    phaseFogAndPan();
+  }, autoMs);
+
+}, 1000);
+
 
   function phaseFogAndPan(){
     CUT.phase = 'fog';
