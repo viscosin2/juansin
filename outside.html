@@ -1487,7 +1487,6 @@ function draw(){
 
   const list = [];
 
-  fogDraw();
   // props
   for(const p of PROPS){
     const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
@@ -1636,7 +1635,7 @@ if (AMBIENT.k > 0.001){
 }
   /* --- LINTERNA encima --- */
   drawFlashlightEnhance();
-
+fogDraw();
 
   // DEBUG AMBIENT
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
