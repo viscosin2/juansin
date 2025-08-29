@@ -1280,6 +1280,7 @@ requestAnimationFrame(check);
 function phaseCameraPan(){
   CUT.phase='pan';
   const targetY = clamp(cam.y - 70, 0, world.h - cam.h);
+  
 
   cameraPanTo(cam.x, targetY, 1200);
   spawnTempGandalfAhead(targetY);
@@ -1288,7 +1289,6 @@ function phaseCameraPan(){
     if (!CAM_TWEEN.on){
       clearInterval(waitPan);
 
-      // 👉 en vez de autowalk directo, sacamos el "?" primero
       CUT.phase = 'preWalkDialog';
       openDialog([{speaker:'Juan', text:'?'}], true);
 
@@ -1327,7 +1327,7 @@ function spawnTempGandalfAhead(targetCamY){
   const targetY = cam.y + cam.h/2;
   const startY  = player.y;
   const dy = targetY - startY;
-  const dur = Math.max(400, Math.min(1200, Math.abs(dy)*6));
+  const dur = Math.max(400, Math.min(1200, Math.abs(dy)*12));
   const t0  = performance.now();
 
   (function step(){
