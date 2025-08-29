@@ -377,15 +377,18 @@ function buildNPCs(){
 
       // zona de interacción para abrir diálogo
       if (p.interact){
-        const i = p.interact;
-        npc.interacts = [{
-          x: npc.x + i.x*s,
-          y: npc.y + (i.y*s) - (i.h*s),
-          w: i.w*s, h: i.h*s,
-          dialog: npc.dialog,
-          sound: npc.sound
-        }];
-      }
+  const i = p.interact;
+  npc.interacts = [{
+    x: npc.x + i.x*s,
+    y: npc.y + (i.y*s) - (i.h*s),
+    w: i.w*s,
+    h: i.h*s,
+    npcRefId: npc.id,     // << clave para que el handler encuentre al NPC
+    dialog: npc.dialog,
+    sound: npc.sound
+  }];
+}
+
 
       NPCS.push(npc);
     }
@@ -1019,12 +1022,13 @@ list.push({
     }
 
     // sombra en el suelo (siempre en el suelo)
-    const footX = Math.round(dx);
-    const footY = Math.round(dy + dh/2);
-    ctx.fillStyle = 'rgba(0,0,0,.3)';
-    ctx.beginPath();
-    ctx.ellipse(footX, footY - 4, dw/2.5, dh/6, 0, 0, Math.PI*2);
-    ctx.fill();  
+    const footX = Math.round(px);
+const footY = Math.round(py); // base del sprite
+ctx.fillStyle = 'rgba(0,0,0,.3)';
+ctx.beginPath();
+ctx.ellipse(footX, footY - 4, (dw/2.5), (dh/6), 0, 0, Math.PI*2);
+ctx.fill();
+
 
     // FX disparo
     if (isNPCFxActive(n)){
