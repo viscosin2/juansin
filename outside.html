@@ -29,6 +29,19 @@
     background:url("assets/ui/action_btn.PNG") center/contain no-repeat; image-rendering:pixelated; transform:scale(1.02);
   }
 
+  #blackfade{
+  position:fixed; inset:0;
+  background:#000;
+  z-index:9999;
+  opacity:1;
+  transition: opacity 1.5s ease; /* duración del fade */
+}
+#blackfade.hide{
+  opacity:0;
+  pointer-events:none;
+}
+
+
   /* Toast */
   .toast{
     position:absolute; top:19px; left:50%; transform:translateX(-50%);
@@ -57,6 +70,7 @@
 <div class="gameboy">
   <div class="screen-container">
     <div class="screen">
+      <div id="blackfade"></div>
       <div id="toast" class="toast"></div>
 
       <div id="dialog" class="dialog">
@@ -854,6 +868,9 @@ async function init(){
 AMBIENT.alphas  = { peach:1, bluehour:0, hell:0 };
 AMBIENT.targets = { peach:1, bluehour:0, hell:0 };
   requestAnimationFrame(loop);
+  // fade negro inicial
+setTimeout(()=> document.getElementById('blackfade').classList.add('hide'), 100);
+
 }
 init();
 </script>
