@@ -1277,24 +1277,30 @@ requestAnimationFrame(check);
 
 
 
-  function phaseCameraPan(){
+function phaseCameraPan(){
   CUT.phase='pan';
   const targetY = clamp(cam.y - 70, 0, world.h - cam.h);
 
-  // 1) Pan SOLO cámara
   cameraPanTo(cam.x, targetY, 1200);
-
-  // 2) Spawnea a Gandalf mini ya pensando en el encuadre destino
   spawnTempGandalfAhead(targetY);
 
-  // 3) Espera al fin del pan
   const waitPan = setInterval(()=>{
     if (!CAM_TWEEN.on){
       clearInterval(waitPan);
-      phaseJuanAutoWalk();
+
+      // 👉 en vez de autowalk directo, sacamos el "?" primero
+      CUT.phase = 'preWalkDialog';
+      openDialog([{speaker:'Juan', text:'?'}], true);
+
+      CUT.hijackAction = ()=>{
+        if (dialogOpen){ advanceDialog(); return; }
+        CUT.hijackAction = null;
+        phaseJuanAutoWalk();   // ahora sí, camina después de cerrar el "?"
+      };
     }
   }, 16);
 }
+
 
 function spawnTempGandalfAhead(targetCamY){
   const gx = player.x;
@@ -1335,25 +1341,25 @@ function spawnTempGandalfAhead(targetCamY){
 
 
   function phaseWorldDialogue(){
-    CUT.phase='worldTalk';
-    const script = [
-      {speaker:'Juan', text:'?'},
-      {speaker:'???',  text:'Hola, muchacho.'},
-      {speaker:'Juan', text:'No me digas que eres...'}
-    ];
-    let idx = 0;
-    openDialog([script[idx]], true);
-    CUT.hijackAction = ()=>{
-      if (dialogOpen){ advanceDialog(); return; }
-      idx++;
-      if (idx < script.length){
-        openDialog([script[idx]], true);
-      } else {
-        CUT.hijackAction = null;
-        phasePortraits();
-      }
-    };
-  }
+  CUT.phase='worldTalk';
+  const script = [
+    {speaker:'???',  text:'Hola, muchacho.'},
+    {speaker:'Juan', text:'No me digas que eres...'}
+  ];
+  let idx = 0;
+  openDialog([script[idx]], true);
+  CUT.hijackAction = ()=>{
+    if (dialogOpen){ advanceDialog(); return; }
+    idx++;
+    if (idx < script.length){
+      openDialog([script[idx]], true);
+    } else {
+      CUT.hijackAction = null;
+      phasePortraits();
+    }
+  };
+}
+
 
   function phasePortraits(){
     CUT.phase='cineOverlay';
