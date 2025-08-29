@@ -108,6 +108,45 @@ const DEBUG_INTER = false;
 const DEBUG_AMBIENT = false;
 const DEPTH_BAND = 12;
 
+/* ====== BACKBUFFER para blur en modo cine ====== */
+let BACKBUF = document.createElement('canvas');
+let BACKCTX = BACKBUF.getContext('2d');
+
+/* ====== ESTADO CINEMÁTICA ====== */
+const CUT = {
+  active: false,        // hay cinemática en curso (bloquea input libre)
+  id: null,             // 'cine1'...
+  phase: null,          // subfase
+  hijackAction: null,   // handler para el botón de acción durante la cine
+  onEnd: null           // callback al terminar
+};
+
+/* ====== FOG (partículas de niebla) ====== */
+const FOG = {
+  active: false,
+  parts: [],              // {x,y, r, vx, vy, alpha, life, side}
+  spawnLeft:  true,
+  spawnRight: true,
+  color: '255,255,255',
+  density: 0.9,           // 0..1
+  zIndex: 'behindChars'   // se dibuja antes que NPC y Juan
+};
+
+/* ====== CAMERA TWEEN ====== */
+const CAM_TWEEN = {
+  on: false, t:0, dur:1000, sx:0, sy:0, ex:0, ey:0
+};
+
+/* ====== PORTRAITS (modo cine) ====== */
+const PORTRAITS = {
+  active:false,
+  blurPx: 3,
+  left:  { img:null, x:-9999, targetX:0, y:0, w:0, h:0, side:'left',  name:'', lines:[] },
+  right: { img:null, x: 9999, targetX:0, y:0, w:0, h:0, side:'right', name:'', lines:[] },
+  script: [],    // [{speaker:'Gandalf', text:'...'}, ...]
+  idx: 0
+};
+  
   const DEFAULT_SHADOW = {
   alpha: 0.30,     // opacidad
   offsetY: -3,     // cuánto “sube”/“baja” desde el pie
@@ -150,9 +189,29 @@ const LIGHT = {
   tint: '255,230,180'
 };
 
-  
+  let IMG_GANDALF = null, IMG_JUAN_BIG = null;
+async function preloadPortraits(){
+  IMG_GANDALF = await loadImage('assets/characters/gandalf_big.PNG');
+  IMG_JUAN_BIG = await loadImage('assets/characters/juan_big.PNG');
+}
 
-/* ========== AMBIENTE (alphas por paleta, sin saltos) ========== */
+  // ------------------------ ZONAS CINE
+  const CINE_ZONES = [
+  { id:'cine1', rect:{type:'percent', x:26, y:33, w:10, h:8}, _done:false }
+];
+  function buildCineZones(){
+  return CINE_ZONES.map(z=>{
+    const r = z.rect;
+    const out = (r.type==='percent')
+      ? { x: Math.round(world.w*(r.x/100)), y:Math.round(world.h*(r.y/100)),
+          w: Math.round(world.w*(r.w/100)), h:Math.round(world.h*(r.h/100)) }
+      : { x:r.x, y:r.y, w:r.w, h:r.h };
+    return {...z, ...out};
+  });
+}
+let CINE_BUILT = [];
+
+/* ========== ZONAS AMBIENTE (alphas por paleta, sin saltos) ========== */
 const AMBIENT = {
   k: 0,            // intensidad global (sube en la intro)
   introMs: 1200,   // fade-in inicial de k
@@ -190,7 +249,7 @@ const NPC_CATALOG = {
   abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -15, y: -12 },fireFxMs: 140},shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },
+  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },fireFxMs: 140},shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }}
 };
 
@@ -336,8 +395,11 @@ function showToast(msg, ms=1800){
   clearTimeout(showToast._to);
   showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
 }
+
   
 /* ====== NPCS ====== */
+
+  
   async function preloadNPCs(){
   const entries = Object.entries(NPC_CATALOG);
   const res = await Promise.all(entries.map(([k,v]) => loadImage(v.src).then(img => [k,img])));
@@ -477,6 +539,11 @@ function advanceDialog(){
 }
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
+  if (CUT.active && typeof CUT.hijackAction === 'function'){
+    CUT.hijackAction();
+    return;
+  }
+  
   if (dialogOpen){
     advanceDialog();
     return;
@@ -557,6 +624,157 @@ function isNPCFxActive(npc){
   return true;
 }
 
+
+
+  // -------------------- FUNCIONES NIEBLA
+  
+  function fogStart(){ FOG.active = true; FOG.parts.length = 0; }
+function fogStop(){ FOG.active = false; FOG.parts.length = 0; }
+
+function fogSpawn(dt){
+  if (!FOG.active) return;
+  const rate = 120 * FOG.density * dt; // partículas/seg aprox
+  const toSpawn = Math.floor(rate);
+  for (let i=0;i<toSpawn;i++){
+    // lado aleatorio entre los activos
+    const side = (FOG.spawnLeft && FOG.spawnRight) ? (Math.random()<0.5?'L':'R') : (FOG.spawnLeft?'L':'R');
+    const r = 6 + Math.random()*18;
+    const y = screenRect.dy + Math.random()*screenRect.dh;
+    const x = (side==='L') ? screenRect.dx - r*2 : screenRect.dx + screenRect.dw + r*2;
+    const vx = (side==='L') ? (12 + Math.random()*24) : -(12 + Math.random()*24);
+    const vy = (Math.random()-0.5)*6;
+    FOG.parts.push({x,y,r,vx,vy,alpha:0.12+Math.random()*0.20, life: 2.5+Math.random()*2.5, side});
+  }
+}
+
+function fogUpdate(dt){
+  if (!FOG.active) return;
+  fogSpawn(dt);
+  for (let i=FOG.parts.length-1;i>=0;i--){
+    const p=FOG.parts[i];
+    p.x += p.vx*dt;
+    p.y += p.vy*dt;
+    p.life -= dt;
+    if(p.life<=0 || p.x < screenRect.dx-60 || p.x > screenRect.dx+screenRect.dw+60){
+      FOG.parts.splice(i,1);
+    }
+  }
+}
+
+function fogDraw(){
+  if (!FOG.active || !FOG.parts.length) return;
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (const p of FOG.parts){
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+    g.addColorStop(0, `rgba(${FOG.color}, ${p.alpha})`);
+    g.addColorStop(1, `rgba(255,255,255, 0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+
+  function portraitsOpen(script){
+  PORTRAITS.active = true;
+  PORTRAITS.script = script.slice();
+  PORTRAITS.idx = 0;
+
+  // posición base
+  const H = screenRect.dh;
+  const centerY = screenRect.dy + H*0.62;
+
+  // imagenes ya precargadas:
+  PORTRAITS.left.img  = IMG_GANDALF;
+  PORTRAITS.left.w    = Math.round(IMG_GANDALF.naturalWidth  * 0.9);
+  PORTRAITS.left.h    = Math.round(IMG_GANDALF.naturalHeight * 0.9);
+  PORTRAITS.left.y    = centerY;
+  PORTRAITS.left.x    = screenRect.dx - PORTRAITS.left.w;         // fuera por la izq
+  PORTRAITS.left.targetX = screenRect.dx + 24;                     // dentro
+
+  PORTRAITS.right.img = IMG_JUAN_BIG;
+  PORTRAITS.right.w   = Math.round(IMG_JUAN_BIG.naturalWidth  * 0.9);
+  PORTRAITS.right.h   = Math.round(IMG_JUAN_BIG.naturalHeight * 0.9);
+  PORTRAITS.right.y   = centerY;
+  PORTRAITS.right.x   = screenRect.dx + screenRect.dw + PORTRAITS.right.w; // fuera dcha
+  PORTRAITS.right.targetX = screenRect.dx + screenRect.dw - PORTRAITS.right.w - 24;
+
+  // primer turno lo “habla” el que toque
+  portraitsApplyTurn();
+  CUT.hijackAction = portraitsNext;
+}
+
+function portraitsApplyTurn(){
+  const line = PORTRAITS.script[PORTRAITS.idx] || {speaker:'', text:''};
+  // pre-slide del que habla
+  if (line.speaker === 'Gandalf'){
+    PORTRAITS.left.x = PORTRAITS.left.x*0.6 + PORTRAITS.left.targetX*0.4; // pequeña entrada instantánea
+  } else {
+    PORTRAITS.right.x = PORTRAITS.right.x*0.6 + PORTRAITS.right.targetX*0.4;
+  }
+  // abre diálogo normal con tu UI (reusa openDialog)
+  openDialog([line], true);
+}
+
+function portraitsNext(){
+  if (dialogOpen){ advanceDialog(); return; } // cierra tipado primero
+  PORTRAITS.idx++;
+  if (PORTRAITS.idx < PORTRAITS.script.length){
+    portraitsApplyTurn();
+  } else {
+    // fin modo cine
+    PORTRAITS.active = false;
+    CUT.hijackAction = null;
+    closeDialog();
+    if (typeof CUT.onEnd === 'function') CUT.onEnd();
+  }
+}
+
+function portraitsUpdate(dt){
+  if (!PORTRAITS.active) return;
+  // deslizar suavemente hacia target
+  const lerp = (a,b,k)=> a+(b-a)*Math.min(1,k);
+  PORTRAITS.left.x  = lerp(PORTRAITS.left.x,  PORTRAITS.left.targetX,  dt*4);
+  PORTRAITS.right.x = lerp(PORTRAITS.right.x, PORTRAITS.right.targetX, dt*4);
+}
+
+function portraitsDrawOverlay(){
+  if (!PORTRAITS.active) return;
+
+  // 1) Copia frame actual y dibuja blur encima
+  BACKCTX.clearRect(0,0,BACKBUF.width,BACKBUF.height);
+  BACKCTX.drawImage(canvas,0,0);
+  ctx.save();
+  ctx.filter = `blur(${PORTRAITS.blurPx}px)`;
+  ctx.drawImage(BACKBUF,0,0);
+  ctx.filter = 'none';
+
+  // oscurecer un poco
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.restore();
+
+  // 2) Dibujar retratos
+  // izquierda
+  if (PORTRAITS.left.img){
+    const lx = Math.round(PORTRAITS.left.x);
+    const ly = Math.round(PORTRAITS.left.y - PORTRAITS.left.h);
+    ctx.drawImage(PORTRAITS.left.img, 0,0, PORTRAITS.left.img.naturalWidth, PORTRAITS.left.img.naturalHeight,
+                  lx, ly, PORTRAITS.left.w, PORTRAITS.left.h);
+  }
+  // derecha
+  if (PORTRAITS.right.img){
+    const rx = Math.round(PORTRAITS.right.x);
+    const ry = Math.round(PORTRAITS.right.y - PORTRAITS.right.h);
+    ctx.drawImage(PORTRAITS.right.img, 0,0, PORTRAITS.right.img.naturalWidth, PORTRAITS.right.img.naturalHeight,
+                  rx, ry, PORTRAITS.right.w, PORTRAITS.right.h);
+  }
+}
+
+
 /* ========== LAYOUT / CÁMARA ========== */
 function resize(){
   const sc=document.querySelector('.screen');
@@ -569,12 +787,23 @@ function resize(){
   cam.h=Math.max(64,Math.round(ROOM.h/ZOOM));
   mapScaleX=screenRect.dw/cam.w; mapScaleY=screenRect.dh/cam.h;
   cam.x=clamp(cam.x,0,world.w-cam.w); cam.y=clamp(cam.y,0,world.h-cam.h);
+  BACKBUF.width  = canvas.width;
+  BACKBUF.height = canvas.height;
+
 }
 addEventListener('resize',resize);
 function centerCameraOnPlayer(){
   cam.x=clamp(player.x-cam.w/2,0,world.w-cam.w);
   cam.y=clamp(player.y-cam.h/2,0,world.h-cam.h);
 }
+
+  function cameraPanTo(x, y, ms=1200){
+  CAM_TWEEN.on = true; CAM_TWEEN.t = 0; CAM_TWEEN.dur = ms;
+  CAM_TWEEN.sx = cam.x; CAM_TWEEN.sy = cam.y;
+  CAM_TWEEN.ex = clamp(x, 0, world.w - cam.w);
+  CAM_TWEEN.ey = clamp(y, 0, world.h - cam.h);
+}
+
 
 /* ========== COLISIÓN ========== */
 function ellipseRectOverlap(cx, cy, rx, ry, rect){
@@ -806,6 +1035,7 @@ function cornerSlide(targetX, targetY, vx, vy){
   }
   return false;
 }
+  
 function nudgeOut(){
   let moved = false;
   for(const ob of OBSTACLES){
@@ -858,6 +1088,107 @@ function update(dt){
     centerCameraOnPlayer();
   }
 
+  //////////////////////////////////// FUNCIONES CINEMATICA 1
+
+  function startCinematic1(){
+  CUT.active = true; CUT.id = 'cine1'; CUT.phase = 'lockAndWait';
+  ambientLock = true; // bloquea movimiento libre
+  player.moving = false;
+
+  // 1) Espera 1s y muestra "¿Qué pasa?"
+  setTimeout(()=>{
+    if (!CUT.active || CUT.id!=='cine1') return;
+    openDialog([{speaker:'Juan', text:'¿Qué pasa?'}], true);
+    // Avance con acción: cerrar ese diálogo y seguir
+    CUT.hijackAction = ()=>{
+      if (dialogOpen){ advanceDialog(); return; }
+      CUT.hijackAction = null;
+      phaseFogAndPan();
+    };
+  }, 1000);
+
+  function phaseFogAndPan(){
+    CUT.phase = 'fog';
+    fogStart();
+    // paneo hacia adelante (sin mover a Juan) ~ descubre personaje
+    const targetCamY = clamp(cam.y - 40, 0, world.h - cam.h);
+    cameraPanTo(cam.x, targetCamY, 1400);
+
+    // tras 1.6s, hacemos mini-autowalk de Juan frente al personaje
+    setTimeout(()=>{
+      CUT.phase = 'approach';
+      // mueve a Juan un poco hacia adelante (50 px en 700ms)
+      const startY = player.y, endY = player.y - 50;
+      const t0 = performance.now(), dur=700;
+      function step(){
+        if (!CUT.active || CUT.id!=='cine1') return;
+        const t = (performance.now()-t0)/dur;
+        const k = Math.min(1, t);
+        player.y = startY + (endY - startY)*k;
+        if (k<1) requestAnimationFrame(step);
+        else phaseWorldDialogue();
+      }
+      requestAnimationFrame(step);
+    }, 1600);
+  }
+
+  function phaseWorldDialogue(){
+    CUT.phase = 'worldTalk';
+    // personaje misterioso + Juan (mundo pixel)
+    openDialog([
+      {speaker:'???', text:'Hola, muchacho.'},
+      {speaker:'Juan', text:'No me digas que eres...'}
+    ], true);
+
+    CUT.hijackAction = ()=>{
+      advanceDialog();
+      if (!dialogOpen){
+        CUT.hijackAction = null;
+        phasePortraits();
+      }
+    }
+  }
+
+  function phasePortraits(){
+    CUT.phase = 'portraits';
+    // Script de la cine (PNG grandes). Empieza Gandalf a la izquierda
+    const script = [
+      { speaker:'Gandalf', text:'En efecto, soy Gandalf el Gris.' },
+      { speaker:'Juan',    text:'Wow.' }
+    ];
+
+    portraitsOpen(script);
+
+    CUT.onEnd = ()=>{
+      // cerrar cine → desvanecer niebla y fin
+      CUT.onEnd = null;
+      fadeOutFogThenEnd();
+    };
+  }
+
+  function fadeOutFogThenEnd(){
+    // desvanece la niebla en ~800ms
+    let t=0, dur=800; const parts0 = FOG.parts.slice();
+    const tick = (ts0=>{
+      return function raf(ts){
+        const dt = ts - ts0; ts0 = ts;
+        t += dt;
+        const k = Math.min(1, t/dur);
+        for (const p of FOG.parts) p.alpha *= (1 - k*0.9);
+        if (k<1) requestAnimationFrame(rafTick = tick(ts0));
+        else { fogStop(); endCine(); }
+      }
+    })(performance.now());
+    let rafTick = requestAnimationFrame(tick);
+  }
+
+  function endCine(){
+    CUT.active=false; CUT.id=null; CUT.phase=null;
+    ambientLock=false;
+  }
+}
+
+
   // Movimiento
   const wantsToMove = !!(vx || vy);
   player.moving = !ambientLock && wantsToMove;
@@ -889,7 +1220,31 @@ function update(dt){
   }
 
   if (!ambientLock) nudgeOut();
+
+  if (!CUT.active){
+  const feet = feetWorld();
+  const trigger = CINE_BUILT.find(z=> !z._done && feet.x>=z.x && feet.x<=z.x+z.w && feet.y>=z.y && feet.y<=z.y+z.h );
+  if (trigger && trigger.id==='cine1'){
+    trigger._done = true;
+    startCinematic1();
+    return;
+  }
+}
+
+if (CAM_TWEEN.on){
+  CAM_TWEEN.t = Math.min(1, CAM_TWEEN.t + dt*1000 / CAM_TWEEN.dur);
+  const ease = (x)=> x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2; // easeInOutQuad
+  const k = ease(CAM_TWEEN.t);
+  cam.x = CAM_TWEEN.sx + (CAM_TWEEN.ex - CAM_TWEEN.sx)*k;
+  cam.y = CAM_TWEEN.sy + (CAM_TWEEN.ey - CAM_TWEEN.sy)*k;
+  if (CAM_TWEEN.t >= 1) CAM_TWEEN.on = false;
+}
+
+  
   centerCameraOnPlayer();
+  fogUpdate(dt);
+  portraitsUpdate(dt);
+
 
   // Zonas
   const feet = feetWorld();
@@ -1006,6 +1361,9 @@ function draw(){
       }
     });
   }
+
+
+  fogDraw();
 
   // NPCs
 for (const n of NPCS){
@@ -1202,10 +1560,8 @@ if (DEBUG_INTER){
 }
 
 
+portraitsDrawOverlay();
 
-
-
-  
   }
 /* ========== LOOP / INIT ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; _nowSec = t / 1000;  update(dt); draw(); requestAnimationFrame(loop); }
@@ -1214,10 +1570,11 @@ async function init(){
   const [bg,spr] = await Promise.all([loadImage(BG_SRC), preloadSprites(JUAN)]);
   bgImg=bg; sprites=spr;
   await preloadCatalog();
-    await preloadNPCs();          // << NUEVO
-
+  await preloadNPCs();
+  await preloadPortraits(); 
 
   world.w=bgImg.naturalWidth; world.h=bgImg.naturalHeight;
+  CINE_BUILT = buildCineZones();
   AMBIENT_BUILT = buildAmbientZones();
   resize();
 
