@@ -139,7 +139,7 @@ const FOG = {
 
   // banda superior (solo arriba)
   bandTop:    0.08,   // 8% desde arriba
-  bandBottom: 0.50    // hasta mitad de pantalla aprox
+  bandBottom: 0.50,_densityScale: 1   // hasta mitad de pantalla aprox
 };
 
 
@@ -659,12 +659,38 @@ function fogStop(){
   FOG.filling=false; FOG.tFill=0;
 }
 
-function fogBeginFill(ms=FOG.fillDur){
-  FOG.fillDur = ms;
+function fogBeginFill(opts = FOG.fillDur){
+  // Compatibilidad: si te pasan un número, es la duración
+  if (typeof opts === 'number'){
+    FOG.fillDur = opts;
+  } else if (opts && typeof opts === 'object'){
+    FOG.fillDur = opts.dur ?? FOG.fillDur;
+    // ancla opcional (en coordenadas de pantalla porque las partículas son "screen-space")
+    if (opts.anchor){
+      // anchor {x,y} en pantalla
+      FOG.anchor = { x: opts.anchor.x, y: opts.anchor.y };
+    } else {
+      // por defecto, ancla al centro-alto de la pantalla útil
+      FOG.anchor = {
+        x: screenRect.dx + screenRect.dw * 0.5,
+        y: screenRect.dy + screenRect.dh * 0.25
+      };
+    }
+    // ancho/alto del área del velo
+    if (opts.areaW) FOG.areaW = opts.areaW;
+    if (opts.areaH) FOG.areaH = opts.areaH;
+    // densidad "lógica" (escala la targetDensity si quieres)
+    if (opts.density != null){
+      // ejemplo: 1.0 = igual, 0.5 = mitad, 2.0 = doble
+      FOG._densityScale = opts.density;
+    }
+  }
+
   FOG.filling = true;
   FOG.tFill   = 0;
   if (!FOG.active) fogStart();
 }
+
 
 function spawnFogParticle(side){
   // y restringido a la banda alta
@@ -707,7 +733,8 @@ function fogUpdate(dt){
     spawnScale = smoothstep(0.0, 1.0, t);
     if (t>=1) FOG.filling = false;
   }
-  const spawnRate = FOG.targetDensity * spawnScale;
+  const spawnRate = FOG.targetDensity * (FOG._densityScale || 1) * spawnScale;
+
 
   // emitir simétrico por lados
   const want = spawnRate * dt;
@@ -1497,10 +1524,11 @@ function draw(){
   const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
   const jFoot = jy + jh/2;
 
-  const propsList = [];
+  const propsBack = [];
+  const propsFront = [];
   const actorsList = []; // NPCs + jugador
 
-  /* ---------- PROPS -> propsList ---------- */
+  /* ---------- PROPS -> propsBack/propsFront ---------- */
   for (const p of PROPS){
     const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
     const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
@@ -1510,15 +1538,23 @@ function draw(){
     const spec = CATALOG[p.type] || {};
     const band = spec.depthBand ?? DEPTH_BAND;
     const anchor = (spec.depthAnchorY ?? 0) * mapScaleY;
-    const pyCut = py + anchor;
+    const pyCut = py + anchor; // "línea de apoyo" del prop
 
-    const sortY = spec.forceBack ? -9999 :
-                  (jFoot < pyCut - band) ? (py + 0.5) :
-                  (jFoot > pyCut + band) ? (py - 0.5) :
-                  py;
+    // Forzado atrás (río, etc.)
+    let goesFront;
+    if (spec.forceBack){
+      goesFront = false;
+    } else {
+      // decide si el prop va delante o detrás del jugador
+      goesFront = (jFoot < (pyCut - band)) ? true
+                : (jFoot > (pyCut + band)) ? false
+                : (pyCut > jFoot); // zona gris: decide por base
+    }
 
-    propsList.push({
-      y: sortY,
+    const bucket = goesFront ? propsFront : propsBack;
+
+    bucket.push({
+      y: py, // ordena por base real dentro del bucket
       draw(){
         if(!p.img){
           ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh);
@@ -1627,9 +1663,17 @@ function draw(){
   });
 
   /* ---------- PINTADO EN ORDEN ---------- */
-  propsList.sort((a,b)=>a.y - b.y).forEach(it=>it.draw()); // props primero
-  fogDraw();                                                // NIEBLA encima de props
-  actorsList.sort((a,b)=>a.y - b.y).forEach(it=>it.draw()); // NPCs + Juan encima
+  // 1) props detrás del jugador
+  propsBack.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
+
+  // 2) niebla (screen-space) entre props y actores
+  fogDraw();
+
+  // 3) actores (NPCs + Juan)
+  actorsList.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
+
+  // 4) props por delante del jugador
+  propsFront.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
 
   ctx.restore();
 
@@ -1737,6 +1781,7 @@ function draw(){
   // --- Retratos / cine overlay al final del todo ---
   portraitsDrawOverlay();
 }
+
 
 
 
