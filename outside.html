@@ -1488,9 +1488,8 @@ function draw(){
   const propsList = [];
   const actorsList = []; // NPCs + jugador
 
-
-  // props
-  for(const p of PROPS){
+  /* ---------- PROPS -> propsList ---------- */
+  for (const p of PROPS){
     const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
     const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
     const dw = Math.round(p.iw * p.scale * mapScaleX);
@@ -1508,139 +1507,133 @@ function draw(){
 
     propsList.push({
       y: sortY,
-      draw: ()=>{
-        if(!p.img){ ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh); ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh); return; }
-        if(spec.flipX){ ctx.save(); ctx.scale(-1,1); ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh); ctx.restore(); }
-        else { ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh); }
+      draw(){
+        if(!p.img){
+          ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh);
+          ctx.strokeStyle='#222'; ctx.strokeRect(dx,dy,dw,dh);
+          return;
+        }
+        if(spec.flipX){
+          ctx.save(); ctx.scale(-1,1);
+          ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh);
+          ctx.restore();
+        } else {
+          ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
+        }
       }
     });
   }
 
-  fogDraw();
-  
-  // NPCs
-for (const n of NPCS){
-  const px = screenRect.dx + (n.x - cam.x) * mapScaleX;
-  const py = screenRect.dy + (n.y - cam.y) * mapScaleY;
-  const dw = Math.round(n.iw * n.scale * mapScaleX);
-  const dh = Math.round(n.ih * n.scale * mapScaleY);
-  const dx = Math.round(px - dw/2);
-  const dy = Math.round(py - dh);
+  /* ---------- NPCs -> actorsList ---------- */
+  for (const n of NPCS){
+    const px = screenRect.dx + (n.x - cam.x) * mapScaleX;
+    const py = screenRect.dy + (n.y - cam.y) * mapScaleY;
+    const dw = Math.round(n.iw * n.scale * mapScaleX);
+    const dh = Math.round(n.ih * n.scale * mapScaleY);
+    const dx = Math.round(px - dw/2);
+    const dy = Math.round(py - dh);
 
-  const band   = n.depthBand ?? DEPTH_BAND;
-  const anchor = (n.depthAnchorY ?? 0) * mapScaleY;
-  const pyCut  = py + anchor;
+    const band   = n.depthBand ?? DEPTH_BAND;
+    const anchor = (n.depthAnchorY ?? 0) * mapScaleY;
+    const pyCut  = py + anchor;
 
-  const sortY = (jFoot < pyCut - band) ? (py + 0.5) :
-                (jFoot > pyCut + band) ? (py - 0.5) :
-                py;
+    const sortY = (jFoot < pyCut - band) ? (py + 0.5) :
+                  (jFoot > pyCut + band) ? (py - 0.5) :
+                  py;
 
-actorsList.push({
-  y: sortY,
-  draw: () => {
+    actorsList.push({
+      y: sortY,
+      draw(){
+        // sombra
+        const sh = (n.shadow || DEFAULT_SHADOW);
+        const footX = Math.round(px);
+        const footY = Math.round(py);
+        const shadowW = Math.max(6, Math.round(dw * sh.scaleX));
+        const shadowH = Math.max(3, Math.round(dh * sh.scaleY));
 
-const sh = (n.shadow || DEFAULT_SHADOW);
-const footX = Math.round(px);
-const footY = Math.round(py); // base real del sprite
-const shadowW = Math.max(6, Math.round(dw * sh.scaleX));
-const shadowH = Math.max(3, Math.round(dh * sh.scaleY));
+        ctx.save();
+        ctx.globalAlpha = sh.alpha;
+        ctx.fillStyle = 'black';
+        ctx.beginPath();
+        ctx.ellipse(footX, footY + sh.offsetY, shadowW, shadowH, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
-ctx.save();
-ctx.globalAlpha = sh.alpha;
-ctx.fillStyle = 'black';
-ctx.beginPath();
-ctx.ellipse(footX, footY + sh.offsetY, shadowW, shadowH, 0, 0, Math.PI * 2);
-ctx.fill();
-ctx.restore();
+        // sprite
+        if (!n.img) {
+          ctx.fillStyle = '#999'; ctx.fillRect(dx, dy, dw, dh);
+        } else {
+          ctx.drawImage(n.img, 0, 0, n.iw, n.ih, dx, dy, dw, dh);
+        }
 
-// --- sprite encima ---
-if (!n.img) {
-  ctx.fillStyle = '#999';
-  ctx.fillRect(dx, dy, dw, dh);
-} else {
-  ctx.drawImage(n.img, 0, 0, n.iw, n.ih, dx, dy, dw, dh);
-}
+        // FX disparo
+        if (isNPCFxActive(n)) {
+          const mx = Math.round(px + (n.muzzleOffset.x * mapScaleX));
+          const my = Math.round(py + (n.muzzleOffset.y * mapScaleY));
+          const r = Math.max(10, 18 * Math.max(mapScaleX, mapScaleY));
+          const g = ctx.createRadialGradient(mx, my, 0, mx, my, r);
+          g.addColorStop(0, 'rgba(255, 240, 200, .95)');
+          g.addColorStop(0.5, 'rgba(255, 200, 80, .55)');
+          g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.fillStyle = g;
+          ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI * 2); ctx.fill();
+          ctx.globalCompositeOperation = 'source-over';
+        }
+      }
+    });
+  }
 
+  /* ---------- JUAN -> actorsList ---------- */
+  actorsList.push({
+    y: jFoot,
+    draw(){
+      const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
+      const footX = Math.round(jx);
+      const footY = Math.round(jy + jh/2);
 
-    // --- FX disparo encima del sprite ---
-    if (isNPCFxActive(n)) {
-      // coordenadas del fogonazo
-      const mx = Math.round(px + (n.muzzleOffset.x * mapScaleX));
-      const my = Math.round(py + (n.muzzleOffset.y * mapScaleY));
-
-      // pequeño flash radial
-      const r = Math.max(10, 18 * Math.max(mapScaleX, mapScaleY));
-      const g = ctx.createRadialGradient(mx, my, 0, mx, my, r);
-      g.addColorStop(0, 'rgba(255, 240, 200, .95)');
-      g.addColorStop(0.5, 'rgba(255, 200, 80, .55)');
-      g.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.fillStyle = g;
+      // sombra
+      ctx.fillStyle = 'rgba(0,0,0,.3)';
       ctx.beginPath();
-      ctx.arc(mx, my, r, 0, Math.PI * 2);
+      ctx.ellipse(footX, footY - 4, jw/2.5, jh/6, 0, 0, Math.PI*2);
       ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
+
+      // respiración
+      const canBreathe = !player.moving && !dialogOpen && !ambientLock && !introActive;
+      const phase  = canBreathe ? Math.sin(_nowSec * BREATH.speed) : 0;
+      const sY     = 1 + phase * BREATH.scaleAmp;
+      const sX     = 1 - phase * BREATH.scaleAmp*0.6;
+      const compY  = (1 - sY) * jh;
+
+      ctx.save();
+      ctx.translate(footX, footY);
+      ctx.translate(0, compY);
+      ctx.scale(sX, sY);
+      ctx.drawImage(img, 0, 0, sw, sh, Math.round(-jw/2), -jh, jw, jh);
+      ctx.restore();
     }
-  }
-});
+  });
 
-}
+  /* ---------- PINTADO EN ORDEN ---------- */
+  propsList.sort((a,b)=>a.y - b.y).forEach(it=>it.draw()); // props primero
+  fogDraw();                                                // NIEBLA encima de props
+  actorsList.sort((a,b)=>a.y - b.y).forEach(it=>it.draw()); // NPCs + Juan encima
 
-  // jugador con “respiración” en idle (pies pegados al suelo)
-actorsList.push({
-  y: jFoot,
-  draw: () => {
-    const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
-
-    // sombra en el suelo (siempre en el suelo)
-    const footX = Math.round(jx);
-    const footY = Math.round(jy + jh/2);
-    ctx.fillStyle = 'rgba(0,0,0,.3)';
-    ctx.beginPath();
-    ctx.ellipse(footX, footY - 4, jw/2.5, jh/6, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // respiración: squash & stretch muy sutil, anclado a los pies
-    const canBreathe = !player.moving && !dialogOpen && !ambientLock && !introActive;
-    const phase  = canBreathe ? Math.sin(_nowSec * BREATH.speed) : 0;
-    const sY     = 1 + phase * BREATH.scaleAmp;      // estira/encoge en vertical
-    const sX     = 1 - phase * BREATH.scaleAmp*0.6;  // compensa un pelín en horizontal
-    const compY  = (1 - sY) * jh;                    // al escalar, el “bottom” subiría: empuja hacia abajo
-
-    ctx.save();
-    // ancla: pies
-    ctx.translate(footX, footY);
-    // compensa para que la suela no se mueva
-    ctx.translate(0, compY);
-    ctx.scale(sX, sY);
-
-    // dibuja alineado por abajo (bottom = 0), centrado en X
-    ctx.drawImage(
-      img, 0, 0, sw, sh,
-      Math.round(-jw/2), -jh,
-      jw, jh
-    );
-    ctx.restore();
-  }
-});
-
-  // pintar ordenado
-  list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   ctx.restore();
 
   /* --- AMBIENT OVERLAYS (alphas por paleta) --- */
-if (AMBIENT.k > 0.001){
-  // Orden estable por modos de mezcla
-  const order = ['peach','bluehour','hell'];
-  for (const pal of order){
-    const a = AMBIENT.alphas[pal] || 0;
-    if (a > 0.001) drawPalette(pal, a * AMBIENT.k);
+  if (AMBIENT.k > 0.001){
+    const order = ['peach','bluehour','hell'];
+    for (const pal of order){
+      const a = AMBIENT.alphas[pal] || 0;
+      if (a > 0.001) drawPalette(pal, a * AMBIENT.k);
+    }
   }
-}
+
   /* --- LINTERNA encima --- */
   drawFlashlightEnhance();
 
-  // DEBUG AMBIENT
+  /* --- DEBUG AMBIENT --- */
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
     ctx.save();
     ctx.globalAlpha = 0.30;
@@ -1662,7 +1655,7 @@ if (AMBIENT.k > 0.001){
     ctx.restore();
   }
 
-  // DEBUG obstáculos
+  /* --- DEBUG OBSTÁCULOS --- */
   if(DEBUG_OBS){
     ctx.save();
     ctx.globalAlpha = .5; ctx.fillStyle = '#ff3366'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
@@ -1676,67 +1669,66 @@ if (AMBIENT.k > 0.001){
     ctx.restore();
   }
 
-// DEBUG ZONAS INTERACCIÓN
-if (DEBUG_INTER){
-  ctx.save();
-  ctx.globalAlpha = .45;
+  /* --- DEBUG ZONAS INTERACCIÓN --- */
+  if (DEBUG_INTER){
+    ctx.save();
+    ctx.globalAlpha = .45;
 
-  // Props: azul
-  ctx.fillStyle = '#33ccff';
-  ctx.strokeStyle = '#00334d';
-  for (const p of PROPS){
-    if (!p.interacts) continue;
-    for (const r of p.interacts){
-      const dx = screenRect.dx + (r.x - cam.x) * mapScaleX;
-      const dy = screenRect.dy + (r.y - cam.y) * mapScaleY;
-      const dw = r.w * mapScaleX, dh = r.h * mapScaleY;
-      ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-      ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+    // Props: azul
+    ctx.fillStyle = '#33ccff';
+    ctx.strokeStyle = '#00334d';
+    for (const p of PROPS){
+      if (!p.interacts) continue;
+      for (const r of p.interacts){
+        const dx = screenRect.dx + (r.x - cam.x) * mapScaleX;
+        const dy = screenRect.dy + (r.y - cam.y) * mapScaleY;
+        const dw = r.w * mapScaleX, dh = r.h * mapScaleY;
+        ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+        ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+      }
     }
+
+    // NPCs: verde
+    ctx.fillStyle = 'rgba(0,255,120,0.45)';
+    ctx.strokeStyle = '#024d2a';
+    for (const n of NPCS){
+      if (!n.interacts) continue;
+      for (const r of n.interacts){
+        const dx = screenRect.dx + (r.x - cam.x) * mapScaleX;
+        const dy = screenRect.dy + (r.y - cam.y) * mapScaleY;
+        const dw = r.w * mapScaleX, dh = r.h * mapScaleY;
+        ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+        ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+      }
+    }
+
+    ctx.restore();
   }
 
-  // NPCs: verde
-  ctx.fillStyle = 'rgba(0,255,120,0.45)';
-  ctx.strokeStyle = '#024d2a';
-  for (const n of NPCS){
-    if (!n.interacts) continue;
-    for (const r of n.interacts){
-      const dx = screenRect.dx + (r.x - cam.x) * mapScaleX;
-      const dy = screenRect.dy + (r.y - cam.y) * mapScaleY;
-      const dw = r.w * mapScaleX, dh = r.h * mapScaleY;
+  /* --- DEBUG ZONAS CINE --- */
+  if (DEBUG_CINE && CINE_BUILT.length){
+    ctx.save();
+    ctx.globalAlpha = 0.45; ctx.fillStyle='#ff00ff'; ctx.strokeStyle='#660066'; ctx.lineWidth=2;
+    for(const z of CINE_BUILT){
+      const dx = screenRect.dx + (z.x - cam.x) * mapScaleX;
+      const dy = screenRect.dy + (z.y - cam.y) * mapScaleY;
+      const dw = z.w * mapScaleX, dh = z.h * mapScaleY;
       ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
       ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+      ctx.globalAlpha=0.95; ctx.fillStyle='#fff'; ctx.font='bold 12px monospace';
+      ctx.fillText(z.id, Math.round(dx)+4, Math.round(dy)+14);
+      ctx.globalAlpha=0.45; ctx.fillStyle='#ff00ff';
     }
+    ctx.restore();
   }
 
-  ctx.restore();
+  // --- Retratos / cine overlay al final del todo ---
+  portraitsDrawOverlay();
 }
 
 
 
-  // DEBUG zonas de cinemática
-if (DEBUG_CINE && CINE_BUILT.length){
-  ctx.save();
-  ctx.globalAlpha = 0.45; ctx.fillStyle='#ff00ff'; ctx.strokeStyle='#660066'; ctx.lineWidth=2;
-  for(const z of CINE_BUILT){
-    const dx = screenRect.dx + (z.x - cam.x) * mapScaleX;
-    const dy = screenRect.dy + (z.y - cam.y) * mapScaleY;
-    const dw = z.w * mapScaleX, dh = z.h * mapScaleY;
-    ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-    ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-    ctx.globalAlpha=0.95; ctx.fillStyle='#fff'; ctx.font='bold 12px monospace';
-    ctx.fillText(z.id, Math.round(dx)+4, Math.round(dy)+14);
-    ctx.globalAlpha=0.45; ctx.fillStyle='#ff00ff';
-  }
-  ctx.restore();
-}
-
-
-
-
-portraitsDrawOverlay();
-
-  }
+  
 /* ========== LOOP / MEGAINIT ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; _nowSec = t / 1000;  update(dt); draw(); requestAnimationFrame(loop); }
 
