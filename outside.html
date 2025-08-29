@@ -1061,52 +1061,56 @@ function startCinematic1(){
   }
 
   function phaseCameraPan(){
-    CUT.phase='pan';
-    // panea solo la cámara (nos "metemos" en la niebla)
-    const targetY = clamp(cam.y - 70, 0, world.h - cam.h);
-    cameraPanTo(cam.x, targetY, 1200);
+  CUT.phase='pan';
+  const targetY = clamp(cam.y - 70, 0, world.h - cam.h);
 
-    // prepara Gandalf sprite pequeño (no afectado por niebla)
-    spawnTempGandalfAhead();
+  // 1) Pan SOLO cámara
+  cameraPanTo(cam.x, targetY, 1200);
 
-    const waitPan = setInterval(()=>{
-      if (!CAM_TWEEN.on){
-        clearInterval(waitPan);
-        phaseJuanAutoWalk();
-      }
-    },16);
-  }
+  // 2) Spawnea a Gandalf mini ya pensando en el encuadre destino
+  spawnTempGandalfAhead(targetY);
 
-  function spawnTempGandalfAhead(){
-    const gx = player.x;
-    const gy = cam.y + cam.h/2 - 90;
-    const iw = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalWidth  : 32;
-    const ih = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalHeight : 32;
-    const npc = {
-      id:'gandalf_temp', type:'gandalf_temp', img: IMG_GANDALF_SMALL,
-      x: gx, y: gy, iw, ih, scale: 0.7,
-      depthBand: DEPTH_BAND, depthAnchorY: 1
-    };
-    NPCS.push(npc);
-  }
+  // 3) Espera al fin del pan
+  const waitPan = setInterval(()=>{
+    if (!CAM_TWEEN.on){
+      clearInterval(waitPan);
+      phaseJuanAutoWalk();
+    }
+  }, 16);
+}
+
+function spawnTempGandalfAhead(targetCamY){
+  const gx = player.x;
+  const gy = targetCamY + cam.h/2 - 90; // visible tras el pan
+  const iw = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalWidth  : 32;
+  const ih = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalHeight : 32;
+  const npc = {
+    id:'gandalf_temp', type:'gandalf_temp', img: IMG_GANDALF_SMALL,
+    x: gx, y: gy, iw, ih, scale: 0.7,
+    depthBand: DEPTH_BAND, depthAnchorY: 1
+  };
+  NPCS.push(npc);
+}
+
 
   function phaseJuanAutoWalk(){
-    CUT.phase='autowalk';
-    // Juan camina solo hasta el centro de cámara
-    const targetY = cam.y + cam.h/2;
-    const startY = player.y;
-    const dy = targetY - startY;
-    const dur = Math.max(400, Math.min(1200, Math.abs(dy)*6));
-    const t0 = performance.now();
-    function step(){
-      if (!CUT.active || CUT.id!=='cine1') return;
-      const t = Math.min(1, (performance.now()-t0)/dur);
-      player.y = startY + dy*t;
-      if (t<1) requestAnimationFrame(step);
-      else phaseWorldDialogue();
-    }
-    requestAnimationFrame(step);
-  }
+  CUT.phase='autowalk';
+  // Objetivo: centro vertical de la cámara YA paneada
+  const targetY = cam.y + cam.h/2;
+  const startY  = player.y;
+  const dy = targetY - startY;
+  const dur = Math.max(400, Math.min(1200, Math.abs(dy)*6));
+  const t0  = performance.now();
+
+  (function step(){
+    if (!CUT.active || CUT.id!=='cine1') return;
+    const t = Math.min(1, (performance.now()-t0)/dur);
+    player.y = startY + dy*t;
+    if (t<1) requestAnimationFrame(step);
+    else phaseWorldDialogue();
+  })();
+}
+
 
   function phaseWorldDialogue(){
     CUT.phase='worldTalk';
