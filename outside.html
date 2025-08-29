@@ -275,8 +275,6 @@ function bindHold(btn,on,off){
   btn.addEventListener('touchstart',start,{passive:false});
   btn.addEventListener('touchend',end,{passive:false});
   btn.addEventListener('touchcancel',end,{passive:false});
-  btn.addEventListener('mousedown',start);
-  window.addEventListener('mouseup',end);
 }
 bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
 bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
@@ -284,7 +282,6 @@ bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
 function bindPressVisual(el){
   const on=()=>el.classList.add('pressed'), off=()=>el.classList.remove('pressed');
-  el.addEventListener('mousedown',on); el.addEventListener('mouseup',off); el.addEventListener('mouseleave',off);
   el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});
   el.addEventListener('touchend',off,{passive:false}); el.addEventListener('touchcancel',off,{passive:false});
 }
@@ -424,11 +421,15 @@ function anyOverlap(cx, cy){
 /* ========== PROPS / OBSTÁCULOS ========== */
   function getInteractHit(){
   const feet = feetWorld();
-  for (const p of PROPS){
-    if (p.interact && pointInRect(feet.x, feet.y, p.interact)){
-      return p;
+  for (const pr of PROPS){
+  if(!pr.interacts) continue;
+  for(const zone of pr.interacts){
+    if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, zone)){
+      if(zone.say) showToast(zone.say);
+      return;
     }
   }
+}
   return null;
 }
 
@@ -455,8 +456,14 @@ function buildPropsAndObstacles(){
       const srcInteract = p.interact || spec.interact || null;
 
       if (srcInteract){
-        const i = srcInteract;
-        prop.interact = { x: prop.x + i.x*s, y: prop.y + (i.y*s) - (i.h*s), w: i.w*s, h: i.h*s };
+        const inters = Array.isArray(spec.interact) ? spec.interact : [spec.interact];
+  prop.interacts = inters.map(i => ({
+    x: prop.x + i.x*s,
+    y: prop.y + (i.y*s) - (i.h*s),
+    w: i.w*s,
+    h: i.h*s,
+    say: i.say || p.say || null
+  }));
       } else {
         // Si quieres que por defecto la interacción sea el collider, descomenta la siguiente línea:
         // if (prop.collider) prop.interact = { ...prop.collider };
