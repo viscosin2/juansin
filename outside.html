@@ -182,7 +182,7 @@ let NPC_IMAGES = {}, NPCS = [];
 const NPC_CATALOG = {
   abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
   gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
-  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
+  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1},
   soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: 10, y: -18 },fireFxMs: 140},
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
 };
@@ -194,7 +194,7 @@ const NPC_PLACED = {
   gato1: [{type:'percent', x: 21, y: 61, interact: { x:-14, y: 12, w:28, h:16 }, 
      dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
     }],
-  voldemort_perfil: [{type:'percent', x: 82, y: 16, interact: { x:-20, y: 12, w:38, h:16 }, 
+  voldemort_perfil: [{type:'percent', x: 82, y: 15.5, interact: { x:-35, y: 12, w:50, h:16 }, 
      dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
     }],
   soldado1: [{id:'gunner1', type:'percent', x: 14, y: 87, interact: { x:-14, y: 8, w:28, h:16 },onFire:true, 
