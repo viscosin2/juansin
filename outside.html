@@ -1019,8 +1019,8 @@ list.push({
     }
 
     // sombra en el suelo (siempre en el suelo)
-    const footX = Math.round(jx);
-    const footY = Math.round(jy + jh/2);
+    const footX = Math.round(dx);
+    const footY = Math.round(dy + dh/2);
     ctx.fillStyle = 'rgba(0,0,0,.3)';
     ctx.beginPath();
     ctx.ellipse(footX, footY - 4, dw/2.5, dh/6, 0, 0, Math.PI*2);
