@@ -133,6 +133,7 @@ const FOG = {
   seed: 1337,
   color: '255,255,255',
   layer: 'betweenBackAndActors',
+  oneSideBias: 0.55,
 
   // fuerzas (más lento)
   swirl: 16,          // antes 32 → menos giro
@@ -795,11 +796,11 @@ if (p.y < yMin) p.vy +=  8 * dt;
 function fogDraw(){
   if (!FOG.active || !FOG.parts.length) return;
 
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
+  // centro usado por las fuerzas (mantenlo igual que en fogUpdate)
+  const cx = screenRect.dx + screenRect.dw*0.5;
+  const cy = screenRect.dy + screenRect.dh*0.42;
 
   for (const p of FOG.parts){
-    // fade in/out por vida (suave, sin “blink”)
     const k = p.age / p.life;
     const fade = (k<0.2) ? smoothstep(0,0.2,k) :
                  (k>0.8) ? (1 - smoothstep(0.8,1,k)) : 1;
@@ -807,11 +808,21 @@ function fogDraw(){
     const alpha = p.alpha0 * fade;
     if (alpha <= 0.002) continue;
 
-    // gradiente “nubecita”
-    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-    g.addColorStop(0, `rgba(${FOG.color}, ${alpha})`);
+    // —— foco desplazado para engordar solo “hacia afuera” ——
+    const vx = p.x - cx, vy = p.y - cy;
+    const len = Math.hypot(vx,vy) || 1;
+    const nx = vx / len, ny = vy / len;   // radial unitario
+    const bias = FOG.oneSideBias || 0;    // 0 = simétrico
+
+    // Mueve el foco interno hacia el centro (−n) un trozo del radio
+    // → eso deja más “cola” al exterior (lado +n) = más grueso solo fuera
+    const fx = p.x - nx * p.r * bias;
+    const fy = p.y - ny * p.r * bias;
+
+    const g = ctx.createRadialGradient(fx, fy, 0, p.x, p.y, p.r);
+    g.addColorStop(0.00, `rgba(${FOG.color}, ${alpha})`);
     g.addColorStop(0.65, `rgba(${FOG.color}, ${alpha*0.7})`);
-    g.addColorStop(1, `rgba(${FOG.color}, 0)`);
+    g.addColorStop(1.00, `rgba(${FOG.color}, 0)`);
 
     ctx.fillStyle = g;
     ctx.beginPath();
