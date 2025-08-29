@@ -1081,16 +1081,21 @@ function startCinematic1(){
 
 function spawnTempGandalfAhead(targetCamY){
   const gx = player.x;
-  const gy = targetCamY + cam.h/2 - 90; // visible tras el pan
+  const gy = targetCamY + cam.h/2 - 40; // más cerca del centro → seguro en pantalla
   const iw = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalWidth  : 32;
   const ih = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalHeight : 32;
+
   const npc = {
     id:'gandalf_temp', type:'gandalf_temp', img: IMG_GANDALF_SMALL,
-    x: gx, y: gy, iw, ih, scale: 0.7,
-    depthBand: DEPTH_BAND, depthAnchorY: 1
+    x: gx, y: gy, iw, ih,
+    scale: 1,                   // más visible
+    depthBand: DEPTH_BAND, depthAnchorY: 1,
+    _debug: true                // flag para overlay de depuración
   };
+
   NPCS.push(npc);
 }
+
 
 
   function phaseJuanAutoWalk(){
