@@ -1302,13 +1302,7 @@ function phaseCameraPan(){
       clearInterval(waitPan);
 
       CUT.phase = 'preWalkDialog';
-      openDialog([{speaker:'Juan', text:'?'}], true);
-
-      CUT.hijackAction = ()=>{
-        if (dialogOpen){ advanceDialog(); return; }
-        CUT.hijackAction = null;
-        phaseQuestionThenWalk();
-      };
+      phaseQuestionThenWalk();
     }
   }, 16);
 }
