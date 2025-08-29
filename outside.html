@@ -108,6 +108,8 @@ const DEBUG_INTER = false;
 const DEBUG_AMBIENT = false;
 const DEBUG_CINE = true; 
 const DEPTH_BAND = 12;
+let interactBlocked = true;     // bloquea interacciones (botón acción)
+let initialDialogLock = false;  // identifica el lock del diálogo inicial
 
 /* ====== BACKBUFFER para blur en modo cine ====== */
 let BACKBUF = document.createElement('canvas');
@@ -497,11 +499,19 @@ function openDialog(lines, startTyping=true){
 function closeDialog(){
   dialogEl.classList.remove('show','ready');
   dialogOpen=false;
+
+  // si el diálogo que se cierra es el inicial, liberamos interacciones
+  if (initialDialogLock){
+    initialDialogLock = false;
+    interactBlocked = false;
+  }
+
   if (ambientLock && ambientLockOwner){
     ambientLock = false;
     ambientLockOwner = null;
   }
 }
+
 
   function closeCurrentDialogNow(){
   if (!dialogOpen) return;
@@ -555,49 +565,47 @@ function advanceDialog(){
 }
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
+
+  // si hay cinemática con hijack, primero eso
   if (CUT.active && typeof CUT.hijackAction === 'function'){
     CUT.hijackAction();
     return;
   }
-  
+
+  // si hay diálogo abierto: avanzar SIEMPRE
   if (dialogOpen){
     advanceDialog();
     return;
   }
 
-// 1) NPCs con diálogo / lógica especial
-const npcHit = getNPCInteractHit();
-if (npcHit){
-  // localizar el npc por id
-  const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
-  if (npc){
-    // gating por flag
-    if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
-      if (npc.dialogBlocked && npc.dialogBlocked.length){
-        openDialog(npc.dialogBlocked, true);
-      } else {
-        showToast('No parece querer hablar ahora.', 1400);
+  // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
+  if (interactBlocked) return;
+
+  // ——— A partir de aquí, interacciones normales ———
+
+  // 1) NPCs con diálogo / lógica especial
+  const npcHit = getNPCInteractHit();
+  if (npcHit){
+    const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
+    if (npc){
+      if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
+        if (npc.dialogBlocked && npc.dialogBlocked.length){
+          openDialog(npc.dialogBlocked, true);
+        } else {
+          showToast('No parece querer hablar ahora.', 1400);
+        }
+        return;
+      }
+      if (npc.dialog && npc.dialog.length){
+        openDialog(npc.dialog, true);
+      }
+      if (npc.onFire){
+        setTimeout(() => { triggerNPCShot(npc); }, 1500);
+        GAME_FLAGS.talked_gunner = true;
       }
       return;
     }
-
-    // diálogo normal
-    if (npc.dialog && npc.dialog.length){
-      openDialog(npc.dialog, true);
-    }
-
-    // efecto disparo + sonido + flag
-if (npc.onFire){
-  setTimeout(() => {
-    triggerNPCShot(npc);
-  }, 1500); // 1000 ms = 1 segundo
-  GAME_FLAGS.talked_gunner = true;
-}
-
-    return;
   }
-}
-
 
   // 2) Props con "say" => toast
   const propHit = getInteractHit();
@@ -606,7 +614,6 @@ if (npc.onFire){
     return;
   }
 }, {passive:false});
-
 
 
 /* ========== UTILS ========== */
@@ -1352,12 +1359,15 @@ function update(dt){
     if (canCenterCam) centerCameraOnPlayer();
 
     if (AMBIENT.k >= 1 && !initialDialogShown){
-      initialDialogShown = true;
-      setTimeout(()=>{
-        openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true);
-        introActive = false;
-      }, 300);
-    }
+  initialDialogShown = true;
+  setTimeout(()=>{
+    initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
+    interactBlocked = true;     // ← bloquea interacciones
+    openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true);
+    introActive = false;
+  }, 300);
+}
+
     return;
   }
 
