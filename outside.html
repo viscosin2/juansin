@@ -122,8 +122,17 @@ const CUT = {
   onEnd: null           // callback al terminar
 };
 
-// ===== Fog (partículas + “fill” suave)
-const FOG = { active:false, parts:[], color:'255,255,255',density: 0.9, filling:false,fillT:0,fillDur: 1500,_fillT0: 0};
+// ===== Fog (partículas + “sweep” de cortinas laterales)
+const FOG = {
+  active:false, parts:[], 
+  color:'255,255,255',
+  density: 0.5,         // menos partículas para evitar parpadeo
+  filling:false, fillT:0, fillDur:3000, _fillT0:0,
+  mode:'sweep',         // 'sweep' = cortinas laterales
+  focusY: null,         // px de pantalla donde “se concentra” arriba
+  baseAlpha: 0.85       // niebla basta/opalina
+};
+
 
 
 /* ====== CAMERA TWEEN ====== */
@@ -627,33 +636,48 @@ function isNPCFxActive(npc){
  function fogStart(){ FOG.active=true; FOG.parts.length=0; }
 function fogStop(){ FOG.active=false; FOG.parts.length=0; FOG.filling=false; FOG.fillT=0; }
 
-function fogBeginFill(ms=FOG.fillDur){
-  FOG.filling = true; FOG.fillT = 0; FOG._fillT0 = performance.now(); FOG.fillDur = ms;
+function fogBeginFill(ms=3000, opts={}){
+  FOG.filling = true; 
+  FOG.fillT   = 0; 
+  FOG._fillT0 = performance.now(); 
+  FOG.fillDur = ms;
+
+  // opciones
+  if (opts.mode)     FOG.mode = opts.mode;
+  if (typeof opts.baseAlpha === 'number') FOG.baseAlpha = opts.baseAlpha;
+  if (typeof opts.density   === 'number') FOG.density   = opts.density;
+  FOG.focusY = typeof opts.focusY === 'number' ? opts.focusY : (screenRect.dy + screenRect.dh*0.28);
+
   if (!FOG.active) fogStart();
 }
+
 
 function fogUpdate(dt){
   if (!FOG.active) return;
 
-  // partículas “normales”
-  const rate = 140 * FOG.density * dt;
+  // partículas: si estamos en "fill", baja el ritmo y fija alfas
+  const targetDensity = FOG.filling ? (FOG.density * 0.35) : FOG.density;
+  const rate = 120 * targetDensity * dt;
   const toSpawn = Math.floor(rate);
+
   for (let i=0;i<toSpawn;i++){
-    const r = 6 + Math.random()*18;
+    const r = 10 + Math.random()*16;
     const y = screenRect.dy + Math.random()*screenRect.dh;
     const fromLeft = Math.random()<0.5;
     const x = fromLeft ? screenRect.dx - r*2 : screenRect.dx + screenRect.dw + r*2;
-    const vx = fromLeft ? (14+Math.random()*26) : -(14+Math.random()*26);
-    const vy = (Math.random()-0.5)*6;
-    FOG.parts.push({x,y,r,vx,vy,alpha:0.12+Math.random()*0.20, life: 2.5+Math.random()*2.5});
+    const vx = fromLeft ? (16+Math.random()*22) : -(16+Math.random()*22);
+    const vy = (Math.random()-0.5)*4;
+    // alfa casi fija para evitar parpadeo
+    const a = 0.22;
+    FOG.parts.push({x,y,r,vx,vy,alpha:a, life: 3.0+Math.random()*2.0});
   }
+
   for (let i=FOG.parts.length-1;i>=0;i--){
     const p=FOG.parts[i];
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt;
-    if (p.life<=0 || p.x < screenRect.dx-80 || p.x > screenRect.dx+screenRect.dw+80) FOG.parts.splice(i,1);
+    if (p.life<=0 || p.x < screenRect.dx-120 || p.x > screenRect.dx+screenRect.dw+120) FOG.parts.splice(i,1);
   }
 
-  // relleno suave (progreso controlado)
   if (FOG.filling){
     const elapsed = performance.now() - FOG._fillT0;
     FOG.fillT = Math.min(1, elapsed / FOG.fillDur);
@@ -661,10 +685,11 @@ function fogUpdate(dt){
   }
 }
 
+
 function fogDraw(){
   if (!FOG.active) return;
 
-  // 1) partículas
+  // --- (1) Partículas suaves encima ---
   if (FOG.parts.length){
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
@@ -678,26 +703,73 @@ function fogDraw(){
     ctx.restore();
   }
 
-  // 2) velo suave que sube con fillT (para asegurar “pantalla llena” sin ver cuadrados)
-  if (FOG.fillT>0){
+  // --- (2) Sweep lateral: dos cortinas desde lados hacia el centro ---
+  if (FOG.mode === 'sweep'){
+    const t = FOG.fillT;        // 0 → 1 en 3s
+    const center = screenRect.dx + screenRect.dw/2;
+    const focusY = FOG.focusY ?? (screenRect.dy + screenRect.dh*0.28);
+    const alpha  = FOG.baseAlpha; // opacidad “basta”
+
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    // Hacemos 3 pasadas con gradientes grandes para que parezca gaseoso
-    const passes = 3;
-    for (let i=0;i<passes;i++){
-      const alpha = 0.12 * FOG.fillT;
-      const cx = screenRect.dx + screenRect.dw * (0.2 + 0.6*Math.random());
-      const cy = screenRect.dy + screenRect.dh * (0.3 + 0.4*Math.random());
-      const R  = Math.max(screenRect.dw, screenRect.dh) * (0.7 + 0.6*Math.random());
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-      g.addColorStop(0, `rgba(${FOG.color}, ${alpha})`);
-      g.addColorStop(1, `rgba(255,255,255, 0)`);
-      ctx.fillStyle = g;
-      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
+
+    // ancho de cortina que avanza
+    const halfW = (screenRect.dw/2) * t;
+
+    // función helper: cortina con degradé y “barriga” hacia focusY
+    function drawCurtain(fromLeft){
+      const x0 = fromLeft ? (center - halfW) : center;
+      const w  = halfW;
+      if (w <= 0) return;
+
+      // 3 pasadas con gradientes radiales grandes para gaseoso
+      for (let i=0;i<3;i++){
+        const cx = fromLeft 
+          ? (x0 - w*0.6 + Math.random()*w*1.2)
+          : (x0 + w*0.6 - Math.random()*w*1.2);
+        // concentrar más arriba (zona Gandalf)
+        const cy = focusY + (Math.random()-0.5) * (screenRect.dh*0.25);
+
+        const R = Math.max(screenRect.dw, screenRect.dh) * (0.7 + Math.random()*0.5);
+        const a = alpha * (0.55 + Math.random()*0.25); // variación suave
+
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        g.addColorStop(0, `rgba(${FOG.color}, ${a})`);
+        g.addColorStop(1, `rgba(255,255,255, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(cx, cy, R, 0, Math.PI*2);
+        ctx.fill();
+      }
     }
+
+    // izquierda y derecha
+    drawCurtain(true);
+    drawCurtain(false);
+
     ctx.restore();
+  } else {
+    // Modo antiguo de “velo suave” si quisieras mantenerlo:
+    if (FOG.fillT>0){
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const passes = 3;
+      for (let i=0;i<passes;i++){
+        const alpha = 0.12 * FOG.fillT;
+        const cx = screenRect.dx + screenRect.dw * (0.2 + 0.6*Math.random());
+        const cy = screenRect.dy + screenRect.dh * (0.3 + 0.4*Math.random());
+        const R  = Math.max(screenRect.dw, screenRect.dh) * (0.7 + 0.6*Math.random());
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        g.addColorStop(0, `rgba(${FOG.color}, ${alpha})`);
+        g.addColorStop(1, `rgba(255,255,255, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+    }
   }
 }
+
 
   function portraitsOpen(script){
   PORTRAITS.active = true; PORTRAITS.script = script.slice(); PORTRAITS.idx = 0;
@@ -1051,7 +1123,13 @@ function startCinematic1(){
 
   function phaseFogFill(){
     CUT.phase='fogFill';
-    fogBeginFill(1500); // llena pantalla en 1.5s
+    fogBeginFill(3000, {
+  mode: 'sweep',
+  baseAlpha: 0.88,           // bien opaco
+  density: 0.4,              // menos partículas mientras llena → menos parpadeo
+  // foco un poco por encima del centro para “zona Gandalf”
+  focusY: screenRect.dy + screenRect.dh * 0.28
+});
     const check = ()=>{
       if (!CUT.active || CUT.id!=='cine1') return;
       if (FOG.filling) requestAnimationFrame(check);
