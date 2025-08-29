@@ -205,7 +205,7 @@ const NPC_PLACED = {
      dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
     }],
   soldado1: [{id:'gunner1', type:'percent', x: 14, y: 87, interact: { x:-14, y: 8, w:28, h:16 },onFire:true, 
-     dialog: [{ speaker:'Armiche', text:'Ahí te va un pequeño perdigón.',sound: "assets/sounds/shot.mp3" }]
+     dialog: [{ speaker:'Armiche', text:'Ahí te va un pequeño perdigón.'}],sound: "assets/sounds/shot.mp3"
     }],
   soldado2: [{id:'guard1', type:'percent', x: 8, y: 87, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_gunner', 
      dialogBlocked:[ {speaker:'Boliche', text:'¡Como en el Call of Duty, señores!'}], dialog: [{ speaker:'Boliche', text:'¡Ah! ¡Mi lentilla!' }]
@@ -540,12 +540,13 @@ function triggerNPCShot(npc){
   npc._fxActive = true;
   npc._fxUntil  = performance.now() + npc.fireFxMs;
 
-  // sonido si existe
-  const snd = NPC_SOUNDS[npc.type];
-  if (snd){
+  // sonido si existe (mapa y sample)
+  if (typeof NPC_SOUNDS !== 'undefined' && NPC_SOUNDS && NPC_SOUNDS[npc.type]) {
+    const snd = NPC_SOUNDS[npc.type];
     try { snd.currentTime = 0; snd.play(); } catch(e){}
   }
 }
+
 
 function isNPCFxActive(npc){
   if (!npc._fxActive) return false;
@@ -1026,8 +1027,8 @@ for (const n of NPCS){
 list.push({
   y: sortY,
   draw: () => {
-    // --- sombra en el suelo (debajo del sprite) ---
-const sh = npc.shadow || DEFAULT_SHADOW;
+
+const sh = (n.shadow || DEFAULT_SHADOW);
 const footX = Math.round(px);
 const footY = Math.round(py); // base real del sprite
 const shadowW = Math.max(6, Math.round(dw * sh.scaleX));
@@ -1072,7 +1073,8 @@ if (!n.img) {
   }
 });
 
-  
+}
+
   // jugador con “respiración” en idle (pies pegados al suelo)
 list.push({
   y: jFoot,
@@ -1110,8 +1112,6 @@ list.push({
     ctx.restore();
   }
 });
-
-
 
   // pintar ordenado
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
