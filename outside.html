@@ -1486,6 +1486,8 @@ function draw(){
   const jFoot = jy + jh/2;
 
   const list = [];
+
+  fogDraw();
   // props
   for(const p of PROPS){
     const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
@@ -1512,9 +1514,6 @@ function draw(){
       }
     });
   }
-
-
-  fogDraw();
 
   // NPCs
 for (const n of NPCS){
