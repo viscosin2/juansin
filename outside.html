@@ -126,15 +126,22 @@ const CUT = {
 const FOG = {
   active:false, parts:[],
   filling:false, tFill:0, fillDur:3000,      // 3s para “llenar”
-  targetDensity: 220,                         // densidad objetivo al final del fill
-  baseAlpha: 0.22,                            // opacidad de cada nubecita
-  seed: 1337,                                 // RNG determinista para evitar parpadeo
+  targetDensity: 260,                         // un pelín más denso
+  baseAlpha: 0.32,                            // más opacidad por partícula
+  seed: 1337,
   color: '255,255,255',
-  swirl: 32,          // fuerza tangencial (remolino)
-  attract: 18,        // fuerza hacia el centro
-  jitterAmp: 6,       // ondulación suave
-  jitterFreq: 1.3     // Hz del “vapor”
+
+  // fuerzas (más lento)
+  swirl: 16,          // antes 32 → menos giro
+  attract: 10,        // antes 18 → avanza más despacio al centro
+  jitterAmp: 3,       // antes 6  → menos “tembleque”
+  jitterFreq: 0.9,    // antes 1.3
+
+  // banda superior (solo arriba)
+  bandTop:    0.08,   // 8% desde arriba
+  bandBottom: 0.50    // hasta mitad de pantalla aprox
 };
+
 
 
 /* ====== CAMERA TWEEN ====== */
@@ -658,28 +665,32 @@ function fogBeginFill(ms=FOG.fillDur){
   if (!FOG.active) fogStart();
 }
 
-// crea una nubecita “humo”
 function spawnFogParticle(side){
-  const kTopBias = 0.55; // más prob arriba
-  const y = screenRect.dy + screenRect.dh * ( (1-kTopBias)*fogRand() + (kTopBias*0.2) );
-  const r = 16 + fogRand()*26;               // radio
-  const life = 4.5 + fogRand()*3.0;          // vida larga
-  const alpha0 = FOG.baseAlpha * (0.85 + 0.3*fogRand()); // alpha estable
+  // y restringido a la banda alta
+  const yMin = screenRect.dy + screenRect.dh * FOG.bandTop;
+  const yMax = screenRect.dy + screenRect.dh * FOG.bandBottom;
+  const y = yMin + (yMax - yMin) * fogRand();
+
+  const r = 18 + fogRand()*28;               // nubecitas un poco grandes
+  const life = 6.0 + fogRand()*2.2;          // vida más larga (más calma)
+  const alpha0 = FOG.baseAlpha * (0.9 + 0.25*fogRand());
 
   const fromLeft = side === 'L';
   const x = fromLeft ? screenRect.dx - r*2 : screenRect.dx + screenRect.dw + r*2;
   const dir = fromLeft ? 1 : -1;
 
-  // velocidad inicial suave hacia el centro
+  // centro un poco por encima del medio (que “rodee” a Gandalf)
   const cx = screenRect.dx + screenRect.dw*0.5;
-  const cy = screenRect.dy + screenRect.dh*0.42; // un pelín alto (cerca de Gandalf)
-  const vx0 = ( (cx - x) * 0.15 + 10*dir ) / life;
-  const vy0 = ( (cy - y) * 0.12 + (fogRand()-0.5)*10 ) / life;
+  const cy = screenRect.dy + screenRect.dh*0.36;
+
+  // velocidades iniciales suaves (más lentas)
+  const vx0 = ((cx - x) * 0.10 + 6*dir) / life;
+  const vy0 = ((cy - y) * 0.08 + (fogRand()-0.5)*6) / life;
 
   FOG.parts.push({
     x, y, r, life, age:0,
     alpha0, vx:vx0, vy:vy0,
-    phase: fogRand()*Math.PI*2,  // para jitter senoidal
+    phase: fogRand()*Math.PI*2,
     side: dir
   });
 }
@@ -714,34 +725,34 @@ function fogUpdate(dt){
     p.age += dt;
     if (p.age >= p.life){ FOG.parts.splice(i,1); continue; }
 
-    // Vector al centro
-    const dx = cx - p.x, dy = cy - p.y;
-    const len = Math.hypot(dx,dy) || 0.0001;
-    const ux = dx/len,    uy = dy/len;
+    // fuerzas
+const dx = cx - p.x, dy = cy - p.y;
+const len = Math.hypot(dx,dy) || 0.0001;
+const ux = dx/len,    uy = dy/len;
+const tx = -uy,       ty = ux;
 
-    // tangencial (giro 90º)
-    const tx = -uy, ty = ux;
+const ax = ux*FOG.attract + tx*FOG.swirl*p.side;
+const ay = uy*FOG.attract + ty*FOG.swirl*p.side;
 
-    // “fuerzas”
-    const ax = ux*FOG.attract + tx*FOG.swirl*p.side;
-    const ay = uy*FOG.attract + ty*FOG.swirl*p.side;
+// jitter suave
+const j = Math.sin(p.phase + p.age*FOG.jitterFreq*2*Math.PI) * FOG.jitterAmp;
+const jx = -uy * j * 0.18;
+const jy =  ux * j * 0.18;
 
-    // jitter “vapor”
-    const j = Math.sin(p.phase + p.age*FOG.jitterFreq*2*Math.PI) * FOG.jitterAmp;
-    const jx = -uy * j * 0.2;  // desvío lateral suave
-    const jy =  ux * j * 0.2;
+// amortiguado más fuerte (↓ velocidad)
+p.vx = p.vx*0.965 + (ax*0.035);
+p.vy = p.vy*0.965 + (ay*0.035);
 
-    // integrar
-    p.vx = p.vx*0.96 + (ax*0.04);   // amortiguado
-    p.vy = p.vy*0.96 + (ay*0.04);
-    p.x += (p.vx + jx) * dt * 16;   // factor para llevar a px/s
-    p.y += (p.vy + jy) * dt * 16;
+// integra más despacio (antes *16)
+p.x += (p.vx + jx) * dt * 10;
+p.y += (p.vy + jy) * dt * 10;
 
-    // fuera de pantalla + margen
-    if (p.x < screenRect.dx-120 || p.x > screenRect.dx+screenRect.dw+120 ||
-        p.y < screenRect.dy-140 || p.y > screenRect.dy+screenRect.dh+140){
-      FOG.parts.splice(i,1);
-    }
+// mantenerlas en la banda alta (si se cuelan, empuje suave hacia arriba)
+const yMin = screenRect.dy + screenRect.dh * FOG.bandTop;
+const yMax = screenRect.dy + screenRect.dh * FOG.bandBottom;
+if (p.y > yMax) p.vy -= 12 * dt;
+if (p.y < yMin) p.vy +=  8 * dt;
+
   }
 }
 
