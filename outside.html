@@ -1620,6 +1620,8 @@ list.push({
   }
 });
 
+  fogDraw();
+
   // pintar ordenado
   list.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   ctx.restore();
@@ -1635,7 +1637,6 @@ if (AMBIENT.k > 0.001){
 }
   /* --- LINTERNA encima --- */
   drawFlashlightEnhance();
-fogDraw();
 
   // DEBUG AMBIENT
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
