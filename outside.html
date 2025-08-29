@@ -108,6 +108,13 @@ const DEBUG_INTER = false;
 const DEBUG_AMBIENT = false;
 const DEPTH_BAND = 12;
 
+  const DEFAULT_SHADOW = {
+  alpha: 0.30,     // opacidad
+  offsetY: -3,     // cuánto “sube”/“baja” desde el pie
+  scaleX: 1/2.4,   // ancho relativo al dw del sprite
+  scaleY: 1/7,     // alto relativo al dh del sprite
+};
+
 /* ========== ASSETS ========== */
 const BG_SRC = "assets/locations/outside.png";
 const JUAN = { size:{w:36,h:40}, scale:0.9,
@@ -180,11 +187,11 @@ let NPC_IMAGES = {}, NPCS = [];
   /* ========== NPCs ========== */
 // Catálogo de tipos de NPC (sprite, escala, collider, etc.)
 const NPC_CATALOG = {
-  abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
-  gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
-  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1},
-  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -10, y: -18 },fireFxMs: 140},
-  soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
+  abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -10, y: -18 },fireFxMs: 140},shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },
+  soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }}
 };
 
 const NPC_PLACED = {
@@ -364,7 +371,8 @@ function buildNPCs(){
         muzzleOffset: spec.muzzleOffset || {x:0,y:0},
         fireFxMs: spec.fireFxMs || 120,
         _fxActive: false,
-        _fxUntil: 0
+        _fxUntil: 0,
+        shadow: { ...DEFAULT_SHADOW, ...(spec.shadow||{}), ...(p.shadow||{}) }
       };
 
       // collider opcional (bloquea como obstáculo)
@@ -1018,26 +1026,29 @@ for (const n of NPCS){
 list.push({
   y: sortY,
   draw: () => {
-    // --- sombra en el suelo (siempre debajo del sprite) ---
-    const footX = Math.round(px);
-    const footY = Math.round(py); // base real del sprite
-    const shadowW = Math.max(10, Math.round(dw / 2.4)); // ancho sombra estable
-    const shadowH = Math.max(4,  Math.round(dh / 7));   // altura sombra estable
+    // --- sombra en el suelo (debajo del sprite) ---
+const sh = npc.shadow || DEFAULT_SHADOW;
+const footX = Math.round(px);
+const footY = Math.round(py); // base real del sprite
+const shadowW = Math.max(6, Math.round(dw * sh.scaleX));
+const shadowH = Math.max(3, Math.round(dh * sh.scaleY));
 
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,.3)';
-    ctx.beginPath();
-    ctx.ellipse(footX, footY - 3, shadowW, shadowH, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+ctx.save();
+ctx.globalAlpha = sh.alpha;
+ctx.fillStyle = 'black';
+ctx.beginPath();
+ctx.ellipse(footX, footY + sh.offsetY, shadowW, shadowH, 0, 0, Math.PI * 2);
+ctx.fill();
+ctx.restore();
 
-    // --- sprite encima de su sombra ---
-    if (!n.img) {
-      ctx.fillStyle = '#999';
-      ctx.fillRect(dx, dy, dw, dh);
-    } else {
-      ctx.drawImage(n.img, 0, 0, n.iw, n.ih, dx, dy, dw, dh);
-    }
+// --- sprite encima ---
+if (!n.img) {
+  ctx.fillStyle = '#999';
+  ctx.fillRect(dx, dy, dw, dh);
+} else {
+  ctx.drawImage(n.img, 0, 0, n.iw, n.ih, dx, dy, dw, dh);
+}
+
 
     // --- FX disparo encima del sprite ---
     if (isNPCFxActive(n)) {
