@@ -937,12 +937,27 @@ for (const n of NPCS){
   list.push({
     y: sortY,
     draw: ()=>{
-      if(!n.img){ 
-        ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh);
-      } else {
-        ctx.drawImage(n.img, 0,0, n.iw,n.ih, dx,dy, dw,dh);
-      }
-    }
+  if (!n.img) {
+    ctx.fillStyle = '#999';
+    ctx.fillRect(dx, dy, dw, dh);
+  } else {
+    // sombra bajo los pies
+    const footX = Math.round(px);
+    const footY = Math.round(py);
+    ctx.fillStyle = 'rgba(0,0,0,.3)';
+    ctx.beginPath();
+    ctx.ellipse(
+      footX, footY,        // centro
+      dw/2.5, dh/6,        // radios (ajusta a gusto)
+      0, 0, Math.PI*2
+    );
+    ctx.fill();
+
+    // sprite del NPC
+    ctx.drawImage(n.img, 0,0, n.iw,n.ih, dx,dy, dw,dh);
+  }
+}
+
   });
 }
 
