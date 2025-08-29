@@ -80,9 +80,7 @@
         <div id="dialogHint" class="dialog-hint">→</div>
       </div>
 
-      <canvas id="game">
-        <div id="blackfade"></div>
-      </canvas>
+      <canvas id="game"></canvas>
     </div>
   </div>
 
@@ -267,7 +265,7 @@ const NPC_CATALOG = {
   abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },fireFxMs: 140},shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },
+  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },fireFxMs: 140},
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }}
 };
 
@@ -1368,23 +1366,27 @@ function spawnTempGandalfAhead(targetCamY){
   }
 
   function fadeOutFogThenEnd(){
-    CUT.phase='fadeFog';
-    let t0 = performance.now(), dur=800;
-    function tick(){
-      if (!CUT.active || CUT.id!=='cine1') return;
-      const k = Math.min(1, (performance.now()-t0)/dur);
-      FOG.fillT = (1-k)*FOG.fillT;
-      for (const p of FOG.parts) p.alpha *= (1 - 0.85*k);
-      if (k<1) requestAnimationFrame(tick);
-      else {
-        fogStop();
-        const i = NPCS.findIndex(n=>n.id==='gandalf_temp');
-        if (i>=0) NPCS.splice(i,1);
-        endCine();
-      }
+  CUT.phase='fadeFog';
+  let t0 = performance.now(), dur=800;
+  function tick(){
+    if (!CUT.active || CUT.id!=='cine1') return;
+    const k = Math.min(1, (performance.now()-t0)/dur);
+
+    // ✅ usar tFill (existe), no fillT
+    FOG.tFill = (1 - k) * FOG.tFill;
+
+    for (const p of FOG.parts) p.alpha *= (1 - 0.85*k);
+    if (k<1) requestAnimationFrame(tick);
+    else {
+      fogStop();
+      const i = NPCS.findIndex(n=>n.id==='gandalf_temp');
+      if (i>=0) NPCS.splice(i,1);
+      endCine();
     }
-    requestAnimationFrame(tick);
   }
+  requestAnimationFrame(tick);
+}
+
 
   function endCine(){
     CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
