@@ -143,7 +143,9 @@ const FOG = {
 
   // banda superior (solo arriba)
   bandTop:    0.08,   // 8% desde arriba
-  bandBottom: 0.50,_densityScale: 1   // hasta mitad de pantalla aprox
+  bandBottom: 0.50,_densityScale: 1,  // hasta mitad de pantalla aprox
+  _aimAhead: false,     // si true, emite por delante de la cámara
+  aheadBias: 0.24,      // cuánto adelantamos el “centro” (0 = centro, 0.24 ≈ 24% hacia arriba)
 };
 
 
@@ -651,6 +653,10 @@ function isNPCFxActive(npc){
 
 
   // -------------------- FUNCIONES NIEBLA
+
+  function fogAimAhead(on=true){ FOG._aimAhead = !!on; }
+function fogResetAim(){ FOG._aimAhead = false; }
+  
   function fogRand(){
   FOG.seed = (FOG.seed * 1664525 + 1013904223) | 0;
   return ((FOG.seed >>> 0) / 4294967296);
@@ -702,24 +708,27 @@ function fogBeginFill(opts = FOG.fillDur){
 
 
 function spawnFogParticle(side){
-  // y restringido a la banda alta
-  const yMin = screenRect.dy + screenRect.dh * FOG.bandTop;
-  const yMax = screenRect.dy + screenRect.dh * FOG.bandBottom;
+  // banda vertical donde nacen (arriba)
+  const tTop    = FOG._aimAhead ? 0.00 : FOG.bandTop;      // más arriba si aimAhead
+  const tBottom = FOG._aimAhead ? 0.38 : FOG.bandBottom;   // banda más alta y estrecha
+  const yMin = screenRect.dy + screenRect.dh * tTop;
+  const yMax = screenRect.dy + screenRect.dh * tBottom;
   const y = yMin + (yMax - yMin) * fogRand();
 
-  const r = 18 + fogRand()*28;               // nubecitas un poco grandes
-  const life = 6.0 + fogRand()*2.2;          // vida más larga (más calma)
+  const r = 16 + fogRand()*24;
+  const life = 4.8 + fogRand()*1.6;
   const alpha0 = FOG.baseAlpha * (0.9 + 0.25*fogRand());
 
   const fromLeft = side === 'L';
   const x = fromLeft ? screenRect.dx - r*2 : screenRect.dx + screenRect.dw + r*2;
   const dir = fromLeft ? 1 : -1;
 
-  // centro un poco por encima del medio (que “rodee” a Gandalf)
+  // centro “atractor”: si aimAhead, empújalo hacia arriba (por delante)
   const cx = screenRect.dx + screenRect.dw*0.5;
-  const cy = screenRect.dy + screenRect.dh*0.36;
+  const baseCy = 0.42; // tu valor normal
+  const cy = screenRect.dy + screenRect.dh * (FOG._aimAhead ? (baseCy - FOG.aheadBias) : baseCy);
 
-  // velocidades iniciales suaves (más lentas)
+  // velocidades suaves
   const vx0 = ((cx - x) * 0.10 + 6*dir) / life;
   const vy0 = ((cy - y) * 0.08 + (fogRand()-0.5)*6) / life;
 
@@ -730,6 +739,7 @@ function spawnFogParticle(side){
     side: dir
   });
 }
+
 
 function fogUpdate(dt){
   if (!FOG.active) return;
@@ -784,11 +794,13 @@ p.vy = p.vy*0.965 + (ay*0.035);
 p.x += (p.vx + jx) * dt * 10;
 p.y += (p.vy + jy) * dt * 10;
 
-// mantenerlas en la banda alta (si se cuelan, empuje suave hacia arriba)
-const yMin = screenRect.dy + screenRect.dh * FOG.bandTop;
-const yMax = screenRect.dy + screenRect.dh * FOG.bandBottom;
+const yBandTop    = FOG._aimAhead ? 0.00 : FOG.bandTop;
+const yBandBottom = FOG._aimAhead ? 0.38 : FOG.bandBottom;
+const yMin = screenRect.dy + screenRect.dh * yBandTop;
+const yMax = screenRect.dy + screenRect.dh * yBandBottom;
 if (p.y > yMax) p.vy -= 12 * dt;
 if (p.y < yMin) p.vy +=  8 * dt;
+
 
   }
 }
@@ -1186,12 +1198,13 @@ function startCinematic1(){
 
 function phaseFogFill(){
   CUT.phase='fogFill';
+  
 
   // ancla en Gandalf pequeño si existe
   const g = NPCS.find(n => n.id === 'gandalf_temp');
   const anchor = g ? { x: g.x, y: g.y - 40 }         // un pelín por encima
                    : { x: cam.x + cam.w/2, y: cam.y + cam.h*0.25 };
-
+  fogAimAhead(true); 
   fogBeginFill({
     anchor,
     dur: 3000,     // lo que pediste: 3s
@@ -1316,6 +1329,7 @@ function spawnTempGandalfAhead(targetCamY){
   function endCine(){
     CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
     ambientLock=false;
+    fogResetAim();   
   }
 }
 
