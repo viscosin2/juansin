@@ -1236,7 +1236,12 @@ function startCinematic1(){
   CUT.hijackAction = ()=>{
     closeCurrentDialogNow();
     CUT.hijackAction = null;
-    phaseFogFill();
+     setTimeout(()=>{
+    if (CUT.active && CUT.id==='cine1'){ 
+      phaseFogFill();
+    }
+  }, 1000);
+};
   };
 
 function phaseFogFill(){
@@ -1256,8 +1261,20 @@ function phaseFogFill(){
     density: 1.0
   });
 
-  const check = ()=> (FOG.filling ? requestAnimationFrame(check) : phaseCameraPan());
-  requestAnimationFrame(check);
+  const check = ()=>{
+  if (FOG.filling){
+    requestAnimationFrame(check);
+  } else {
+    // Espera 1s antes del paneo
+    CUT.phase = 'prePanDelay';
+    setTimeout(()=>{
+      if (CUT.active && CUT.id==='cine1'){  // por si se canceló la cine
+        phaseCameraPan();
+      }
+    }, 1000);
+  }
+};
+requestAnimationFrame(check);
 }
 
 
