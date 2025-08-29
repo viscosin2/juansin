@@ -183,7 +183,7 @@ const NPC_CATALOG = {
   abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
   gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1},
   voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1},
-  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: 10, y: -18 },fireFxMs: 140},
+  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -10, y: -18 },fireFxMs: 140},
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1}
 };
 
@@ -198,10 +198,10 @@ const NPC_PLACED = {
      dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
     }],
   soldado1: [{id:'gunner1', type:'percent', x: 14, y: 87, interact: { x:-14, y: 8, w:28, h:16 },onFire:true, 
-     dialog: [{ speaker:'Voldemort', text:'Ahí te va un pequeño perdigón.' }, { speaker:'Armiche',text:'WTF' }]
+     dialog: [{ speaker:'Armiche', text:'Ahí te va un pequeño perdigón.' }]
     }],
   soldado2: [{id:'guard1', type:'percent', x: 8, y: 87, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_gunner', 
-     dialogBlocked:[ {speaker:'Boliche', text:'¡Como en el Call of Duty, señores!'}], dialog: [{ speaker:'', text:'¡Ah! ¡Mi lentilla!' }, { speaker:'Juan',text:'WTF' }]
+     dialogBlocked:[ {speaker:'Boliche', text:'¡Como en el Call of Duty, señores!'}], dialog: [{ speaker:'Boliche', text:'¡Ah! ¡Mi lentilla!' }]
     }]
 };
 
