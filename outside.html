@@ -174,7 +174,7 @@ const CATALOG = {
   valla_clara:  { src:'assets/objects/valla_clara.png',  scale:1, collider:null },
   valla_media:  { src:'assets/objects/valla_media.png',  scale:1, collider:{x:-50,y:3,w:50,h:1} },
   valla_oscura: { src:'assets/objects/valla_oscura.png', scale:1, collider:{x:-210,y:-4.5,w:500,h:1}},
-  casajuan:     { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91, h:21}, depthBand:1, depthAnchorY:1},
+  casajuan:     { src:'assets/objects/casajuan.png',     scale:1, collider:{x:-46.5,y:-5,w:91, h:21}, depthBand:1, depthAnchorY:1, interact:{x:-16,y:-10,w:32,h:18}},
   casaclara:    { src:'assets/objects/casaclara.png',    scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
   casaclara_amarilla:{ src:'assets/objects/casaclara_amarilla.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, depthBand:1, depthAnchorY:1},
   casaclara_azul:{ src:'assets/objects/casaclara_azul.png', scale:1, collider:{x:-28,y:-5,w:58, h:21}, flipX:true, depthBand:1, depthAnchorY:1},
@@ -197,7 +197,7 @@ const PLACED = {
                 {type:'percent',x:40,y:30},{type:'percent',x:50,y:30},{type:'percent',x:60,y:30},{type:'percent',x:70,y:30},{type:'percent',x:76.5,y:22.5},{type:'percent',x:86.5,y:22.5},{type:'percent',x:78,y:10},
                 {type:'percent',x:83,y:10.5},{type:'percent',x:85,y:32},{type:'percent',x:79,y:35},{type:'percent',x:96,y:9},{type:'percent',x:94,y:20},{type:'percent',x:96.5,y:30}],
   arboloscuro:  [{type:'percent',x:83,y:55},{type:'percent',x:78.5,y:58},{type:'percent',x:63,y:61},{type:'percent',x:85,y:79},{type:'percent',x:78,y:100.5}],
-  casajuan:    [{type:'percent',x:7.2,y:82}],
+  casajuan:    [{type:'percent',x:7.2,y:82,say:'Se oyen pajarillos...'}],
   casaclara_amarilla:[{type:'percent',x:24.5,y:90}],
   casaclara_azul:    [{type:'percent',x:5.5,y:45}],
   casaclara:         [{type:'percent',x:7,y:20}],
@@ -354,8 +354,17 @@ function advanceDialog(){
 }
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
-  if(dialogOpen){ advanceDialog(); }
+  if (dialogOpen){
+    advanceDialog();
+    return;
+  }
+  // si no hay diálogo, intenta interacción
+  const hit = getInteractHit();
+  if (hit && hit.say){
+    showToast(hit.say, 1800);
+  }
 }, {passive:false});
+
 
 /* ========== UTILS ========== */
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -401,6 +410,16 @@ function anyOverlap(cx, cy){
 }
 
 /* ========== PROPS / OBSTÁCULOS ========== */
+  function getInteractHit(){
+  const feet = feetWorld();
+  for (const p of PROPS){
+    if (p.interact && pointInRect(feet.x, feet.y, p.interact)){
+      return p;
+    }
+  }
+  return null;
+}
+
 async function preloadCatalog(){
   const entries=Object.entries(CATALOG);
   const res=await Promise.all(entries.map(([k,v])=>loadImage(v.src).then(img=>[k,img])));
@@ -420,6 +439,18 @@ function buildPropsAndObstacles(){
         const col = { x: prop.x + c.x*s, y: prop.y + (c.y*s) - (c.h*s), w: c.w*s, h: c.h*s };
         prop.collider = col; OBSTACLES.push({ ...col, name: type });
       }
+      const s = prop.scale;
+      const srcInteract = p.interact || spec.interact || null;
+
+      if (srcInteract){
+        const i = srcInteract;
+        prop.interact = { x: prop.x + i.x*s, y: prop.y + (i.y*s) - (i.h*s), w: i.w*s, h: i.h*s };
+      } else {
+        // Si quieres que por defecto la interacción sea el collider, descomenta la siguiente línea:
+        // if (prop.collider) prop.interact = { ...prop.collider };
+      }
+      if (typeof p.say === 'string') prop.say = p.say;
+
       PROPS.push(prop);
     }
   }
@@ -428,6 +459,7 @@ function buildPropsAndObstacles(){
     OBSTACLES.push({x:r.x,y:r.y,w:r.w,h:r.h,name:o.name||'extra'});
   }
 }
+
 
 /* ========== AMBIENTE: zonas + overlay ========== */
 function buildAmbientZones(){
@@ -840,6 +872,24 @@ if (AMBIENT.k > 0.001){
     }
     ctx.restore();
   }
+
+  // DEBUG ZONAS INTERACCÓN
+  if (DEBUG_OBS){
+  ctx.save();
+  ctx.globalAlpha = .45;
+  ctx.fillStyle = '#33ccff';
+  ctx.strokeStyle = '#00334d';
+  for (const p of PROPS){
+    if (!p.interact) continue;
+    const dx = screenRect.dx + (p.interact.x - cam.x) * mapScaleX;
+    const dy = screenRect.dy + (p.interact.y - cam.y) * mapScaleY;
+    const dw = p.interact.w * mapScaleX, dh = p.interact.h * mapScaleY;
+    ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+    ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+  }
+  ctx.restore();
+}
+
 }
 
 /* ========== LOOP / INIT ========== */
