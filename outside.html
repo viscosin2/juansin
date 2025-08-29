@@ -60,7 +60,8 @@
     background:rgba(12,12,24,0.9); border-top:2px solid #3cf;
   }
   .dialog.show{ transform:translateX(-50%) scaleX(1); }
-  .dialog-name{ font-family:'Press Start 2P',system-ui; font-size:10px; color:#8df; margin-bottom:4px; text-shadow:0 1px 0 #000; }
+  .dialog-name.juan{ font-family:'Press Start 2P',system-ui; font-size:10px; color:#8df; margin-bottom:4px; text-shadow:0 1px 0 #000; }
+  .dialog-name.other{ font-family:'Press Start 2P',system-ui; font-size:10px; color:#f98; margin-bottom:4px; text-shadow:0 1px 0 #000; }
   .dialog-text{ font-family:'VT323',monospace; font-size:18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
   .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
   .dialog.ready .dialog-hint{ opacity:.9; }
@@ -405,6 +406,11 @@ function closeDialog(){
 function renderCurrentLine(startTyping=false){
   const line = dialogScript[dialogIndex] || {speaker:'', text:''};
   dialogNameEl.textContent = line.speaker || '';
+  if (line.speaker === 'Juan'){
+    dialogNameEl.className = 'dialog-name juan';
+  } else {
+    dialogNameEl.className = 'dialog-name other';
+  }
   dialogTextEl.textContent = '';
   dialogHintEl.style.opacity = 0;
   if(startTyping) startTypingEffect(line.text);
