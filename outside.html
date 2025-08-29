@@ -106,6 +106,7 @@ const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
 const DEBUG_OBS = false;
 const DEBUG_INTER = false;
 const DEBUG_AMBIENT = false;
+const DEBUG_CINE = true; 
 const DEPTH_BAND = 12;
 
 /* ====== BACKBUFFER para blur en modo cine ====== */
@@ -1312,7 +1313,7 @@ for (const key of Object.keys(AMBIENT.alphas)) {
 
 }
 
-/* ========== DRAW ========== */
+/* ========== MEGADRAW ========== */
 function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -1558,6 +1559,37 @@ if (DEBUG_INTER){
 
   ctx.restore();
 }
+
+
+
+  // DEBUG zonas de cinemática
+if (DEBUG_CINE && CINE_BUILT.length){
+  ctx.save();
+  ctx.globalAlpha = 0.45;
+  ctx.fillStyle   = '#ff00ff'; // fucsia transparente
+  ctx.strokeStyle = '#660066';
+  ctx.lineWidth = 2;
+
+  for (const z of CINE_BUILT){
+    const dx = screenRect.dx + (z.x - cam.x) * mapScaleX;
+    const dy = screenRect.dy + (z.y - cam.y) * mapScaleY;
+    const dw = z.w * mapScaleX, dh = z.h * mapScaleY;
+
+    ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+    ctx.strokeRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
+
+    // texto con el id
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(z.id, Math.round(dx)+4, Math.round(dy)+14);
+
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle   = '#ff00ff';
+  }
+  ctx.restore();
+}
+
 
 
 portraitsDrawOverlay();
