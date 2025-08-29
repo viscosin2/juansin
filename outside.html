@@ -172,6 +172,23 @@ let AMBIENT_BUILT = [];
 let _ambientCurrentZone = null;
 let introActive = true;
 let initialDialogShown = false;
+let NPC_IMAGES = {}, NPCS = [];
+
+
+  /* ========== NPCs ========== */
+// Catálogo de tipos de NPC (sprite, escala, collider, etc.)
+const NPC_CATALOG = {
+  vecino: { 
+    src: 'assets/npcs/abuela.png', scale: 1, collider: { x:-10, y:-4, w:20, h:8 },depthBand: 8, depthAnchorY: 1}
+};
+
+const NPC_PLACED = {
+  abuela: [
+    {type:'percent', x: 10, y: 87, interact: { x:-14, y: 8, w:28, h:16 }, 
+     dialog: [{ speaker:'Abuelita', text:'Buenas, Juan. ¿Has visto a mi gato?' }, { speaker:'Juan',text:'Mmm… creo que estaba por el río.' }]
+    }]
+};
+
 
 /* ========== CATALOGO / PLACEMENT ========== */
 const CATALOG = {
@@ -296,6 +313,59 @@ function showToast(msg, ms=1800){
   clearTimeout(showToast._to);
   showToast._to = setTimeout(()=>t.classList.remove('show'), ms);
 }
+  
+/* ====== NPCS ====== */
+  async function preloadNPCs(){
+  const entries = Object.entries(NPC_CATALOG);
+  const res = await Promise.all(entries.map(([k,v]) => loadImage(v.src).then(img => [k,img])));
+  res.forEach(([k,img]) => { NPC_IMAGES[k] = img; });
+}
+
+function buildNPCs(){
+  NPCS = [];
+  for (const [type, list] of Object.entries(NPC_PLACED)){
+    const spec = NPC_CATALOG[type];
+    const img  = NPC_IMAGES[type];
+    if(!spec || !list?.length) continue;
+
+    for (const p of list){
+      const pos = (p.type === 'percent') ? percentToWorld(p) : { x:p.x, y:p.y };
+      const s   = spec.scale || 1;
+      const npc = {
+        type, img,
+        x: pos.x, y: pos.y,
+        iw: img ? img.naturalWidth  : 32,
+        ih: img ? img.naturalHeight : 32,
+        scale: s,
+        depthBand: spec.depthBand ?? DEPTH_BAND,
+        depthAnchorY: spec.depthAnchorY ?? 0,
+        dialog: Array.isArray(p.dialog) ? p.dialog : null
+      };
+
+      // collider opcional (bloquea como obstáculo)
+      if (spec.collider){
+        const c = spec.collider;
+        const col = { x: npc.x + c.x*s, y: npc.y + (c.y*s) - (c.h*s), w: c.w*s, h: c.h*s };
+        npc.collider = col;
+        OBSTACLES.push({ ...col, name:`npc:${type}` });
+      }
+
+      // zona de interacción para abrir diálogo
+      if (p.interact){
+        const i = p.interact;
+        npc.interacts = [{
+          x: npc.x + i.x*s,
+          y: npc.y + (i.y*s) - (i.h*s),
+          w: i.w*s, h: i.h*s,
+          dialog: npc.dialog
+        }];
+      }
+
+      NPCS.push(npc);
+    }
+  }
+}
+
 
 /* ====== DIÁLOGO ====== */
 const dialogEl     = document.getElementById('dialog');
@@ -369,10 +439,19 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
     advanceDialog();
     return;
   }
-  // si no hay diálogo, intenta interacción
-  const hit = getInteractHit();
-  if (hit && hit.say){
-    showToast(hit.say, 1800);
+
+  // 1) NPCs con diálogo
+  const npcHit = getNPCInteractHit();
+  if (npcHit && npcHit.dialog && npcHit.dialog.length){
+    openDialog(npcHit.dialog, true);
+    return;
+  }
+
+  // 2) Props con "say" => toast
+  const propHit = getInteractHit();
+  if (propHit && propHit.say){
+    showToast(propHit.say, 1800);
+    return;
   }
 }, {passive:false});
 
@@ -427,6 +506,18 @@ function getInteractHit(){
     for (const zone of pr.interacts){
       if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, zone)){
         return zone; // devolvemos la zona encontrada
+      }
+    }
+  }
+  return null;
+}
+
+  function getNPCInteractHit(){
+  for (const npc of NPCS){
+    if (!npc.interacts) continue;
+    for (const zone of npc.interacts){
+      if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, zone)){
+        return zone; // trae .dialog si existe
       }
     }
   }
@@ -826,6 +917,36 @@ function draw(){
     });
   }
 
+  // NPCs
+for (const n of NPCS){
+  const px = screenRect.dx + (n.x - cam.x) * mapScaleX;
+  const py = screenRect.dy + (n.y - cam.y) * mapScaleY;
+  const dw = Math.round(n.iw * n.scale * mapScaleX);
+  const dh = Math.round(n.ih * n.scale * mapScaleY);
+  const dx = Math.round(px - dw/2);
+  const dy = Math.round(py - dh);
+
+  const band   = n.depthBand ?? DEPTH_BAND;
+  const anchor = (n.depthAnchorY ?? 0) * mapScaleY;
+  const pyCut  = py + anchor;
+
+  const sortY = (jFoot < pyCut - band) ? (py + 0.5) :
+                (jFoot > pyCut + band) ? (py - 0.5) :
+                py;
+
+  list.push({
+    y: sortY,
+    draw: ()=>{
+      if(!n.img){ 
+        ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh);
+      } else {
+        ctx.drawImage(n.img, 0,0, n.iw,n.ih, dx,dy, dw,dh);
+      }
+    }
+  });
+}
+
+  
   // jugador con “respiración” en idle (pies pegados al suelo)
 list.push({
   y: jFoot,
@@ -918,10 +1039,12 @@ if (AMBIENT.k > 0.001){
     ctx.restore();
   }
 
-  // DEBUG ZONAS INTERACCÓN
- if (DEBUG_INTER){
+// DEBUG ZONAS INTERACCIÓN
+if (DEBUG_INTER){
   ctx.save();
   ctx.globalAlpha = .45;
+
+  // Props: azul
   ctx.fillStyle = '#33ccff';
   ctx.strokeStyle = '#00334d';
   for (const p of PROPS){
@@ -934,8 +1057,29 @@ if (AMBIENT.k > 0.001){
       ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
     }
   }
+
+  // NPCs: verde
+  ctx.fillStyle = 'rgba(0,255,120,0.45)';
+  ctx.strokeStyle = '#024d2a';
+  for (const n of NPCS){
+    if (!n.interacts) continue;
+    for (const r of n.interacts){
+      const dx = screenRect.dx + (r.x - cam.x) * mapScaleX;
+      const dy = screenRect.dy + (r.y - cam.y) * mapScaleY;
+      const dw = r.w * mapScaleX, dh = r.h * mapScaleY;
+      ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+      ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+    }
+  }
+
   ctx.restore();
 }
+
+
+
+
+
+  
   }
 /* ========== LOOP / INIT ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; _nowSec = t / 1000;  update(dt); draw(); requestAnimationFrame(loop); }
@@ -944,6 +1088,8 @@ async function init(){
   const [bg,spr] = await Promise.all([loadImage(BG_SRC), preloadSprites(JUAN)]);
   bgImg=bg; sprites=spr;
   await preloadCatalog();
+    await preloadNPCs();          // << NUEVO
+
 
   world.w=bgImg.naturalWidth; world.h=bgImg.naturalHeight;
   AMBIENT_BUILT = buildAmbientZones();
@@ -956,6 +1102,8 @@ async function init(){
   keys.up=keys.down=keys.left=keys.right=false;
 
   buildPropsAndObstacles();
+    buildNPCs();                  // << NUEVO
+
   centerCameraOnPlayer();
 
   // Arranque del ambiente base desde 0 con fade
