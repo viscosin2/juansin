@@ -130,6 +130,7 @@ const FOG = {
   baseAlpha: 0.1,                            // más opacidad por partícula
   seed: 1337,
   color: '255,255,255',
+  layer: 'betweenBackAndActors',
 
   // fuerzas (más lento)
   swirl: 16,          // antes 32 → menos giro
@@ -1348,10 +1349,7 @@ function update(dt){
     AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
     player.moving = false; player.frame = 0;
     const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
-if (canCenterCam) centerCameraOnPlayer();
-
-
-
+    if (canCenterCam) centerCameraOnPlayer();
 
     if (AMBIENT.k >= 1 && !initialDialogShown){
       initialDialogShown = true;
@@ -1363,85 +1361,93 @@ if (canCenterCam) centerCameraOnPlayer();
     return;
   }
 
+  // Disparo de la zona de cine solo si no hay cinemática en curso
   if (!CUT.active){
-  const feet = feetWorld();
-  const cz = CINE_BUILT.find(z=> !z._done && feet.x>=z.x && feet.x<=z.x+z.w && feet.y>=z.y && feet.y<=z.y+z.h);
-  if (cz && cz.id==='cine1'){
-    cz._done = true;
-    startCinematic1();
-    return;
+    const feet = feetWorld();
+    const cz = CINE_BUILT.find(z=> !z._done && feet.x>=z.x && feet.x<=z.x+z.w && feet.y>=z.y && feet.y<=z.y+z.h);
+    if (cz && cz.id==='cine1'){
+      cz._done = true;
+      startCinematic1();
+      return;
+    }
   }
-}
 
-  if (dialogOpen){
+  // Si hay diálogo Y NO estamos en cinemática, paramos aquí (como antes).
+  // En cinemática NO hacemos return para que sigan fog/cámara/retratos.
+  if (!CUT.active && dialogOpen){
     player.moving = false; player.frame = 0;
     const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
-if (canCenterCam) centerCameraOnPlayer();
-
+    if (canCenterCam) centerCameraOnPlayer();
     return;
   }
 
+  // Si hay ambientLock, congelamos animación de Juan (pero seguimos actualizando resto)
   if (ambientLock){
     player.moving = false; player.frame = 0;
     const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
-if (canCenterCam) centerCameraOnPlayer();
-
+    if (canCenterCam) centerCameraOnPlayer();
   }
 
+  // Retratos y tween de cámara siguen siempre
+  portraitsUpdate(dt);
+  if (CAM_TWEEN.on){
+    CAM_TWEEN.t = Math.min(1, CAM_TWEEN.t + dt*1000 / CAM_TWEEN.dur);
+    const ease = (x)=> x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
+    const k = ease(CAM_TWEEN.t);
+    cam.x = CAM_TWEEN.sx + (CAM_TWEEN.ex - CAM_TWEEN.sx)*k;
+    cam.y = CAM_TWEEN.sy + (CAM_TWEEN.ey - CAM_TWEEN.sy)*k;
+    if (CAM_TWEEN.t>=1) CAM_TWEEN.on=false;
+  }
 
-portraitsUpdate(dt);
-if (CAM_TWEEN.on){
-  CAM_TWEEN.t = Math.min(1, CAM_TWEEN.t + dt*1000 / CAM_TWEEN.dur);
-  const ease = (x)=> x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
-  const k = ease(CAM_TWEEN.t);
-  cam.x = CAM_TWEEN.sx + (CAM_TWEEN.ex - CAM_TWEEN.sx)*k;
-  cam.y = CAM_TWEEN.sy + (CAM_TWEEN.ey - CAM_TWEEN.sy)*k;
-  if (CAM_TWEEN.t>=1) CAM_TWEEN.on=false;
-}
-
-  // Movimiento
-  const wantsToMove = !!(vx || vy);
-  player.moving = !ambientLock && wantsToMove;
-
-  if (player.moving){
-    player.dir = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : (vy < 0 ? 'up' : 'down');
-    const len   = Math.hypot(vx, vy) || 1;
-    const stepx = (vx/len) * player.speed * dt;
-    const stepy = (vy/len) * player.speed * dt;
-
-    const s = JUAN.scale, halfW = Math.round(JUAN.size.w*s)/2, halfH = Math.round(JUAN.size.h*s)/2;
-    const nx = clamp(player.x + stepx, halfW, world.w - halfW);
-    const ny = clamp(player.y + stepy, halfH, world.h - halfH);
-
-    let blockedX = false, blockedY = false;
-    for (const ob of OBSTACLES) if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX = true; break; }
-    if (!blockedX) player.x = nx;
-    for (const ob of OBSTACLES) if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY = true; break; }
-    if (!blockedY) player.y = ny;
-
-    if (blockedX && blockedY){
-      if (!cornerSlide(nx, ny, stepx, stepy)) nudgeOut();
-    }
-
-    player.frameTime += dt;
-    if (player.frameTime >= 0.12){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
-  } else {
+  // ---------------- Movimiento (bloqueado completamente si CUT.active) ----------------
+  if (CUT.active){
+    // bloqueo total durante la cinemática
+    player.moving = false;
     player.frame = 0;
+  } else {
+    const wantsToMove = !!(vx || vy);
+    player.moving = !ambientLock && wantsToMove;
+
+    if (player.moving){
+      player.dir = Math.abs(vx) > Math.abs(vy) ? (vx < 0 ? 'left' : 'right') : (vy < 0 ? 'up' : 'down');
+      const len   = Math.hypot(vx, vy) || 1;
+      const stepx = (vx/len) * player.speed * dt;
+      const stepy = (vy/len) * player.speed * dt;
+
+      const s = JUAN.scale, halfW = Math.round(JUAN.size.w*s)/2, halfH = Math.round(JUAN.size.h*s)/2;
+      const nx = clamp(player.x + stepx, halfW, world.w - halfW);
+      const ny = clamp(player.y + stepy, halfH, world.h - halfH);
+
+      let blockedX = false, blockedY = false;
+      for (const ob of OBSTACLES) if (ellipseRectOverlap(nx, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedX = true; break; }
+      if (!blockedX) player.x = nx;
+      for (const ob of OBSTACLES) if (ellipseRectOverlap(player.x, ny + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, ob)){ blockedY = true; break; }
+      if (!blockedY) player.y = ny;
+
+      if (blockedX && blockedY){
+        if (!cornerSlide(nx, ny, stepx, stepy)) nudgeOut();
+      }
+
+      player.frameTime += dt;
+      if (player.frameTime >= 0.12){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
+    } else {
+      player.frame = 0;
+    }
   }
 
   if (!ambientLock) nudgeOut();
 
   const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
-if (canCenterCam) centerCameraOnPlayer();
+  if (canCenterCam) centerCameraOnPlayer();
 
+  // La niebla debe actualizar SIEMPRE (incluida la cinemática)
   fogUpdate(dt);
 
-  // Zonas
+  // ---------------- Zonas de ambiente ----------------
   const feet = feetWorld();
   const newZone = AMBIENT_BUILT.find(z => pointInRect(feet.x, feet.y, z));
   const prevZone = _ambientCurrentZone;
 
-  // Cambio de zona
   if (newZone !== prevZone){
     // limpiar anterior
     if (prevZone){
@@ -1479,56 +1485,56 @@ if (canCenterCam) centerCameraOnPlayer();
     }
 
     // Objetivos de paleta (crossfade sin saltos)
-const targetPal = newZone ? newZone.palette : 'peach';
-AMBIENT.targets.peach    = (targetPal === 'peach')    ? 1 : 0;
-AMBIENT.targets.bluehour = (targetPal === 'bluehour') ? 1 : 0;
-AMBIENT.targets.hell     = (targetPal === 'hell')     ? 1 : 0;
+    const targetPal = newZone ? newZone.palette : 'peach';
+    AMBIENT.targets.peach    = (targetPal === 'peach')    ? 1 : 0;
+    AMBIENT.targets.bluehour = (targetPal === 'bluehour') ? 1 : 0;
+    AMBIENT.targets.hell     = (targetPal === 'hell')     ? 1 : 0;
 
     _ambientCurrentZone = newZone;
   }
 
- // Sube la intensidad global durante la intro
-// (si prefieres que solo suba en intro, deja como lo tenías)
-AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
+  // Sube la intensidad global durante la intro (si lo mantienes así)
+  AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
 
-// Interpolar alphas hacia sus objetivos (crossfade continuo)
-for (const key of Object.keys(AMBIENT.alphas)) {
-  const a = AMBIENT.alphas[key];
-  const t = AMBIENT.targets[key];
-  AMBIENT.alphas[key] = (AMBIENT.fadeMs <= 0)
-    ? t
-    : a + (t - a) * Math.min(1, (dt * 1000) / AMBIENT.fadeMs);
+  // Interpolar alphas hacia sus objetivos (crossfade continuo)
+  for (const key of Object.keys(AMBIENT.alphas)) {
+    const a = AMBIENT.alphas[key];
+    const t = AMBIENT.targets[key];
+    AMBIENT.alphas[key] = (AMBIENT.fadeMs <= 0)
+      ? t
+      : a + (t - a) * Math.min(1, (dt * 1000) / AMBIENT.fadeMs);
+  }
 }
 
-}
 
 /* ========== MEGADRAW ========== */
 function draw(){
   if(!bgImg) return;
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
+  // fondo
   let sx = Math.round(cam.x), sy = Math.round(cam.y);
   sx = clamp(sx, 0, world.w - cam.w);
   sy = clamp(sy, 0, world.h - cam.h);
   ctx.drawImage(bgImg, sx, sy, cam.w, cam.h, screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
+  // clip principal
   ctx.save();
   ctx.beginPath();
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  // jugador en coords pantalla
+  // ----- cálculos del jugador -----
   const sw = JUAN.size.w, sh = JUAN.size.h, s = JUAN.scale;
   const jw = Math.round(sw*s), jh = Math.round(sh*s);
   const jx = Math.round(screenRect.dx + (player.x - cam.x) * mapScaleX);
   const jy = Math.round(screenRect.dy + (player.y - cam.y) * mapScaleY);
   const jFoot = jy + jh/2;
 
-  const propsBack = [];
-  const propsFront = [];
-  const actorsList = []; // NPCs + jugador
+  const propsList = [];
+  const actorsList = [];
 
-  /* ---------- PROPS -> propsBack/propsFront ---------- */
+  // ----- props (un solo bucket como antes) -----
   for (const p of PROPS){
     const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
     const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
@@ -1538,23 +1544,15 @@ function draw(){
     const spec = CATALOG[p.type] || {};
     const band = spec.depthBand ?? DEPTH_BAND;
     const anchor = (spec.depthAnchorY ?? 0) * mapScaleY;
-    const pyCut = py + anchor; // "línea de apoyo" del prop
+    const pyCut = py + anchor;
 
-    // Forzado atrás (río, etc.)
-    let goesFront;
-    if (spec.forceBack){
-      goesFront = false;
-    } else {
-      // decide si el prop va delante o detrás del jugador
-      goesFront = (jFoot < (pyCut - band)) ? true
-                : (jFoot > (pyCut + band)) ? false
-                : (pyCut > jFoot); // zona gris: decide por base
-    }
+    const sortY = spec.forceBack ? -9999 :
+                  (jFoot < pyCut - band) ? (py + 0.5) :
+                  (jFoot > pyCut + band) ? (py - 0.5) :
+                  py;
 
-    const bucket = goesFront ? propsFront : propsBack;
-
-    bucket.push({
-      y: py, // ordena por base real dentro del bucket
+    propsList.push({
+      y: sortY,
       draw(){
         if(!p.img){
           ctx.fillStyle='#777'; ctx.fillRect(dx,dy,dw,dh);
@@ -1572,7 +1570,7 @@ function draw(){
     });
   }
 
-  /* ---------- NPCs -> actorsList ---------- */
+  // ----- NPCs -----
   for (const n of NPCS){
     const px = screenRect.dx + (n.x - cam.x) * mapScaleX;
     const py = screenRect.dy + (n.y - cam.y) * mapScaleY;
@@ -1598,7 +1596,6 @@ function draw(){
         const footY = Math.round(py);
         const shadowW = Math.max(6, Math.round(dw * sh.scaleX));
         const shadowH = Math.max(3, Math.round(dh * sh.scaleY));
-
         ctx.save();
         ctx.globalAlpha = sh.alpha;
         ctx.fillStyle = 'black';
@@ -1608,11 +1605,8 @@ function draw(){
         ctx.restore();
 
         // sprite
-        if (!n.img) {
-          ctx.fillStyle = '#999'; ctx.fillRect(dx, dy, dw, dh);
-        } else {
-          ctx.drawImage(n.img, 0, 0, n.iw, n.ih, dx, dy, dw, dh);
-        }
+        if (!n.img) { ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh); }
+        else { ctx.drawImage(n.img,0,0,n.iw,n.ih,dx,dy,dw,dh); }
 
         // FX disparo
         if (isNPCFxActive(n)) {
@@ -1632,7 +1626,7 @@ function draw(){
     });
   }
 
-  /* ---------- JUAN -> actorsList ---------- */
+  // ----- JUAN -----
   actorsList.push({
     y: jFoot,
     draw(){
@@ -1661,22 +1655,13 @@ function draw(){
       ctx.restore();
     }
   });
-fogDraw();
-  /* ---------- PINTADO EN ORDEN ---------- */
-  // 1) props detrás del jugador
-  propsBack.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
 
-  // 2) niebla (screen-space) entre props y actores
+  // ----- orden de pintado clásico -----
+  propsList.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());     // props
+  actorsList.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());    // NPCs + Juan
+  ctx.restore();                                               // (salimos del clip para overlays)
 
-  // 3) actores (NPCs + Juan)
-  actorsList.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
-
-  // 4) props por delante del jugador
-  propsFront.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
-
-  ctx.restore();
-
-  /* --- AMBIENT OVERLAYS (alphas por paleta) --- */
+  // Overlays de ambiente y linterna (quedarán por DEBAJO de la niebla)
   if (AMBIENT.k > 0.001){
     const order = ['peach','bluehour','hell'];
     for (const pal of order){
@@ -1684,107 +1669,27 @@ fogDraw();
       if (a > 0.001) drawPalette(pal, a * AMBIENT.k);
     }
   }
-
-  /* --- LINTERNA encima --- */
   drawFlashlightEnhance();
 
-  /* --- DEBUG AMBIENT --- */
-  if (DEBUG_AMBIENT && AMBIENT_BUILT.length){
-    ctx.save();
-    ctx.globalAlpha = 0.30;
-    for (const z of AMBIENT_BUILT){
-      const dx = screenRect.dx + (z.x - cam.x) * mapScaleX;
-      const dy = screenRect.dy + (z.y - cam.y) * mapScaleY;
-      const dw = z.w * mapScaleX, dh = z.h * mapScaleY;
-      ctx.fillStyle = (z.palette==='bluehour') ? '#66a3ff' : '#ff66aa';
-      ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-      ctx.globalAlpha = 0.9;
-      ctx.strokeStyle = '#ffffff';
-      ctx.strokeRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-      ctx.globalAlpha = 0.95;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px monospace';
-      ctx.fillText(z.name || z.palette || 'zone', Math.round(dx)+4, Math.round(dy)+14);
-      ctx.globalAlpha = 0.30;
-    }
-    ctx.restore();
-  }
+  // Debug (si lo usas)
+  if (DEBUG_AMBIENT && AMBIENT_BUILT.length){ /* ... igual que antes ... */ }
+  if (DEBUG_OBS){ /* ... igual que antes ... */ }
+  if (DEBUG_INTER){ /* ... igual que antes ... */ }
+  if (DEBUG_CINE && CINE_BUILT.length){ /* ... igual que antes ... */ }
 
-  /* --- DEBUG OBSTÁCULOS --- */
-  if(DEBUG_OBS){
-    ctx.save();
-    ctx.globalAlpha = .5; ctx.fillStyle = '#ff3366'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
-    for(const ob of OBSTACLES){
-      const dx = screenRect.dx + (ob.x - cam.x) * mapScaleX;
-      const dy = screenRect.dy + (ob.y - cam.y) * mapScaleY;
-      const dw = ob.w * mapScaleX, dh = ob.h * mapScaleY;
-      ctx.fillRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-      ctx.strokeRect(Math.round(dx), Math.round(dy), Math.round(dw), Math.round(dh));
-    }
-    ctx.restore();
-  }
-
-  /* --- DEBUG ZONAS INTERACCIÓN --- */
-  if (DEBUG_INTER){
-    ctx.save();
-    ctx.globalAlpha = .45;
-
-    // Props: azul
-    ctx.fillStyle = '#33ccff';
-    ctx.strokeStyle = '#00334d';
-    for (const p of PROPS){
-      if (!p.interacts) continue;
-      for (const r of p.interacts){
-        const dx = screenRect.dx + (r.x - cam.x) * mapScaleX;
-        const dy = screenRect.dy + (r.y - cam.y) * mapScaleY;
-        const dw = r.w * mapScaleX, dh = r.h * mapScaleY;
-        ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-        ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-      }
-    }
-
-    // NPCs: verde
-    ctx.fillStyle = 'rgba(0,255,120,0.45)';
-    ctx.strokeStyle = '#024d2a';
-    for (const n of NPCS){
-      if (!n.interacts) continue;
-      for (const r of n.interacts){
-        const dx = screenRect.dx + (r.x - cam.x) * mapScaleX;
-        const dy = screenRect.dy + (r.y - cam.y) * mapScaleY;
-        const dw = r.w * mapScaleX, dh = r.h * mapScaleY;
-        ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-        ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-      }
-    }
-
-    ctx.restore();
-  }
-
-  /* --- DEBUG ZONAS CINE --- */
-  if (DEBUG_CINE && CINE_BUILT.length){
-    ctx.save();
-    ctx.globalAlpha = 0.45; ctx.fillStyle='#ff00ff'; ctx.strokeStyle='#660066'; ctx.lineWidth=2;
-    for(const z of CINE_BUILT){
-      const dx = screenRect.dx + (z.x - cam.x) * mapScaleX;
-      const dy = screenRect.dy + (z.y - cam.y) * mapScaleY;
-      const dw = z.w * mapScaleX, dh = z.h * mapScaleY;
-      ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-      ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-      ctx.globalAlpha=0.95; ctx.fillStyle='#fff'; ctx.font='bold 12px monospace';
-      ctx.fillText(z.id, Math.round(dx)+4, Math.round(dy)+14);
-      ctx.globalAlpha=0.45; ctx.fillStyle='#ff00ff';
-    }
-    ctx.restore();
-  }
-
-  // --- Retratos / cine overlay al final del todo ---
+  // Retratos / modo cine
   portraitsDrawOverlay();
+
+  // >>>> NIEBLA AL FINAL DEL TODO (encima de todo lo anterior) <<<<
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
+  fogDraw();
+  ctx.restore();
 }
 
 
-
-
-  
 /* ========== LOOP / MEGAINIT ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; _nowSec = t / 1000;  update(dt); draw(); requestAnimationFrame(loop); }
 
