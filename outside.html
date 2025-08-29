@@ -1243,7 +1243,7 @@ function startCinematic1(){
   }
 function phaseQuestionThenWalk(){
   CUT.phase = 'question';
-  openDialog([{ speaker:'Juan', text:'?' }], true);
+  openDialog([{ speaker:'Juan', text:'...?' }], true);
 
   // Acción: cerrar "?" y arrancar caminata YA
   CUT.hijackAction = ()=>{
@@ -1349,20 +1349,20 @@ function spawnTempGandalfAhead(targetCamY){
   function phaseWorldDialogue(){
   CUT.phase='worldTalk';
   const script = [
-    {speaker:'???',  text:'Hola, muchacho.'},
-    {speaker:'Juan', text:'No me digas que eres...'}
+    {speaker:'???',  text:'Hola, muchacho...'},
+    {speaker:'Juan', text:'¡Yias! Pero si tu eres...'}
   ];
-  let idx = 0;
-  openDialog([script[idx]], true);
+  // Abre TODAS las líneas
+  openDialog(script, true);
+
   CUT.hijackAction = ()=>{
-    if (dialogOpen){ advanceDialog(); return; }
-    idx++;
-    if (idx < script.length){
-      openDialog([script[idx]], true);
-    } else {
-      CUT.hijackAction = null;
-      phasePortraits();
+    if (dialogOpen){
+      advanceDialog();
+      return;
     }
+    // aquí el diálogo ya terminó
+    CUT.hijackAction = null;
+    phasePortraits();
   };
 }
 
