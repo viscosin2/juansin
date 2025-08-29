@@ -1018,13 +1018,13 @@ list.push({
       ctx.drawImage(n.img, 0,0, n.iw,n.ih, dx,dy, dw,dh);
     }
 
-    // sombra igual que Juan (rápida)
-    const footX = Math.round(px);
-    const footY = Math.round(py + dh/2);
+    // sombra en el suelo (siempre en el suelo)
+    const footX = Math.round(jx);
+    const footY = Math.round(jy + jh/2);
     ctx.fillStyle = 'rgba(0,0,0,.3)';
     ctx.beginPath();
-    ctx.ellipse(footX, footY - 4, (dw/2.5), (dh/6), 0, 0, Math.PI*2);
-    ctx.fill();
+    ctx.ellipse(footX, footY - 4, dw/2.5, dh/6, 0, 0, Math.PI*2);
+    ctx.fill();  
 
     // FX disparo
     if (isNPCFxActive(n)){
