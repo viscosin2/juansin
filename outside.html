@@ -1241,7 +1241,19 @@ function startCinematic1(){
   }, 1000);
 };
   }
+function phaseQuestionThenWalk(){
+  CUT.phase = 'question';
+  openDialog([{ speaker:'Juan', text:'?' }], true);
 
+  // Acción: cerrar "?" y arrancar caminata YA
+  CUT.hijackAction = ()=>{
+    if (dialogOpen) closeDialog();
+    CUT.hijackAction = null;
+    phaseJuanAutoWalk();   // ← empieza a caminar al instante
+  };
+}
+
+  
 function phaseFogFill(){
   CUT.phase='fogFill';
 
@@ -1295,7 +1307,7 @@ function phaseCameraPan(){
       CUT.hijackAction = ()=>{
         if (dialogOpen){ advanceDialog(); return; }
         CUT.hijackAction = null;
-        phaseJuanAutoWalk();   // ahora sí, camina después de cerrar el "?"
+        phaseQuestionThenWalk();
       };
     }
   }, 16);
@@ -1323,11 +1335,11 @@ function spawnTempGandalfAhead(targetCamY){
 
   function phaseJuanAutoWalk(){
   CUT.phase='autowalk';
-  // Objetivo: centro vertical de la cámara YA paneada
   const targetY = cam.y + cam.h/2;
   const startY  = player.y;
   const dy = targetY - startY;
-  const dur = Math.max(400, Math.min(1200, Math.abs(dy)*12));
+  CUT.autoDir = (dy >= 0) ? 'down' : 'up';
+  const dur = Math.max(400, Math.min(1200, Math.abs(dy)*16));
   const t0  = performance.now();
 
   (function step(){
@@ -1506,10 +1518,21 @@ function update(dt){
 
   // ---------------- Movimiento (bloqueado completamente si CUT.active) ----------------
   if (CUT.active){
-    // bloqueo total durante la cinemática
+  if (CUT.phase === 'autowalk'){
+    // animar como si estuviera andando
+    player.moving = true;
+    if (CUT.autoDir) player.dir = CUT.autoDir;
+    player.frameTime += dt;
+    if (player.frameTime >= 0.12){
+      player.frame = (player.frame + 1) % 2;
+      player.frameTime = 0;
+    }
+  } else {
+    // resto de fases: congelado
     player.moving = false;
     player.frame = 0;
-  } else {
+  }
+} else {
     const wantsToMove = !!(vx || vy);
     player.moving = !ambientLock && wantsToMove;
 
