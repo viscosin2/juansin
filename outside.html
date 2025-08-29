@@ -1269,7 +1269,7 @@ function phaseFogFill(){
       if (CUT.active && CUT.id==='cine1'){  // por si se canceló la cine
         phaseCameraPan();
       }
-    }, 1000);
+    }, 3000);
   }
 };
 requestAnimationFrame(check);
@@ -1821,7 +1821,7 @@ AMBIENT.alphas  = { peach:1, bluehour:0, hell:0 };
 AMBIENT.targets = { peach:1, bluehour:0, hell:0 };
   requestAnimationFrame(loop);
   // fade negro inicial
-setTimeout(()=> document.getElementById('blackfade').classList.add('hide'), 100);
+setTimeout(()=> document.getElementById('blackfade').classList.add('hide'), 50);
 
 }
 init();
