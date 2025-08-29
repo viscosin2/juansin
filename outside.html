@@ -198,10 +198,10 @@ const NPC_PLACED = {
      dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
     }],
   soldado1: [{id:'gunner1', type:'percent', x: 14, y: 87, interact: { x:-14, y: 8, w:28, h:16 },onFire:true, 
-     dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
+     dialog: [{ speaker:'Voldemort', text:'Ahí te va un pequeño perdigón.' }, { speaker:'Armiche',text:'WTF' }]
     }],
   soldado2: [{id:'guard1', type:'percent', x: 8, y: 87, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_gunner', 
-     dialogBlocked:[ {speaker:'Guardia', text:'…No tengo nada que decirte.'}], dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
+     dialogBlocked:[ {speaker:'Boliche', text:'¡Como en el Call of Duty, señores!'}], dialog: [{ speaker:'', text:'¡Ah! ¡Mi lentilla!' }, { speaker:'Juan',text:'WTF' }]
     }]
 };
 
@@ -496,10 +496,13 @@ if (npcHit){
     }
 
     // efecto disparo + sonido + flag
-    if (npc.onFire){
-      triggerNPCShot(npc);
-      GAME_FLAGS.talked_gunner = true;
-    }
+if (npc.onFire){
+  setTimeout(() => {
+    triggerNPCShot(npc);
+  }, 1500); // 1000 ms = 1 segundo
+  GAME_FLAGS.talked_gunner = true;
+}
+
     return;
   }
 }
