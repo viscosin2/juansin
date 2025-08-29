@@ -125,23 +125,23 @@ const CUT = {
 
 const FOG = {
   active:false, parts:[],
-  filling:false, fillT:0, fillDur:3000,  // unifica en fillT
-  density: 1,                             // <-- NUEVO: valor por defecto
-  baseAlpha: 0.1,
+  filling:false, tFill:0, fillDur:3000,      // 3s para “llenar”
+  targetDensity: 260,                         // un pelín más denso
+  baseAlpha: 0.32,                            // más opacidad por partícula
   seed: 1337,
   color: '255,255,255',
-  swirl: 16,
-  attract: 10,
-  jitterAmp: 3,
-  jitterFreq: 0.9,
-  bandTop: 0.08,
-  bandBottom: 0.50,
-  anchor:{x:0,y:0},
-  areaW: 300,
-  areaH: 120,
-  targetYBand: 80,
-  world:true
+
+  // fuerzas (más lento)
+  swirl: 16,          // antes 32 → menos giro
+  attract: 10,        // antes 18 → avanza más despacio al centro
+  jitterAmp: 3,       // antes 6  → menos “tembleque”
+  jitterFreq: 0.9,    // antes 1.3
+
+  // banda superior (solo arriba)
+  bandTop:    0.08,   // 8% desde arriba
+  bandBottom: 0.50    // hasta mitad de pantalla aprox
 };
+
 
 
 
@@ -656,21 +656,15 @@ function fogStart(){
 function fogStop(){
   FOG.active=false;
   FOG.parts.length=0;
-  FOG.filling=false; FOG.fillT=0;   // <-- usa fillT
+  FOG.filling=false; FOG.tFill=0;
 }
 
-
-function fogBeginFill(opts={}){
-  FOG.filling = true; FOG.fillT = 0; FOG._fillT0 = performance.now();
-  FOG.fillDur = (opts.dur ?? FOG.fillDur);
-  if (opts.anchor){ FOG.anchor = { x: opts.anchor.x, y: opts.anchor.y }; }
-  if (opts.areaW) FOG.areaW = opts.areaW;
-  if (opts.areaH) FOG.areaH = opts.areaH;
-  FOG.density = (opts.density ?? FOG.density ?? 1);  // <-- asegura densidad
+function fogBeginFill(ms=FOG.fillDur){
+  FOG.fillDur = ms;
+  FOG.filling = true;
+  FOG.tFill   = 0;
   if (!FOG.active) fogStart();
 }
-
-
 
 function spawnFogParticle(side){
   // y restringido a la banda alta
@@ -705,98 +699,94 @@ function spawnFogParticle(side){
 function fogUpdate(dt){
   if (!FOG.active) return;
 
-  // spawn rate más estable
-  const rate = 120 * FOG.density * dt;
-  const toSpawn = Math.floor(rate);
-
-  for (let i=0; i<toSpawn; i++){
-    // Spawnea en una franja superior respecto al ancla, entrando desde lados
-    const fromLeft = Math.random()<0.5;
-    const x = fromLeft
-      ? FOG.anchor.x - FOG.areaW/2 - 40 - Math.random()*40
-      : FOG.anchor.x + FOG.areaW/2 + 40 + Math.random()*40;
-
-    const y = FOG.anchor.y - FOG.areaH/2 + Math.random()*FOG.areaH;
-
-    const r  = 8 + Math.random()*16;
-    const vx = (fromLeft ? 1 : -1) * (10 + Math.random()*18); // más lento
-    const vy = (-4 + Math.random()*8);                         // poco movimiento vertical
-    const alpha = 0.22 + Math.random()*0.20;                   // más opacas
-    const life  = 3.2 + Math.random()*2.0;
-
-    FOG.parts.push({ x, y, r, vx, vy, alpha, life, spin:(Math.random()*Math.PI*2), spinSpeed:(-0.6+Math.random()*1.2) });
-  }
-
-  // mover en mundo
-  for (let i=FOG.parts.length-1; i>=0; i--){
-    const p = FOG.parts[i];
-    p.x += p.vx*dt; p.y += p.vy*dt; p.life -= dt; p.spin += p.spinSpeed*dt;
-    // culling simple por vida
-    if (p.life<=0) FOG.parts.splice(i,1);
-  }
-
-  // progreso del “relleno basto”
+  // subir densidad de 0 → target en 3s con ease-in-out
+  let spawnScale = 1;
   if (FOG.filling){
-    const elapsed = performance.now() - FOG._fillT0;
-    FOG.fillT = Math.min(1, elapsed / FOG.fillDur);
-    if (FOG.fillT>=1) FOG.filling = false;
+    FOG.tFill = Math.min(FOG.fillDur, FOG.tFill + dt*1000);
+    const t = FOG.tFill / FOG.fillDur;
+    spawnScale = smoothstep(0.0, 1.0, t);
+    if (t>=1) FOG.filling = false;
+  }
+  const spawnRate = FOG.targetDensity * spawnScale;
+
+  // emitir simétrico por lados
+  const want = spawnRate * dt;
+  let toSpawn = Math.floor(want);
+  // alterna lados
+  for (let i=0; i<toSpawn; i++){
+    spawnFogParticle(i%2===0?'L':'R');
+  }
+
+  // mover + fuerzas
+  const cx = screenRect.dx + screenRect.dw*0.5;
+  const cy = screenRect.dy + screenRect.dh*0.42;
+
+  for (let i=FOG.parts.length-1;i>=0;i--){
+    const p = FOG.parts[i];
+    p.age += dt;
+    if (p.age >= p.life){ FOG.parts.splice(i,1); continue; }
+
+   // fuerzas
+const dx = cx - p.x, dy = cy - p.y;
+const len = Math.hypot(dx,dy) || 0.0001;
+const ux = dx/len,    uy = dy/len;
+const tx = -uy,       ty = ux;
+
+const ax = ux*FOG.attract + tx*FOG.swirl*p.side;
+const ay = uy*FOG.attract + ty*FOG.swirl*p.side;
+
+// jitter suave
+const j = Math.sin(p.phase + p.age*FOG.jitterFreq*2*Math.PI) * FOG.jitterAmp;
+const jx = -uy * j * 0.18;
+const jy =  ux * j * 0.18;
+
+// amortiguado más fuerte (↓ velocidad)
+p.vx = p.vx*0.965 + (ax*0.035);
+p.vy = p.vy*0.965 + (ay*0.035);
+
+// integra más despacio (antes *16)
+p.x += (p.vx + jx) * dt * 10;
+p.y += (p.vy + jy) * dt * 10;
+
+// mantenerlas en la banda alta (si se cuelan, empuje suave hacia arriba)
+const yMin = screenRect.dy + screenRect.dh * FOG.bandTop;
+const yMax = screenRect.dy + screenRect.dh * FOG.bandBottom;
+if (p.y > yMax) p.vy -= 12 * dt;
+if (p.y < yMin) p.vy +=  8 * dt;
+
   }
 }
-
 
 function fogDraw(){
-  if (!FOG.active) return;
+  if (!FOG.active || !FOG.parts.length) return;
 
-  // partículas (en mundo → pantalla)
-  if (FOG.parts.length){
-    ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-    for (const p of FOG.parts){
-      const sx = screenRect.dx + (p.x - cam.x) * mapScaleX;
-      const sy = screenRect.dy + (p.y - cam.y) * mapScaleY;
-      const R  = p.r * Math.max(mapScaleX, mapScaleY);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
 
-      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, R);
-      g.addColorStop(0, `rgba(${FOG.color}, ${p.alpha})`);
-      g.addColorStop(1, `rgba(255,255,255, 0)`);
-      ctx.fillStyle = g;
+  for (const p of FOG.parts){
+    // fade in/out por vida (suave, sin “blink”)
+    const k = p.age / p.life;
+    const fade = (k<0.2) ? smoothstep(0,0.2,k) :
+                 (k>0.8) ? (1 - smoothstep(0.8,1,k)) : 1;
 
-      // un toque de “spin” para que parezcan nubecitas
-      ctx.save();
-      ctx.translate(sx, sy);
-      ctx.rotate(p.spin);
-      ctx.beginPath();
-      ctx.arc(0, 0, R, 0, Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-    }
-    ctx.restore();
+    const alpha = p.alpha0 * fade;
+    if (alpha <= 0.002) continue;
+
+    // gradiente “nubecita”
+    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+    g.addColorStop(0, `rgba(${FOG.color}, ${alpha})`);
+    g.addColorStop(0.65, `rgba(${FOG.color}, ${alpha*0.7})`);
+    g.addColorStop(1, `rgba(${FOG.color}, 0)`);
+
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fill();
   }
 
-  // velo “basto” que se cierra desde lados hacia el centro (mundo → pantalla)
-  if (FOG.fillT>0){
-    const cx = screenRect.dx + (FOG.anchor.x - cam.x) * mapScaleX;
-    const cy = screenRect.dy + (FOG.anchor.y - cam.y) * mapScaleY;
-    const halfW = (FOG.areaW * 0.6) * mapScaleX; // ancho objetivo alrededor del ancla
-    const top    = cy - (FOG.areaH * 0.8) * mapScaleY; // parte alta
-    const bottom = cy + (FOG.areaH * 0.6) * mapScaleY; // límite inferior del “cinturón”
-
-    ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-    ctx.globalAlpha = 0.30 * FOG.fillT; // controla opacidad global del velo
-
-    // izquierda
-    ctx.fillStyle = `rgba(${FOG.color}, 1)`;
-    ctx.fillRect(screenRect.dx, top, Math.max(0, (cx - halfW) - screenRect.dx), bottom - top);
-
-    // derecha
-    const rightEdge = screenRect.dx + screenRect.dw;
-    const fromRight = Math.max(cx + halfW, screenRect.dx);
-    ctx.fillRect(fromRight, top, rightEdge - fromRight, bottom - top);
-
-    ctx.restore();
-  }
+  ctx.restore();
 }
+
 
   function portraitsOpen(script){
   PORTRAITS.active = true; PORTRAITS.script = script.slice(); PORTRAITS.idx = 0;
