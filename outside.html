@@ -826,41 +826,44 @@ function draw(){
     });
   }
 
-  // jugador con “respiración” en idle
+  // jugador con “respiración” en idle (pies pegados al suelo)
 list.push({
   y: jFoot,
   draw: () => {
     const img = player.moving ? sprites.walk[player.dir][player.frame] : sprites.idle[player.dir][0];
 
-    // sombra (no se “mueve” con la respiración)
+    // sombra en el suelo (siempre en el suelo)
+    const footX = Math.round(jx);
+    const footY = Math.round(jy + jh/2);
     ctx.fillStyle = 'rgba(0,0,0,.3)';
     ctx.beginPath();
-    ctx.ellipse(jx, jy + Math.round(jh/2) - 4, jw/2.5, jh/6, 0, 0, Math.PI*2);
+    ctx.ellipse(footX, footY - 4, jw/2.5, jh/6, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // respiración sólo cuando está parado y no hay locks/diálogo/intro
+    // respiración: squash & stretch muy sutil, anclado a los pies
     const canBreathe = !player.moving && !dialogOpen && !ambientLock && !introActive;
-    const breathSin  = Math.sin(_nowSec * BREATH.speed);
-    const breathY    = canBreathe ? breathSin * BREATH.amp : 0;
-    const breathS    = canBreathe ? (1 + breathSin * BREATH.scaleAmp) : 1;
+    const phase  = canBreathe ? Math.sin(_nowSec * BREATH.speed) : 0;
+    const sY     = 1 + phase * BREATH.scaleAmp;      // estira/encoge en vertical
+    const sX     = 1 - phase * BREATH.scaleAmp*0.6;  // compensa un pelín en horizontal
+    const compY  = (1 - sY) * jh;                    // al escalar, el “bottom” subiría: empuja hacia abajo
 
     ctx.save();
-    // trasladamos al centro del sprite, aplicamos escala sutil y desplazamiento vertical
-    const cx = Math.round(jx);
-    const cy = Math.round(jy);
-    ctx.translate(cx, cy + breathY);
-    ctx.scale(breathS, breathS);
+    // ancla: pies
+    ctx.translate(footX, footY);
+    // compensa para que la suela no se mueva
+    ctx.translate(0, compY);
+    ctx.scale(sX, sY);
 
-    // dibuja el sprite centrado en (0,0) tras la transformación
+    // dibuja alineado por abajo (bottom = 0), centrado en X
     ctx.drawImage(
       img, 0, 0, sw, sh,
-      Math.round(-jw/2), Math.round(-jh/2),
+      Math.round(-jw/2), -jh,
       jw, jh
     );
-
     ctx.restore();
   }
 });
+
 
 
   // pintar ordenado
