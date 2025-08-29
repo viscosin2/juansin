@@ -1227,7 +1227,10 @@ function startCinematic1(){
   ambientLock = true; player.moving=false;
 
   // F1: bloquea y muestra "¿Qué pasa?"
-  openDialog([{speaker:'Juan', text:'¿Qué pasa?'}], true);
+  setTimeout(() => {
+    openDialog([{speaker:'Juan', text:'...'},{speaker:'Juan', text:'Algo pasa...'}], true);
+  }, 1000);
+  
 
   // Acción → cerrar y pasar a F2 (niebla)
   CUT.hijackAction = ()=>{
