@@ -419,19 +419,18 @@ function anyOverlap(cx, cy){
 }
 
 /* ========== PROPS / OBSTÁCULOS ========== */
-  function getInteractHit(){
-  const feet = feetWorld();
+function getInteractHit(){
   for (const pr of PROPS){
-  if(!pr.interacts) continue;
-  for(const zone of pr.interacts){
-    if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, zone)){
-      if(zone.say) showToast(zone.say);
-      return;
+    if(!pr.interacts) continue;
+    for (const zone of pr.interacts){
+      if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, zone)){
+        return zone; // devolvemos la zona encontrada
+      }
     }
   }
-}
   return null;
 }
+
 
 async function preloadCatalog(){
   const entries=Object.entries(CATALOG);
@@ -453,21 +452,19 @@ function buildPropsAndObstacles(){
         prop.collider = col; OBSTACLES.push({ ...col, name: type });
       }
       const s = prop.scale;
-      const srcInteract = p.interact || spec.interact || null;
+      const srcInteract = p.interact ?? spec.interact ?? null;
 
-      if (srcInteract){
-        const inters = Array.isArray(spec.interact) ? spec.interact : [spec.interact];
+if (srcInteract){
+  const inters = Array.isArray(srcInteract) ? srcInteract : [srcInteract];
   prop.interacts = inters.map(i => ({
     x: prop.x + i.x*s,
     y: prop.y + (i.y*s) - (i.h*s),
     w: i.w*s,
     h: i.h*s,
-    say: i.say || p.say || null
+    say: (typeof i.say === 'string' ? i.say : (typeof p.say === 'string' ? p.say : null))
   }));
-      } else {
-        // Si quieres que por defecto la interacción sea el collider, descomenta la siguiente línea:
-        // if (prop.collider) prop.interact = { ...prop.collider };
-      }
+}
+
       if (typeof p.say === 'string') prop.say = p.say;
 
       PROPS.push(prop);
@@ -917,23 +914,25 @@ if (AMBIENT.k > 0.001){
   }
 
   // DEBUG ZONAS INTERACCÓN
-  if (DEBUG_INTER){
+ if (DEBUG_INTER){
   ctx.save();
   ctx.globalAlpha = .45;
   ctx.fillStyle = '#33ccff';
   ctx.strokeStyle = '#00334d';
   for (const p of PROPS){
-    if (!p.interact) continue;
-    const dx = screenRect.dx + (p.interact.x - cam.x) * mapScaleX;
-    const dy = screenRect.dy + (p.interact.y - cam.y) * mapScaleY;
-    const dw = p.interact.w * mapScaleX, dh = p.interact.h * mapScaleY;
-    ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
-    ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+    if (!p.interacts) continue;
+    for (const r of p.interacts){
+      const dx = screenRect.dx + (r.x - cam.x) * mapScaleX;
+      const dy = screenRect.dy + (r.y - cam.y) * mapScaleY;
+      const dw = r.w * mapScaleX, dh = r.h * mapScaleY;
+      ctx.fillRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+      ctx.strokeRect(Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
+    }
   }
   ctx.restore();
 }
 
-}
+
 
 /* ========== LOOP / INIT ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; _nowSec = t / 1000;  update(dt); draw(); requestAnimationFrame(loop); }
