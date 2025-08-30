@@ -102,9 +102,9 @@ const ZOOM = 2.1;
 const START = { mode:'percent', x:7, y:81 };
 const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
 const DEBUG_OBS = false;
-const DEBUG_INTER = true;
+const DEBUG_INTER = false;
 const DEBUG_AMBIENT = false;
-const DEBUG_CINE = true; 
+const DEBUG_CINE = false; 
 const DEPTH_BAND = 12;
 let interactBlocked = true;     
 let initialDialogLock = false;  
@@ -1410,7 +1410,7 @@ function spawnGandalfWhiteAtPlayer(){
           if (dialogOpen){ advanceDialog(); return; }
           openDialog([
             { speaker:'Juan', text:'??!!' },
-            { speaker:'Gandalf', text:'¿Se puede saber dónde estabas?, llegas tarde.' }
+            { speaker:'Juan', text:'¿Se puede saber dónde estabas? Llegas tarde.' }
           ], true);
 
           CUT.hijackAction = () => {
@@ -1418,7 +1418,7 @@ function spawnGandalfWhiteAtPlayer(){
             closeDialog();
             CUT.hijackAction = null;
             openSoloGandalfEpic([
-              { speaker:'Gandalf', text:'Un mago nunca llega tarde, Johnny Barrett, ni pronto. Llega justamente cuando se lo propone.' }
+              {speaker:'Gandalf', text:'Un mago nunca llega tarde, Johnny Barrett, ni pronto. Llega justamente cuando se lo propone.' }
             ]);
           };
         };
