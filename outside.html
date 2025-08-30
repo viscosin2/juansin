@@ -730,11 +730,30 @@ function portraitsOpen(script){
     openDialog([line0], true);
   });
 
-  // Acción durante portraits
-  CUT.hijackAction = ()=>{
-    if (dialogOpen){ advanceDialog(); return; }
+  // Acción durante portraits: 1 pulsación = cerrar línea actual y pasar al siguiente speaker
+CUT.hijackAction = () => {
+  if (!PORTRAITS.active) return;
+
+  if (dialogOpen) {
+    if (isTyping) {
+      // si está escribiendo, terminar de escribir (misma semántica que avanzas 1ª vez)
+      clearInterval(typingTimer);
+      isTyping = false;
+      const full = dialogScript[dialogIndex]?.text ?? '';
+      dialogTextEl.textContent = full;
+      dialogEl.classList.add('ready');
+      dialogHintEl.style.opacity = 1;
+      return;
+    }
+    // texto ya completo: cerrar y SALTAR a la transición de portraits en la MISMA pulsación
+    closeDialog();
     _nextPortraitLine();
-  };
+    return;
+  }
+
+  // si no hay diálogo abierto (p. ej. entre animaciones), ignoramos o dejamos que _nextPortraitLine lo gestione
+};
+
 }
 
 function _nextPortraitLine(){
