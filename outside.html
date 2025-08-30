@@ -225,7 +225,8 @@ const BREATH = {
 let _nowSec = 0;  // tiempo en segundos (lo llenamos en loop)
 
 const GAME_FLAGS = {
-  talked_gunner: false,   // se activa al hablar con el NPC de la pistola
+  talked_gunner: false,
+  juansin_other_halo: false
 };
 
   
@@ -523,8 +524,9 @@ function buildNPCs(){
     sound: npc.sound
   }];
 }
-
-
+if (npc.id === 'juansin_other' && GAME_FLAGS.juasin_other_halo) {
+  npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
+}
       NPCS.push(npc);
     }
   }
@@ -647,7 +649,17 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
   const npcHit = getNPCInteractHit();
   if (npcHit){
     const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
-    if (npc){
+    if (npc){   
+      
+    if (npc.id === 'juansin_other' && !GAME_FLAGS.juasin_other_halo){
+      npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
+      GAME_FLAGS.juasin_other_halo = true;
+
+      // (Opcional) mini destello de 300ms al activarse
+      npc._fxActive = true;
+      npc._fxUntil  = performance.now() + 300;
+    }
+
       if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
         if (npc.dialogBlocked && npc.dialogBlocked.length){
           openDialog(npc.dialogBlocked, true);
@@ -2149,20 +2161,20 @@ for (const n of NPCS){
       ctx.fill();
       ctx.restore();
 
-      if (n.type === 'voldemort_perfil') {
-  const halo = n.halo || { color:'80,255,140', radius:34, alpha:0.35 };
-
-  // centro del halo: un poco por encima del pie (mitad del sprite)
+if (n.halo) {
+  const halo = {
+    color: '255,255,160',
+    radius: 34,
+    alpha: 0.55,
+    pulse: 0.04,      // 0 si no quieres “respirar”
+    offsetY: 0.6,     // altura relativa
+    ...n.halo
+  };
   const cx = Math.round(px);
-  const cy = Math.round(py - dh * 0.55);
-
-  // radio escalado a la cámara
-  const R = Math.max(10, halo.radius * Math.max(mapScaleX, mapScaleY));
-
-  // suave respiración/pulso muy sutil
-  const t = performance.now() * 0.0015;
-  const pulse = 1 + Math.sin(t * 2.7) * 0.04;
-  const Rp = R * pulse;
+  const cy = Math.round(py - dh * halo.offsetY);
+  const R  = Math.max(10, halo.radius * Math.max(mapScaleX, mapScaleY));
+  const t  = performance.now() * 0.0015;
+  const Rp = R * (1 + Math.sin(t * 2.7) * halo.pulse);
 
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rp);
   g.addColorStop(0.00, `rgba(${halo.color}, ${halo.alpha})`);
@@ -2170,29 +2182,13 @@ for (const n of NPCS){
   g.addColorStop(1.00, `rgba(${halo.color}, 0)`);
 
   ctx.save();
-  ctx.globalCompositeOperation = 'lighter'; // suma luz
+  ctx.globalCompositeOperation = 'lighter';
   ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(cx, cy, Rp, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, Rp, 0, Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
-        if (n.id === 'juansin_other' && n._fxActive){
-    const mx = Math.round(px);
-    const my = Math.round(py - dh * 0.6);
-    const r  = Math.max(14, 22 * Math.max(mapScaleX, mapScaleY));
-    const g  = ctx.createRadialGradient(mx, my, 0, mx, my, r);
-    g.addColorStop(0,   'rgba(255,255,160,.95)');
-    g.addColorStop(0.5, 'rgba(255,255,160,.45)');
-    g.addColorStop(1,   'rgba(255,255,255,0)');
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-    if (performance.now() > (n._fxUntil||0)) n._fxActive = false;
-  }
+
 
 
 // (después de esto, dibujas el sprite como ya haces)
