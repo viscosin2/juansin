@@ -1025,16 +1025,34 @@ node.alpha = node.aFrom + (node.aTo - node.aFrom) * kA;
 }
 // ——— BLUR SUPPORT + FALLBACK ———
 function supportsCanvasFilter(){
-  // algunos navegadores exponen ctx.filter pero lo ignoran; probamos con un draw mínimo
   try{
+    // Test real: dibuja un borde nítido, aplica blur y comprueba si el centro deja de ser “duro”
     const c = document.createElement('canvas');
-    c.width = c.height = 2;
+    c.width = c.height = 40;
     const x = c.getContext('2d');
-    x.fillStyle = '#fff'; x.fillRect(0,0,2,2);
-    x.filter = 'blur(1px)';
+
+    // Fondo negro
+    x.fillStyle = '#000'; x.fillRect(0,0,40,40);
+    // Borde blanco de 2px
+    x.fillStyle = '#fff';
+    x.fillRect(0,0,40,2); x.fillRect(0,38,40,2);
+    x.fillRect(0,0,2,40); x.fillRect(38,0,2,40);
+
+    // Lee el centro ANTES
+    const before = x.getImageData(20,20,1,1).data[0]; // canal R
+
+    // Aplica blur y redibuja sobre sí mismo
+    x.filter = 'blur(8px)';
     x.drawImage(c,0,0);
-    return typeof x.filter === 'string';
-  }catch(e){ return false; }
+
+    // Lee el centro DESPUÉS
+    const after = x.getImageData(20,20,1,1).data[0];
+
+    // Si el blur funciona, el centro *debería* subir de 0 (negro) por sangrado de borde
+    return after > before + 5; 
+  }catch(e){
+    return false;
+  }
 }
 
 // buffer para blur barato
