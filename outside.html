@@ -2504,6 +2504,7 @@ function update(dt){
       : a + (t - a) * Math.min(1, (dt * 1000) / AMBIENT.fadeMs);
   }
   smokeUpdate(dt);
+  updateBushPulse(dt);
 }
 
 
@@ -2538,9 +2539,10 @@ const zlist = [];
 for (const p of PROPS){
   const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
   const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
-  const dw = Math.round(p.iw * p.scale * mapScaleX);
-  const dh = Math.round(p.ih * p.scale * mapScaleY);
-  const dx = Math.round(px - dw/2), dy = Math.round(py - dh);
+const pulse = (BUSH_PULSE.active && p.id === BUSH_PULSE.targetId) ? BUSH_PULSE.scale : 1.0;
+const dw = Math.round(p.iw * p.scale * pulse * mapScaleX);
+const dh = Math.round(p.ih * p.scale * pulse * mapScaleY);
+const dx = Math.round(px - dw/2), dy = Math.round(py - dh);
   const spec = CATALOG[p.type] || {};
   const band = spec.depthBand ?? DEPTH_BAND;
   const anchor = (spec.depthAnchorY ?? 0) * mapScaleY;
