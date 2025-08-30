@@ -151,7 +151,23 @@ const FOG = {
   areaH: 140
 };
 
+// ******************************* SMOKE SUPER
 
+  const SMOKE = {
+  active: false,
+  parts: [],
+  anchor: null,            // {x,y} en mundo
+  areaW: 120,              // ancho del “ovillo” de humo
+  areaH: 70,               // alto del “ovillo”
+  targetDensity: 80,       // densidad base
+  baseAlpha: 0.05,         // opacidad de cada partícula
+  color: '200,200,200',    // humo gris
+  swirl: 10,               // remolino suave
+  attract: 5,              // atracción al centro
+  jitterAmp: 2.0,
+  jitterFreq: 1.0,
+  seed: 4242
+};
 
 
 /* ====== CAMERA TWEEN ====== */
@@ -211,6 +227,8 @@ let _nowSec = 0;  // tiempo en segundos (lo llenamos en loop)
 const GAME_FLAGS = {
   talked_gunner: false,   // se activa al hablar con el NPC de la pistola
 };
+
+  
 
 /* ========== LINTERNA (opcional) ========== */
 const LIGHT = {
@@ -975,7 +993,116 @@ if (R?.img){
   ctx.restore();
 }
 
+// ************************** FUNCIONES SMOKE
 
+  function smokeRand(){
+  SMOKE.seed = (SMOKE.seed * 1664525 + 1013904223) | 0;
+  return ((SMOKE.seed >>> 0) / 4294967296);
+}
+function smokeStart(anchor){
+  SMOKE.anchor = anchor ? {x:anchor.x, y:anchor.y} : null;
+  SMOKE.parts.length = 0;
+  SMOKE.active = !!SMOKE.anchor;
+}
+function spawnSmokeParticle(side = (Math.random()<0.5?'L':'R')){
+  if (!SMOKE.anchor) return;
+  const fromLeft = side === 'L';
+  const halfW = SMOKE.areaW * 0.5;
+  const halfH = SMOKE.areaH * 0.5;
+
+  const x = fromLeft ? (SMOKE.anchor.x - halfW - 30) : (SMOKE.anchor.x + halfW + 30);
+  const y = (SMOKE.anchor.y - halfH) + smokeRand() * (SMOKE.areaH);
+
+  // centro de fuerzas = la propia ancla (ligeramente alto)
+  const cx = SMOKE.anchor.x;
+  const cy = SMOKE.anchor.y - halfH * 0.2;
+
+  const r = 14 + smokeRand()*18;
+  const life = 5.5 + smokeRand()*2.0;
+  const alpha0 = SMOKE.baseAlpha * (0.9 + 0.25*smokeRand());
+
+  const dir = fromLeft ? 1 : -1;
+  const vx0 = ((cx - x) * 0.1 + 4*dir) / life;
+  const vy0 = ((cy - y) * 0.08 + (smokeRand()-0.5)*4) / life;
+
+  SMOKE.parts.push({
+    x, y, r, life, age:0, alpha0, vx:vx0, vy:vy0,
+    side: dir, phase: smokeRand()*Math.PI*2
+  });
+}
+function smokeUpdate(dt){
+  if (!SMOKE.active || !SMOKE.anchor) return;
+
+  // emitir
+  const want = SMOKE.targetDensity * dt;
+  const toSpawn = Math.floor(want);
+  for (let i=0;i<toSpawn;i++) spawnSmokeParticle(i%2===0?'L':'R');
+
+  const cx = SMOKE.anchor.x;
+  const cy = SMOKE.anchor.y - SMOKE.areaH*0.2;
+  const yMin = SMOKE.anchor.y - SMOKE.areaH*0.5;
+  const yMax = SMOKE.anchor.y + SMOKE.areaH*0.5;
+
+  for (let i=SMOKE.parts.length-1; i>=0; i--){
+    const p = SMOKE.parts[i];
+    p.age += dt;
+    if (p.age >= p.life){ SMOKE.parts.splice(i,1); continue; }
+
+    const dx = cx - p.x, dy = cy - p.y;
+    const len = Math.hypot(dx,dy) || 1;
+    const ux = dx/len,  uy = dy/len;
+    const tx = -uy,     ty = ux;
+
+    // fuerzas
+    const ax = ux*SMOKE.attract + tx*SMOKE.swirl*p.side;
+    const ay = uy*SMOKE.attract + ty*SMOKE.swirl*p.side;
+
+    // jitter
+    const j = Math.sin(p.phase + p.age*SMOKE.jitterFreq*2*Math.PI) * SMOKE.jitterAmp;
+    const jx = -uy * j * 0.18;
+    const jy =  ux * j * 0.18;
+
+    p.vx = p.vx*0.965 + (ax*0.035);
+    p.vy = p.vy*0.965 + (ay*0.035);
+
+    p.x += (p.vx + jx) * dt * 10;
+    p.y += (p.vy + jy) * dt * 10;
+
+    // mantener banda vertical
+    if (p.y > yMax) p.vy -= 10 * dt;
+    if (p.y < yMin) p.vy +=  8 * dt;
+  }
+}
+function smokeDraw(){
+  if (!SMOKE.active || !SMOKE.parts.length) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
+
+  ctx.globalCompositeOperation = 'screen';
+  for (const p of SMOKE.parts){
+    const k = p.age / p.life;
+    const fade = (k<0.25) ? (k/0.25) : (k>0.85 ? (1-(k-0.85)/0.15) : 1);
+    const alpha = p.alpha0 * fade;
+    if (alpha <= 0.002) continue;
+
+    // mundo -> pantalla
+    const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
+    const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
+    const pr = p.r * Math.max(mapScaleX, mapScaleY);
+
+    const g = ctx.createRadialGradient(px, py, 0, px, py, pr);
+    g.addColorStop(0.00, `rgba(${SMOKE.color}, ${alpha})`);
+    g.addColorStop(0.65, `rgba(${SMOKE.color}, ${alpha*0.6})`);
+    g.addColorStop(1.00,  `rgba(${SMOKE.color}, 0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, pr, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
 
   // -------------------- FUNCIONES NIEBLA
 function fogUseWorld(anchor){
@@ -1860,6 +1987,7 @@ function update(dt){
       ? t
       : a + (t - a) * Math.min(1, (dt * 1000) / AMBIENT.fadeMs);
   }
+  smokeUpdate(dt);
 }
 
 
@@ -2069,6 +2197,7 @@ zlist.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
   fogDraw();
+  smokeDraw();
   ctx.restore();
 
   // Retratos / modo cine
@@ -2098,7 +2227,14 @@ async function init(){
   keys.up=keys.down=keys.left=keys.right=false;
 
   buildPropsAndObstacles();
-    buildNPCs();                  // << NUEVO
+    buildNPCs();   
+
+  const superProp = PROPS.find(p => p.type === 'super');
+  if (superProp){
+    smokeStart({ x: superProp.x, y: superProp.y - 10 });
+    // Si quieres otro tamaño/densidad:
+    // SMOKE.areaW = 150; SMOKE.areaH = 90; SMOKE.targetDensity = 100;
+  }
 
   centerCameraOnPlayer();
 
