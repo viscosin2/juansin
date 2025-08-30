@@ -158,10 +158,10 @@ const FOG = {
   parts: [],
   anchor: null,            // {x,y} en mundo
   areaW: 120,              // ancho del “ovillo” de humo
-  areaH: 70,               // alto del “ovillo”
+  areaH: 35,               // alto del “ovillo”
   targetDensity: 80,       // densidad base
-  baseAlpha: 0.05,         // opacidad de cada partícula
-  color: '200,200,200',    // humo gris
+  color: '40,40,40',      // gris muy oscuro tirando a negro
+  baseAlpha: 0.04,        // más denso (ajusta 0.07–0.1 según te guste)
   swirl: 10,               // remolino suave
   attract: 5,              // atracción al centro
   jitterAmp: 2.0,
@@ -2231,9 +2231,8 @@ async function init(){
 
   const superProp = PROPS.find(p => p.type === 'super');
   if (superProp){
-    smokeStart({ x: superProp.x, y: superProp.y - 10 });
-    // Si quieres otro tamaño/densidad:
-    // SMOKE.areaW = 150; SMOKE.areaH = 90; SMOKE.targetDensity = 100;
+    smokeStart({ x: superProp.x, y: superProp.y - 50 });
+     //SMOKE.areaW = 150; SMOKE.areaH = 90; //SMOKE.targetDensity = 100;
   }
 
   centerCameraOnPlayer();
