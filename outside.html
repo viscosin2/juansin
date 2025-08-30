@@ -348,6 +348,8 @@ async function preloadCinematicImages(){
 }
 let CINE_BUILT = [];
 
+  
+
 /* ========== ZONAS AMBIENTE (alphas por paleta, sin saltos) ========== */
 const AMBIENT = {
   k: 0,            // intensidad global (sube en la intro)
@@ -467,7 +469,7 @@ const PLACED = {
                  {type:'percent',x:72,y:11},{type:'percent',x:74,y:13.5},{type:'percent',x:80,y:12},{type:'percent',x:86,y:9},{type:'percent',x:90,y:12},{type:'percent',x:97,y:11},{type:'percent',x:76,y:25},
                  {type:'percent',x:96,y:25},{type:'percent',x:82,y:33},{type:'percent',x:94,y:32}],
   arbustooscuro: [{type:'percent',x:97,y:49},{type:'percent',x:86,y:57},{type:'percent',x:65,y:63},{type:'percent',x:83,y:79},{type:'percent',x:97,y:96}],
-  arbustooscuroescondite: [{type:'percent',x:86,y:81}],
+  arbustooscuroescondite: [{id:'bush_hideout', type:'percent', x: 86, y: 81, interact: { x:-14, y: 12, w:28, h:16 }}],
   valla_clara:  [{type:'percent',x:15.25,y:99.75}],
   valla_media:  [{type:'percent',x:53.61,y:31.9}],
   valla_oscura: [{type:'percent',x:80.17,y:99.15}],
@@ -1268,7 +1270,62 @@ function smokeDraw(){
   }
   ctx.restore();
 }
+// ********************** FUNCIONES ARBUSTO
 
+  /* ====== BUSH PULSE (arbusto que late hasta que Juan interactúa) ====== */
+const BUSH_PULSE = {
+  active: false,
+  targetId: 'bush_hideout',
+  t: 0,                 // tiempo acumulado
+  speed: Math.PI * 2,   // 1 “latido” por segundo (2π rad/seg)
+  base: 1.0,            // escala base (1.0 = sin cambio)
+  amp: 0.06,            // amplitud del zoom (±6%)
+  scale: 1.0            // escala resultante (se actualiza en update)
+};
+
+function startBushPulse(id = 'bush_hideout'){
+  BUSH_PULSE.active = true;
+  BUSH_PULSE.targetId = id;
+  BUSH_PULSE.t = 0;
+  BUSH_PULSE.scale = 1.0;
+}
+
+function stopBushPulse(){
+  BUSH_PULSE.active = false;
+  BUSH_PULSE.scale = 1.0;
+}
+
+// Devuelve el prop con el id del arbusto (si existe)
+function getBushProp(){
+  return PROPS.find(p => p.id === BUSH_PULSE.targetId) || null;
+}
+
+// ¿Juan está dentro de alguna zona de interacción del prop?
+function isPlayerInsidePropInteract(prop){
+  if (!prop || !prop.interacts) return false;
+  for (const zone of prop.interacts){
+    if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, zone)){
+      return true;
+    }
+  }
+  return false;
+}
+
+function updateBushPulse(dt){
+  if (!BUSH_PULSE.active) return;
+  // anima escala (latido)
+  BUSH_PULSE.t += dt * BUSH_PULSE.speed;           // 2π por segundo
+  const s = BUSH_PULSE.base + Math.sin(BUSH_PULSE.t) * BUSH_PULSE.amp;
+  BUSH_PULSE.scale = s;
+
+  // si Juan entra en la zona de interacción del arbusto -> parar
+  const prop = getBushProp();
+  if (isPlayerInsidePropInteract(prop)){
+    stopBushPulse();
+  }
+}
+
+  
   // -------------------- FUNCIONES NIEBLA
 function fogUseWorld(anchor){
   FOG.space = 'world';
@@ -1579,26 +1636,31 @@ function buildPropsAndObstacles(){
     if(!spec || !list?.length) continue;
     for (const p of list) {
       const pos = (p.type === 'percent') ? percentToWorld(p) : { x: p.x, y: p.y };
-      const prop = { type, img, x: pos.x, y: pos.y,
-        iw: img ? img.naturalWidth : 32, ih: img ? img.naturalHeight : 32, scale: spec.scale || 1 };
+      const prop = {
+        id: p.id || `${type}_${Math.random().toString(36).slice(2,7)}`, // <<<<< NUEVO
+        type, img, x: pos.x, y: pos.y,
+        iw: img ? img.naturalWidth : 32, ih: img ? img.naturalHeight : 32,
+        scale: spec.scale || 1
+      };
+
       if (spec.collider){
         const c = spec.collider, s = prop.scale;
         const col = { x: prop.x + c.x*s, y: prop.y + (c.y*s) - (c.h*s), w: c.w*s, h: c.h*s };
         prop.collider = col; OBSTACLES.push({ ...col, name: type });
       }
+
       const s = prop.scale;
       const srcInteract = p.interact ?? spec.interact ?? null;
-
-if (srcInteract){
-  const inters = Array.isArray(srcInteract) ? srcInteract : [srcInteract];
-  prop.interacts = inters.map(i => ({
-    x: prop.x + i.x*s,
-    y: prop.y + (i.y*s) - (i.h*s),
-    w: i.w*s,
-    h: i.h*s,
-    say: (typeof i.say === 'string' ? i.say : (typeof p.say === 'string' ? p.say : null))
-  }));
-}
+      if (srcInteract){
+        const inters = Array.isArray(srcInteract) ? srcInteract : [srcInteract];
+        prop.interacts = inters.map(i => ({
+          x: prop.x + i.x*s,
+          y: prop.y + (i.y*s) - (i.h*s),
+          w: i.w*s,
+          h: i.h*s,
+          say: (typeof i.say === 'string' ? i.say : (typeof p.say === 'string' ? p.say : null))
+        }));
+      }
 
       if (typeof p.say === 'string') prop.say = p.say;
 
@@ -1610,6 +1672,7 @@ if (srcInteract){
     OBSTACLES.push({x:r.x,y:r.y,w:r.w,h:r.h,name:o.name||'extra'});
   }
 }
+
 
 
 /* ========== AMBIENTE: zonas + overlay ========== */
@@ -1931,7 +1994,7 @@ function spawnTempGandalfAhead(targetCamY){
     ambientLock=false;
     fogResetAim();   
     fogUseScreen();   // vuelve al modo normal si lo quieres así tras la cine
-
+    setTimeout(() => startBushPulse('bush_hideout'), 600);
   }
 
 // **************************** CINEMATICA 3
