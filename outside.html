@@ -809,7 +809,10 @@ function _startSlide(node, toX, cb){
 
   if (toX === node.inX){ node.aFrom = 0; node.aTo = 1; }
   else if (toX === node.outX){ node.aFrom = 1; node.aTo = 0; }
-  else { node.aFrom = node.alpha ?? 1; node.aTo = node.alpha ?? 1; }
+  else {
+   node.aFrom = (node.alpha != null ? node.alpha : 1);
+  node.aTo   = (node.alpha != null ? node.alpha : 1);
+}
 }
 
 
@@ -915,8 +918,8 @@ function portraitsUpdate(dt){
     PORTRAITS.blurK = Math.min(1, PORTRAITS.blurK + (dt*1000)/PORTRAITS.blurInMs);
   }
 
-  const upd = (node)=>{
-    if (!node?.anim) return;
+ const upd = (node)=>{
+   if (!(node && node.anim)) return;
     node.t = Math.min(1, node.t + (dt*1000)/PORTRAITS.slideMs);
     const k = _ease(node.t);  // tu misma función de easing
     node.x = node.from + (node.to - node.from) * k;
@@ -962,25 +965,26 @@ function portraitsDrawOverlay(){
   ctx.clip();
 
   // blur + oscurecido
-  ctx.globalAlpha = Math.max(0, Math.min(1, PORTRAITS.blurK ?? 0)); 
+ var _bk = (PORTRAITS.blurK != null ? PORTRAITS.blurK : 0);
+ ctx.globalAlpha = Math.max(0, Math.min(1, _bk));
   ctx.filter = `blur(${PORTRAITS.blurPx}px) grayscale(35%)`;
   ctx.drawImage(BACKBUF,0,0);
   ctx.filter = 'none';
   ctx.globalAlpha = 1;
-  ctx.globalAlpha = (PORTRAITS.blurK ?? 0) * 0.40;                  
+ ctx.globalAlpha = _bk * 0.40;             
   ctx.fillStyle = '#000';
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
   // retratos
   const L = PORTRAITS.left, R = PORTRAITS.right;
-  if (L?.img){
+ if (L && L.img){
   const lx = Math.round(L.x), ly = Math.round(L.yBottom - L.h);
   ctx.save();
   ctx.globalAlpha = (L.alpha ?? 1);
   ctx.drawImage(L.img, 0,0, L.img.naturalWidth, L.img.naturalHeight, lx, ly, L.w, L.h);
   ctx.restore();
 }
-if (R?.img){
+ if (R && R.img){
   const rx = Math.round(R.x), ry = Math.round(R.yBottom - R.h);
   ctx.save();
   ctx.globalAlpha = (R.alpha ?? 1);
@@ -1387,7 +1391,7 @@ if (srcInteract){
 function buildAmbientZones(){
   const out=[];
   for (const z of AMBIENT_ZONES){
-    if (z.rect?.type==='percent'){
+    if (z.rect && z.rect.type === 'percent'){
       out.push({
         ...z,
         x: Math.round(world.w*(z.rect.x/100)),
