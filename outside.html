@@ -106,8 +106,9 @@ const DEBUG_INTER = false;
 const DEBUG_AMBIENT = false;
 const DEBUG_CINE = true; 
 const DEPTH_BAND = 12;
-let interactBlocked = true;     // bloquea interacciones (botón acción)
-let initialDialogLock = false;  // identifica el lock del diálogo inicial
+let interactBlocked = true;     
+let initialDialogLock = false;  
+let onDialogClosed = null;
 
 /* ====== BACKBUFFER para blur en modo cine ====== */
 let BACKBUF = document.createElement('canvas');
@@ -514,6 +515,12 @@ function closeDialog(){
   if (ambientLock && ambientLockOwner){
     ambientLock = false;
     ambientLockOwner = null;
+  }
+
+  if (typeof onDialogClosed === 'function'){
+    const fn = onDialogClosed;
+    onDialogClosed = null;   // limpiar para que sea one–shot
+    fn();
   }
 }
 
@@ -1350,19 +1357,22 @@ function spawnTempGandalfAhead(targetCamY){
   CUT.phase='worldTalk';
   const script = [
     {speaker:'???',  text:'Hola, muchacho...'},
-    {speaker:'Juan', text:'¡Yias! Pero si tu eres...'}
+    {speaker:'Juan', text:'¡Yias! Pero si tu eres...'},
+    {speaker:'???', text:'En efecto.'}
   ];
   // Abre TODAS las líneas
   openDialog(script, true);
 
+  onDialogClosed = ()=>{
+    CUT.hijackAction = null;
+    phasePortraits();
+  };
+
+  // mientras esté abierto, el botón Acción sólo avanza
   CUT.hijackAction = ()=>{
     if (dialogOpen){
       advanceDialog();
-      return;
     }
-    // aquí el diálogo ya terminó
-    CUT.hijackAction = null;
-    phasePortraits();
   };
 }
 
