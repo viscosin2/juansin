@@ -849,11 +849,10 @@ function portraitsUpdate(dt){
   const upd = (node)=>{
     if (!node?.anim) return;
     node.t = Math.min(1, node.t + (dt*1000)/PORTRAITS.slideMs);
-    const k = _ease(node.t);  // tu misma función de easing
-    node.x = node.from + (node.to - node.from) * k;
-
-    // fade sincronizado con el slide
-    node.alpha = node.aFrom + (node.aTo - node.aFrom) * k;
+const k = _ease(node.t);
+const kA = Math.min(1, _ease(node.t * 1.12)); // alpha ~12% más rápida
+node.x = node.from + (node.to - node.from) * k;
+node.alpha = node.aFrom + (node.aTo - node.aFrom) * kA;
 
     if (node.t>=1){
       node.anim = false;
