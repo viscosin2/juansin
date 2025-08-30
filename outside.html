@@ -2075,18 +2075,16 @@ player.frameTime = 0;
 
 
 function cine3_beginPortraits(){
-  // Activa layout en bandas negras
+  // Activa layout/estado
   PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
-
   PORTRAITS.active = true;
   PORTRAITS.blurK = 0;
   PORTRAITS.forceBlurFallback = false;
   PORTRAITS.stage = 'entering';
 
-  // Construidos en letterbox: SSJ arriba, Juan abajo
+  // Construcción de retratos (letterbox interno)
   PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ',  'top');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan', 'bottom');
-
   PORTRAITS.left.flipX = true;
 
   // Parten fuera
@@ -2098,17 +2096,26 @@ function cine3_beginPortraits(){
 
   // Entra primero SSJ por la izquierda
   _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
-    // >>> Espera 1 segundo antes del ataque <<<
+    // Espera 1s antes del ataque
     setTimeout(()=>{
-      // dash in + back (ataque)
+      // (1) Dash de SSJ (ataque)
       cine3_attackSequence(()=>{
-        // sale SSJ y entra Juan
+        // (2) SSJ sale y entra Juan
         _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
+          // >>> MOSTRAR LA LÍNEA DE ATAQUE ANTES DE QUE ENTRE JUAN <<<
+          openDialog([{ speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' }], true);
+
+          // Mientras dura la coreografía, bloquear el botón Acción para que no cierren el texto
+          CUT.hijackAction = ()=>{}; // no-op
+
           _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
-            // >>> Espera 1 segundo antes de "recibir el golpe" <<<
+            // Tras 1s, reproducir reacción de "recibir" en Juan y bajar su barra
             setTimeout(()=>{
               cine3_hitReaction(PORTRAITS.right);
               HPBARS.setTargets(1, 100);
+
+              // A partir de aquí, permitir avanzar: al pulsar, cerrar la 1ª línea
+              // y mostrar las siguientes (“Estás muy debilitado…”)
               cine3_openNarrator();
             }, 1000);
           });
@@ -2117,9 +2124,10 @@ function cine3_beginPortraits(){
     }, 1000);
   });
 
-  // Durante esta coreografía el botón acción no hace nada
-  CUT.hijackAction = null;
+  // Durante esta coreografía el botón Acción no hace nada hasta que llamemos a cine3_openNarrator()
+  CUT.hijackAction = ()=>{};
 }
+
 
 
 
@@ -2149,25 +2157,29 @@ function cine3_hitReaction(node){
 }
 
 function cine3_openNarrator(){
-  openDialog([
-    {speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' }
-  ], true);
-
+  // Ahora mismo ya está visible la primera línea del narrador (la del ataque).
+  // Reconfiguramos el handler para que, al pulsar, pasemos a las siguientes líneas.
   CUT.hijackAction = ()=>{
-    if (isTyping){ advanceDialog(); return; }
     if (dialogOpen){
-      // mostrar segunda línea
+      // Cierra la primera línea (“te ataca con una bola de energía”)
       closeDialog();
-      openDialog([{ speaker:'', text:'Estás muy debilitado.' },{ speaker:'', text:'¡Rápido! Escóndete en algún sitio.' }], true);
-      // siguiente Acción cierra y hace fade out total
+
+      // Abre las siguientes y cambia el handler para cerrar y volver al mundo
+      openDialog([
+        { speaker:'', text:'Estás muy debilitado.' },
+        { speaker:'', text:'¡Rápido! Escóndete en algún sitio.' }
+      ], true);
+
       CUT.hijackAction = ()=>{
-        if (dialogOpen){ closeDialog(); }
-        CUT.hijackAction = null;
-        // Fade out de barras + retratos y volver al mundo
-        HPBARS.hide();
-        // al terminar retratos, reset
-        CUT.onEnd = ()=>{ endCine3(); };
-        _endPortraits(); // usa tu cierre estándar con blur out
+        if (dialogOpen){
+          closeDialog();
+          CUT.hijackAction = null;
+
+          // Fade out de barras + retratos y vuelta al mundo
+          HPBARS.hide();
+          CUT.onEnd = ()=>{ endCine3(); };
+          _endPortraits(); // cierre estándar con blur out
+        }
       };
     }
   };
