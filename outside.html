@@ -2072,7 +2072,6 @@ function spawnTempGandalfAhead(targetCamY){
 function endCine3(){
   CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
   ambientLock=false;
-  setTimeout(() => startBushPulse('bush_hideout'), 500); // retardo suave opcional
 }
 
 
@@ -2319,8 +2318,13 @@ function cine3_openNarrator(){
 
           // Fade out de barras + retratos y vuelta al mundo
           HPBARS.hide();
-          CUT.onEnd = ()=>{ endCine3(); };
-          _endPortraits(); // cierre estándar con blur out
+// cuando terminan de desvanecerse los retratos (justo tras cerrar "¡Rápido!..."):
+CUT.onEnd = ()=>{
+  startBushPulse('bush_hideout'); // ← aquí arranca el “latido”
+  endCine3();
+};
+_endPortraits(); // cierre estándar con blur out
+
         }
       };
     }
