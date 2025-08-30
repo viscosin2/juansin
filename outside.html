@@ -187,17 +187,72 @@ const PORTRAITS = {
   stage:'idle', // 'entering' | 'speaking' | 'exiting' | 'ending'
 };
 
-  const PORTRAIT_SCALES = {
-  Gandalf: 1.7, // 130% de su tamaño normal
-  Juan:    1.7  // escala normal
+const PORTRAIT_SCALES = {
+  Gandalf: 1.7,
+  Juan:    1.7,
+  SSJ:     1.7
 };
+
 const PORTRAIT_TOP_AIR = 15;   // aire fijo por arriba (px relativos a screenRect)
 const PORTRAIT_BOTTOM_PAD = -40; // “colchón” desde abajo
 const PORTRAIT_EDGE_INSET = -0.12;
-  
+
+// ====== BARRAS DE VIDA PARA CINE ======
+const HPBARS = {
+  active:false, alpha:0, fadeInMs:400, fadeOutMs:400,
+  juan:100, ssj:100, juanT:100, ssjT:100, speed:120, // % por segundo
+  show(juanPct=100, ssjPct=100){ this.active=true; this.alpha=0; this._showing=true; this._hiding=false; this.juan=this.juanT=juanPct; this.ssj=this.ssjT=ssjPct; },
+  setTargets(juanPct, ssjPct){ if(juanPct!=null) this.juanT=juanPct; if(ssjPct!=null) this.ssjT=ssjPct; },
+  hide(){ if(!this.active) return; this._hiding=true; this._showing=false; },
+  update(dt){
+    if(!this.active) return;
+    const step = this.speed*dt;
+    const lerp = (v,t)=> v + Math.sign(t-v)*Math.min(Math.abs(t-v), step);
+    this.juan = lerp(this.juan, this.juanT);
+    this.ssj  = lerp(this.ssj,  this.ssjT);
+    if (this._showing){ this.alpha = Math.min(1, this.alpha + (dt*1000)/this.fadeInMs); if(this.alpha>=1) this._showing=false; }
+    if (this._hiding){ this.alpha = Math.max(0, this.alpha - (dt*1000)/this.fadeOutMs); if(this.alpha<=0){ this._hiding=false; this.active=false; } }
+  }
+};
+
+function drawHPBars(){
+  if(!HPBARS.active || HPBARS.alpha<=0) return;
+  const a = Math.max(0, Math.min(1, HPBARS.alpha));
+
+  const padX = Math.round(screenRect.dw*0.12);
+  const barW = Math.round(screenRect.dw*0.76);
+  const barH = 12;
+  const gap  = 8;
+  const x = Math.round(screenRect.dx + padX);
+  const topY = Math.round(screenRect.dy + 10);
+
+  ctx.save();
+  ctx.globalAlpha = a;
+
+  // SSJ (rojo) arriba
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x, topY, barW, barH);
+  ctx.fillStyle = '#e03232';
+  ctx.fillRect(x, topY, Math.round(barW * (HPBARS.ssj/100)), barH);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.strokeRect(x+0.5, topY+0.5, barW-1, barH-1);
+  ctx.font = '600 11px system-ui'; ctx.fillStyle='#ffd2d2';
+  ctx.fillText(`SSJ ${Math.round(HPBARS.ssj)}%`, x+6, topY+barH-3);
+
+  // Juan (azul) abajo
+  const y2 = topY + barH + gap;
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x, y2, barW, barH);
+  ctx.fillStyle = '#3c88ff';
+  ctx.fillRect(x, y2, Math.round(barW * (HPBARS.juan/100)), barH);
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.strokeRect(x+0.5, y2+0.5, barW-1, barH-1);
+  ctx.fillStyle='#cfe6ff';
+  ctx.fillText(`Juan ${Math.round(HPBARS.juan)}%`, x+6, y2+barH-3);
+
+  ctx.restore();
+}
+
 const _ease = x => x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
 
-let IMG_GANDALF_SMALL=null, IMG_GANDALF=null, IMG_JUAN_BIG=null;
+let IMG_GANDALF_SMALL=null, IMG_GANDALF=null, IMG_JUAN_BIG=null, IMG_JUAN_SSJ=null;
+
   
   const DEFAULT_SHADOW = {
   alpha: 0.30,     // opacidad
@@ -248,6 +303,7 @@ async function preloadCinematicImages(){
   IMG_GANDALF_SMALL = await loadImage('assets/npcs/gandalf.png');
   IMG_GANDALF       = await loadImage('assets/portraits/gandalf_portrait.png');
   IMG_JUAN_BIG      = await loadImage('assets/portraits/juansin_portrait.png');
+  IMG_JUAN_SSJ      = await loadImage('assets/portraits/juansin_ssj_portrait.png');
 }
 
   // ------------------------ ZONAS CINE
@@ -804,7 +860,8 @@ function _startSlide(node, toX, cb){
 
 
 function _nodeForSpeaker(name){
-  return (name === 'Gandalf') ? PORTRAITS.left : PORTRAITS.right;
+  if (name === 'Gandalf' || name === 'SSJ') return PORTRAITS.left;
+  return PORTRAITS.right;
 }
 
 function portraitsOpen(script){
@@ -1014,6 +1071,7 @@ if (R?.img){
   ctx.drawImage(R.img, 0,0, R.img.naturalWidth, R.img.naturalHeight, ox, oy, dw, dh);
   ctx.restore();
 }
+drawHPBars();
 
 
   ctx.restore();
@@ -1797,27 +1855,139 @@ function spawnTempGandalfAhead(targetCamY){
 
 // **************************** CINEMATICA 3
 
-  // ========== CINEMÁTICA 3: "otro Juan" ==========
+// ========== CINEMÁTICA 3 — JUAN vs SSJ ==========
 async function startCinematic3(){
-  CUT.active = true; CUT.id='cine3'; CUT.phase='lock';
-  ambientLock = true; player.moving = false;
+  CUT.active = true; CUT.id='cine3'; CUT.phase='start';
+  ambientLock = true; player.moving=false;
 
-  // 1) Espera 1s y abre diálogo: "...?", "¿Ese soy yo?"
-  setTimeout(() => {
-    openDialog([
-      { speaker:'Juan', text:'...?' },
-      { speaker:'Juan', text:'¿Ese soy yo?' }
-    ], true);
-  }, 1000);
+  // 1) Cambia el "otro Juan" a SSJ y muestra auto-línea
+  const other = await applyOtherJuanSSJ({boostHalo:true});
 
-  // 2) Acción: cerrar diálogo, esperar 1s y transformar sprite del otro Juan
+  // Mensaje automático (sin tocar Acción)
+  openDialog([{ speaker:'Juan', text:'Pues no, no soy yo.' }], true);
+
+  // 2) Acción → autowalk hacia la izquierda hasta colocarse frente al otro Juan
   CUT.hijackAction = ()=>{
-    closeCurrentDialogNow();
+    if (dialogOpen){ closeDialog(); }
     CUT.hijackAction = null;
 
-    setTimeout(()=>{ swapOtherJuanToSSJ(); }, 1000);
+    if (!other){ endCine3(); return; }
+
+    // target: un poco a la derecha del SSJ, misma Y del jugador, y mirar hacia arriba
+    const offset = 22;
+    const targetX = other.x + offset;
+    const targetY = player.y;
+
+    cineAutoWalkTo(targetX, targetY, 700, ()=>{
+      player.dir = 'up'; // se gira hacia arriba
+      // 3) Halo más intenso 1s
+      if (other && other.halo){
+        const startA = other.halo.alpha||0.6, startR = other.halo.radius||30;
+        const t0 = performance.now(), dur=1000;
+        (function tick(){
+          const k = Math.min(1,(performance.now()-t0)/dur);
+          other.halo.alpha = startA + (0.9 - startA)*k;
+          other.halo.radius = startR + (46 - startR)*k;
+          if (k<1) requestAnimationFrame(tick);
+        })();
+      }
+
+      // 4) Diálogo SSJ "Grr" → Acción → Juan "Omaigos" → Acción → modo cine
+      openDialog([{speaker:'SSJ', text:'Grr'}], true);
+      CUT.hijackAction = ()=>{
+        if (dialogOpen){ closeDialog(); openDialog([{speaker:'Juan', text:'Omaigos'}], true); return; }
+      };
+      onDialogClosed = ()=>{ CUT.hijackAction=null; cine3_beginPortraits(); };
+    });
   };
 }
+
+  function cine3_beginPortraits(){
+  // Preparar overlay
+  PORTRAITS.active = true;
+  PORTRAITS.blurK = 0;
+  PORTRAITS.stage = 'entering';
+  // instancias de lados
+  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan');
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
+
+  // Barras de vida: Juan al 10%, SSJ al 100%
+  HPBARS.show(10, 100);
+
+  // Entra primero SSJ por la izquierda
+  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
+    // Sin pulsar nada, hace un ataque rápido
+    cine3_attackSequence(()=>{
+      // sale SSJ por la izq y entra Juan por la dcha
+      _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
+        _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
+          // animación de "recibir golpe" y bajar vida del 10% → 1%
+          cine3_hitReaction(PORTRAITS.right);
+          HPBARS.setTargets(1, 100);
+
+          // Narrador (dos líneas). Acción para avanzar y Acción para cerrar
+          cine3_openNarrator();
+        });
+      });
+    });
+  });
+
+  // El botón Acción durante la coreografía no hace nada hasta el narrador
+  CUT.hijackAction = null;
+}
+
+function cine3_attackSequence(done){
+  // Dash de SSJ hacia el centro y atrás
+  const L = PORTRAITS.left;
+  const mid = L.inX + Math.round(screenRect.dw*0.04);
+  const back = L.inX;
+  // dash in
+  L.sFrom=1.00; L.sTo=1.06;
+  _startSlide(L, mid, ()=>{
+    // y vuelve al sitio
+    L.sFrom=1.06; L.sTo=1.00;
+    _startSlide(L, back, ()=>{ if (typeof done==='function') done(); });
+  });
+}
+
+function cine3_hitReaction(node){
+  // pequeño temblor/retroceso
+  const orig = node.inX;
+  const kick = orig + Math.round(screenRect.dw*0.02);
+  node.sFrom=1.00; node.sTo=0.96;
+  _startSlide(node, kick, ()=>{
+    node.sFrom=0.96; node.sTo=1.00;
+    _startSlide(node, orig, null);
+  });
+}
+
+function cine3_openNarrator(){
+  openDialog([
+    { speaker:'', text:'SSJ ataca a Juan con no sé qué. Juan tenía solo un 10% de vida de los combates anteriores (esta es la cinemática 3) y con el ataque se le queda al 1%.' }
+  ], true);
+
+  CUT.hijackAction = ()=>{
+    if (isTyping){ advanceDialog(); return; }
+    if (dialogOpen){
+      // mostrar segunda línea
+      closeDialog();
+      openDialog([{ speaker:'', text:'Juan está demasiado débil. ¡Rápido! Escóndete en algún sitio.' }], true);
+      // siguiente Acción cierra y hace fade out total
+      CUT.hijackAction = ()=>{
+        if (dialogOpen){ closeDialog(); }
+        CUT.hijackAction = null;
+        // Fade out de barras + retratos y volver al mundo
+        HPBARS.hide();
+        // al terminar retratos, reset
+        CUT.onEnd = ()=>{ endCine3(); };
+        _endPortraits(); // usa tu cierre estándar con blur out
+      };
+    }
+  };
+}
+
 
 async function swapOtherJuanToSSJ(){
   // Busca el NPC con id fijo
@@ -1827,6 +1997,35 @@ async function swapOtherJuanToSSJ(){
     endCine3();
     return;
   }
+
+  async function applyOtherJuanSSJ({boostHalo=true}={}){
+  const other = NPCS.find(n => n.id === 'juansin_other');
+  if(!other) return null;
+  const img = await loadImage('assets/npcs/juan_ssj.png');
+  if (img){ other.img = img; other.iw = img.naturalWidth||other.iw; other.ih = img.naturalHeight||other.ih; }
+  if (boostHalo){
+    other.halo = { color:'255,255,160', radius:38, alpha:0.8, pulse:0.08, offsetY:0.62 };
+    other._fxActive = true; other._fxUntil = performance.now() + 600;
+  }
+  GAME_FLAGS.juansin_other_halo = true;
+  return other;
+}
+  function cineAutoWalkTo(targetX, targetY, ms, onDone){
+  CUT.phase = 'autowalk';
+  const sx = player.x, sy = player.y;
+  const t0 = performance.now(); const dur = Math.max(200, ms|0);
+  const face = ()=>{ const dx = targetX - player.x, dy = targetY - player.y; player.dir = Math.abs(dx)>Math.abs(dy) ? (dx<0?'left':'right') : (dy<0?'up':'down'); };
+  (function step(){
+    const k = Math.min(1, (performance.now()-t0)/dur);
+    player.x = sx + (targetX - sx)*k;
+    player.y = sy + (targetY - sy)*k;
+    face();
+    if (k<1) requestAnimationFrame(step);
+    else { CUT.phase=null; if(onDone) onDone(); }
+  })();
+}
+
+
 
   // Carga el nuevo PNG y aplica (actualiza tamaño si cambia)
   const img = await loadImage('assets/npcs/juan_ssj.png');
@@ -1944,6 +2143,7 @@ function update(dt){
     const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
     if (canCenterCam) centerCameraOnPlayer();
   }
+  HPBARS.update(dt);
 
   // Retratos y tween de cámara siguen siempre
   portraitsUpdate(dt);
