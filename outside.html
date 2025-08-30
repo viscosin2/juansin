@@ -1624,7 +1624,7 @@ function updateBushPulse(dt){
   // si Juan entra en la zona de interacción del arbusto -> parar y lanzar escena
   const prop = getBushProp();
   if (isPlayerInsidePropInteract(prop)){
-    if (!BUSH_SCENE.triggered) startBushHideSequence(); // 👈 arranca escena
+    if (!BUSH_SCENE.triggered) startBushHideSequence();
     stopBushPulse();
     return;
   }
@@ -2649,10 +2649,17 @@ CUT.hijackAction = ()=> {
 
   HPBARS.hide();
 
-  CUT.onEnd = ()=>{
-    startBushPulse('bush_hideout');
-    endCine3();
-  };
+CUT.onEnd = ()=>{
+  ambientLock = true;
+  ambientLockOwner = 'hide_bush';
+  // por si quedó alguna tecla “pegada”
+  if (typeof KEYS !== 'undefined'){ KEYS.up=KEYS.down=KEYS.left=KEYS.right=false; }
+  player.moving = false; player.vx = 0; player.vy = 0;
+
+  startBushPulse('bush_hideout');
+  endCine3();
+};
+
 
   _endPortraits();
 };
@@ -3015,7 +3022,22 @@ const dx = Math.round(px - dw/2), dy = Math.round(py - dh);
         ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh);
         ctx.restore();
       } else {
-        // halo opcional para props (usado por la pócima)
+        if (p._isPotion){
+  ctx.save();
+  // posición del “pie” del sprite (ajusta offsetY si tu sprite tiene más aire arriba)
+  const footX = Math.round(px + dw/2);
+  const footY = Math.round(py + dh*0.92);
+
+  // tamaño de la elipse (escala con el sprite)
+  const rx = Math.max(6, dw*0.28);
+  const ry = Math.max(3, dh*0.14);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';  // opacidad de la sombra
+  ctx.beginPath();
+  ctx.ellipse(footX, footY, rx, ry, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
 if (p._halo){
   const halo = Object.assign({ radius:28, alpha:0.55, pulse:0.06, offsetY:0.6, color:'255,255,160' }, p._halo);
   const cx = Math.round(px);
