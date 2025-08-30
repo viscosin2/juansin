@@ -251,7 +251,9 @@ async function preloadCinematicImages(){
 
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
-  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false }
+  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
+  { id:'cine3', rect:{type:'percent', x:85, y:80, w:6, h:6}, _done:false }
+
 ];
   function buildCineZones(){
   return CINE_ZONES.map(z=>{
@@ -306,7 +308,9 @@ const NPC_CATALOG = {
   gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.55 }},
   soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },fireFxMs: 140},
-  soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }}
+  soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  juansin_idle: { src: 'assets/juan_character/idle_down_shoes.png', scale: 0.9, collider: { x:-10, y:0, w:20, h:15 }, depthBand: 8, depthAnchorY: 1, shadow:{ alpha:0.30, offsetY:-3, scaleX:1/2.4, scaleY:1/7 } },
+
 };
 
 const NPC_PLACED = {
@@ -319,12 +323,17 @@ const NPC_PLACED = {
   voldemort_perfil: [{type:'percent', x: 82, y: 15.5, interact: { x:-35, y: 12, w:50, h:16 }, 
      dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
     }],
-  soldado1: [{id:'gunner1', type:'percent', x: 14, y: 87, interact: { x:-14, y: 8, w:28, h:16 },onFire:true, 
+  soldado1: [{id:'gunner1', type:'percent', x: 14, y: 87, interact: { x:-14, y: 12, w:28, h:16 },onFire:true, 
      dialog: [{ speaker:'Armiche', text:'Ahí te va un pequeño perdigón.'}],sound: "assets/sounds/shot.mp3"
     }],
   soldado2: [{id:'guard1', type:'percent', x: 8, y: 87, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_gunner', 
      dialogBlocked:[ {speaker:'Boliche', text:'¡Como en el Call of Duty, señores!'}], dialog: [{ speaker:'Boliche', text:'¡Ah! ¡Mi lentilla!' }]
-    }]
+    }],
+  juansin_idle: [{
+    id:'juansin_other',
+    type:'percent', x: 70, y: 83,
+    interact: { x:-14, y: 12, w:28, h:16 }
+  }],
 };
 
 
@@ -1769,6 +1778,59 @@ function spawnTempGandalfAhead(targetCamY){
 
   }
 
+// **************************** CINEMATICA 3
+
+  // ========== CINEMÁTICA 3: "otro Juan" ==========
+async function startCinematic3(){
+  CUT.active = true; CUT.id='cine3'; CUT.phase='lock';
+  ambientLock = true; player.moving = false;
+
+  // 1) Espera 1s y abre diálogo: "...?", "¿Ese soy yo?"
+  setTimeout(() => {
+    openDialog([
+      { speaker:'Juan', text:'...?' },
+      { speaker:'Juan', text:'¿Ese soy yo?' }
+    ], true);
+  }, 1000);
+
+  // 2) Acción: cerrar diálogo, esperar 1s y transformar sprite del otro Juan
+  CUT.hijackAction = ()=>{
+    closeCurrentDialogNow();
+    CUT.hijackAction = null;
+
+    setTimeout(()=>{ swapOtherJuanToSSJ(); }, 1000);
+  };
+}
+
+async function swapOtherJuanToSSJ(){
+  // Busca el NPC con id fijo
+  const other = NPCS.find(n => n.id === 'juansin_other');
+  if(!other){
+    console.warn('cine3: no se encontró el NPC juansin_other');
+    endCine3();
+    return;
+  }
+
+  // Carga el nuevo PNG y aplica (actualiza tamaño si cambia)
+  const img = await loadImage('assets/npcs/juansin_ssj.png');
+  if (img){
+    other.img = img;
+    other.iw  = img.naturalWidth  || other.iw;
+    other.ih  = img.naturalHeight || other.ih;
+  }
+
+  // (Opcional) pequeño destello para remarcar el cambio
+  other._fxActive = true;
+  other._fxUntil  = performance.now() + 300;
+
+  // Termina la cine
+  endCine3();
+}
+
+function endCine3(){
+  CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
+  ambientLock=false;
+}
 
   
 /* ========== MOVIMIENTO / MEGAUPDATE ========== */
@@ -1833,16 +1895,16 @@ function update(dt){
     return;
   }
 
-  // Disparo de la zona de cine solo si no hay cinemática en curso
-  if (!CUT.active){
+   if (!CUT.active){
     const feet = feetWorld();
     const cz = CINE_BUILT.find(z=> !z._done && feet.x>=z.x && feet.x<=z.x+z.w && feet.y>=z.y && feet.y<=z.y+z.h);
-    if (cz && cz.id==='cine1'){
+    if (cz){
       cz._done = true;
-      startCinematic1();
-      return;
+      if (cz.id === 'cine1'){ startCinematic1(); return; }
+      if (cz.id === 'cine3'){ startCinematic3(); return; }
     }
   }
+
 
   // Si hay diálogo Y NO estamos en cinemática, paramos aquí (como antes).
   // En cinemática NO hacemos return para que sigan fog/cámara/retratos.
@@ -2115,6 +2177,23 @@ for (const n of NPCS){
   ctx.fill();
   ctx.restore();
 }
+
+        if (n.id === 'juansin_other' && n._fxActive){
+    const mx = Math.round(px);
+    const my = Math.round(py - dh * 0.6);
+    const r  = Math.max(14, 22 * Math.max(mapScaleX, mapScaleY));
+    const g  = ctx.createRadialGradient(mx, my, 0, mx, my, r);
+    g.addColorStop(0,   'rgba(255,255,160,.95)');
+    g.addColorStop(0.5, 'rgba(255,255,160,.45)');
+    g.addColorStop(1,   'rgba(255,255,255,0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    if (performance.now() > (n._fxUntil||0)) n._fxActive = false;
+  }
+
 
 // (después de esto, dibujas el sprite como ya haces)
 if (!n.img) { ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh); }
