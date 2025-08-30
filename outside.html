@@ -197,7 +197,13 @@ const PORTRAIT_SCALES = {
 const PORTRAIT_TOP_AIR = 15;   // aire fijo por arriba (px relativos a screenRect)
 const PORTRAIT_BOTTOM_PAD = -40; // “colchón” desde abajo
 const PORTRAIT_EDGE_INSET = -0.12;
-
+  
+const DEFAULT_SHADOW = {
+  alpha: 0.28,     // opacidad de la elipse
+  offsetY: -2,     // desplazamiento vertical desde los pies
+  scaleX: 1/2.8,   // ancho relativo
+  scaleY: 1/8      // alto relativo
+};
 // ====== BARRAS DE VIDA PARA CINE ======
 const HPBARS = {
   active:false, alpha:0, fadeInMs:400, fadeOutMs:400,
@@ -215,6 +221,10 @@ const HPBARS = {
     if (this._hiding){ this.alpha = Math.max(0, this.alpha - (dt*1000)/this.fadeOutMs); if(this.alpha<=0){ this._hiding=false; this.active=false; } }
   }
 };
+
+  function _ease(t){
+  return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+}
 
 function drawHPBars(){
   if(!HPBARS.active || HPBARS.alpha<=0) return;
