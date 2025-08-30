@@ -682,35 +682,23 @@ function isNPCFxActive(npc){
 // --------------------- FUNCIONES PORTRAITS
 
 function _makeSide(img, side, name){
-  const maxW = Math.floor(screenRect.dw * 0.52);
-  const maxH = Math.floor(screenRect.dh - PORTRAIT_TOP_AIR - PORTRAIT_BOTTOM_PAD);
-
-  // escala base: que quepa por ancho y por alto
-  let baseScale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight);
-
-  // override por personaje
-  if (PORTRAIT_SCALES[name]) baseScale *= PORTRAIT_SCALES[name];
-
-  const w = Math.round(img.naturalWidth  * baseScale);
-  const h = Math.round(img.naturalHeight * baseScale);
-
-  const yBottom = screenRect.dy + screenRect.dh - PORTRAIT_BOTTOM_PAD; // todos comparten “suelo”
-
+  // ... (lo que ya tienes de escalas/posiciones)
+  const base = {
+    img, name, side, w, h, yBottom,
+    t:0, from:0, to:0, anim:false, onDone:null,
+    alpha: 0, aFrom: 0, aTo: 0   // <<< NUEVO
+  };
   if (side === 'left'){
-    return {
-      img, name, side, w, h, yBottom,
-      x: screenRect.dx - w - 80,                // off a la izq
-      inX: screenRect.dx + 24,                  // visible
-      outX: screenRect.dx - w - 80,             // fuera
-      t:0, from:0, to:0, anim:false, onDone:null
+    return { ...base,
+      x: screenRect.dx - w - 80,
+      inX: screenRect.dx + 24,
+      outX: screenRect.dx - w - 80,
     };
   } else {
-    return {
-      img, name, side, w, h, yBottom,
-      x: screenRect.dx + screenRect.dw + 80,    // off a la dcha
+    return { ...base,
+      x: screenRect.dx + screenRect.dw + 80,
       inX: screenRect.dx + screenRect.dw - 24 - w,
       outX: screenRect.dx + screenRect.dw + 80,
-      t:0, from:0, to:0, anim:false, onDone:null
     };
   }
 }
@@ -718,10 +706,23 @@ function _makeSide(img, side, name){
 
 
 function _startSlide(node, toX, cb){
-  node.anim = true; node.t = 0;
-  node.from = node.x; node.to = toX;
-  node.onDone = typeof cb === 'function' ? cb : null;
+  node.anim = true;
+  node.t = 0;
+  node.from = node.x;
+  node.to = toX;
+  node.onDone = (typeof cb === 'function') ? cb : null;
+
+  // Fade segun si entra o sale
+  if (toX === node.inX){
+    node.aFrom = 0; node.aTo = 1;
+  } else if (toX === node.outX){
+    node.aFrom = 1; node.aTo = 0;
+  } else {
+    // por si haces panes intermedios
+    node.aFrom = node.alpha ?? 1; node.aTo = node.alpha ?? 1;
+  }
 }
+
 
 function _nodeForSpeaker(name){
   return (name === 'Gandalf') ? PORTRAITS.left : PORTRAITS.right;
@@ -823,22 +824,28 @@ function _endPortraits(){
 function portraitsUpdate(dt){
   if (!PORTRAITS.active) return;
 
-  // blur in
+  // blur in como ya tenías
   if (PORTRAITS.stage !== 'ending' && PORTRAITS.blurK < 1){
     PORTRAITS.blurK = Math.min(1, PORTRAITS.blurK + (dt*1000)/PORTRAITS.blurInMs);
   }
 
   const upd = (node)=>{
-    if (!node.anim) return;
+    if (!node?.anim) return;
     node.t = Math.min(1, node.t + (dt*1000)/PORTRAITS.slideMs);
-    const k = _ease(node.t);
-    node.x = node.from + (node.to - node.from)*k;
+    const k = _ease(node.t);  // tu misma función de easing
+    node.x = node.from + (node.to - node.from) * k;
+
+    // fade sincronizado con el slide
+    node.alpha = node.aFrom + (node.aTo - node.aFrom) * k;
+
     if (node.t>=1){
       node.anim = false;
       node.x = node.to;
+      node.alpha = node.aTo;
       if (node.onDone){ const cb = node.onDone; node.onDone=null; cb(); }
     }
   };
+
   upd(PORTRAITS.left);
   upd(PORTRAITS.right);
 }
@@ -869,14 +876,19 @@ function portraitsDrawOverlay(){
   // retratos
   const L = PORTRAITS.left, R = PORTRAITS.right;
   if (L?.img){
-    const lx = Math.round(L.x), ly = Math.round(L.yBottom - L.h);
-    ctx.drawImage(L.img, 0,0, L.img.naturalWidth, L.img.naturalHeight, lx, ly, L.w, L.h);
-  }
-  if (R?.img){
-    const rx = Math.round(R.x), ry = Math.round(R.yBottom - R.h);
-    ctx.drawImage(R.img, 0,0, R.img.naturalWidth, R.img.naturalHeight, rx, ry, R.w, R.h);
-  }
-
+  const lx = Math.round(L.x), ly = Math.round(L.yBottom - L.h);
+  ctx.save();
+  ctx.globalAlpha = (L.alpha ?? 1);
+  ctx.drawImage(L.img, 0,0, L.img.naturalWidth, L.img.naturalHeight, lx, ly, L.w, L.h);
+  ctx.restore();
+}
+if (R?.img){
+  const rx = Math.round(R.x), ry = Math.round(R.yBottom - R.h);
+  ctx.save();
+  ctx.globalAlpha = (R.alpha ?? 1);
+  ctx.drawImage(R.img, 0,0, R.img.naturalWidth, R.img.naturalHeight, rx, ry, R.w, R.h);
+  ctx.restore();
+}
   ctx.restore();
 }
 
