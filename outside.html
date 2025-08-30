@@ -1022,57 +1022,64 @@ function drawBlurFallback(srcCanvas, dstCtx, clipRect){
 }
 
   
-function portraitsDrawOverlay(){
-  if (!PORTRAITS.active) return;
+function portraitsDrawOverlay() {
+  const pad = 8;
+  const w = PORTRAIT_W, h = PORTRAIT_H;
+  const dw = w * PORTRAIT_SCALE;
+  const dh = h * PORTRAIT_SCALE;
+  const y = canvas.height - dh - pad;
 
-  // “captura” el frame ya dibujado
-  BACKCTX.clearRect(0,0,BACKBUF.width,BACKBUF.height);
-  BACKCTX.drawImage(canvas,0,0);
+  // --- Left (SSJ) ---
+  if (PORTRAITS.left && PORTRAITS.left.img) {
+    const L = PORTRAITS.left;
+    const ox = pad, oy = y;
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-  ctx.clip();
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, L.alpha ?? 1));
+    if (L.flipX) {
+      ctx.translate(ox + dw / 2, oy);
+      ctx.scale(-1, 1);
+      ctx.drawImage(
+        L.img,
+        0, 0, L.img.naturalWidth, L.img.naturalHeight,
+        -dw / 2, 0, dw, dh
+      );
+    } else {
+      ctx.drawImage(
+        L.img,
+        0, 0, L.img.naturalWidth, L.img.naturalHeight,
+        ox, oy, dw, dh
+      );
+    }
+    ctx.restore();
+  }
 
-  // —— BLUR fuerte + oscurecido ——
-  const k = PORTRAITS.blurK ?? 1;        // 0→1
-  const wantAlpha = Math.min(1, 0.95*k); // casi tapa del todo
-drawBlurFallback(BACKBUF, ctx, screenRect);
+  // --- Right (Juan) ---
+  if (PORTRAITS.right && PORTRAITS.right.img) {
+    const R = PORTRAITS.right;
+    const ox = canvas.width - dw - pad, oy = y;
 
-  // capa de oscurecido para separar bien los retratos
-  ctx.globalAlpha = 0.38 * k;            // sombra suave escalada por k
-  ctx.fillStyle = '#000';
-  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
-
-const L = PORTRAITS.left, R = PORTRAITS.right;
-
-if (L?.img){
-  const s = L.scaleTemp ?? 1;
-  const lx = Math.round(L.x), ly = Math.round(L.yBottom - L.h);
-  const dw = Math.round(L.w * s), dh = Math.round(L.h * s);
-  const ox = lx + Math.round((L.w - dw) / 2);
-  const oy = ly + Math.round((L.h - dh)); // anclar al “suelo” del retrato
-  ctx.save();
-  ctx.globalAlpha = Math.max(0, Math.min(1, L.alpha ?? 1));
-  ctx.drawImage(L.img, 0,0, L.img.naturalWidth, L.img.naturalHeight, ox, oy, dw, dh);
-  ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, R.alpha ?? 1));
+    if (R.flipX) {
+      ctx.translate(ox + dw / 2, oy);
+      ctx.scale(-1, 1);
+      ctx.drawImage(
+        R.img,
+        0, 0, R.img.naturalWidth, R.img.naturalHeight,
+        -dw / 2, 0, dw, dh
+      );
+    } else {
+      ctx.drawImage(
+        R.img,
+        0, 0, R.img.naturalWidth, R.img.naturalHeight,
+        ox, oy, dw, dh
+      );
+    }
+    ctx.restore();
+  }
 }
-if (R?.img){
-  const s = R.scaleTemp ?? 1;
-  const rx = Math.round(R.x), ry = Math.round(R.yBottom - R.h);
-  const dw = Math.round(R.w * s), dh = Math.round(R.h * s);
-  const ox = rx + Math.round((R.w - dw) / 2);
-  const oy = ry + Math.round((R.h - dh));
-  ctx.save();
-  ctx.globalAlpha = Math.max(0, Math.min(1, R.alpha ?? 1));
-  ctx.drawImage(R.img, 0,0, R.img.naturalWidth, R.img.naturalHeight, ox, oy, dw, dh);
-  ctx.restore();
-}
-drawHPBars();
 
-
-  ctx.restore();
-}
 
 // ************************** FUNCIONES SMOKE
 
@@ -1960,6 +1967,7 @@ cineAutoWalkTo(targetX1, targetY1, 500, () => {
   const targetX2 = other.x;      // mantiene X del SSJ
   const targetY2 = other.y + 30; // parar 20px por encima del SSJ
   cineAutoWalkTo(targetX2, targetY2, 700, () => {
+    CUT.phase = 'idle'; 
     player.dir = 'up';
 player.moving = false;
 player.frame = 0;      // idle total
@@ -2000,6 +2008,7 @@ player.frameTime = 0;
   // instancias de lados
   PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan');
+    PORTRAITS.left.flipX = true;
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
