@@ -970,11 +970,9 @@ CUT.hijackAction = () => {
 
 
 function _nextPortraitLine(){
-  // si el texto ya se cerró, preparamos la transición al siguiente speaker
   PORTRAITS.idx++;
   if (PORTRAITS.idx >= PORTRAITS.script.length){
-    // fin
-    _endPortraits(); 
+    _endPortraits();
     return;
   }
 
@@ -984,13 +982,18 @@ function _nextPortraitLine(){
   const prevNode = _nodeForSpeaker(prev.speaker);
   const nextNode = _nodeForSpeaker(next.speaker);
 
+  // ✨ Si el speaker NO cambia, no deslizamos nada: solo mostramos el texto
+  if (prev.speaker === next.speaker){
+    PORTRAITS.stage = 'speaking';
+    openDialog([next], true);
+    return;
+  }
+
+  // Cambio de speaker -> animación normal
   PORTRAITS.stage = 'exiting';
-  // 1) sale el anterior
   _startSlide(prevNode, prevNode.outX, ()=>{
-    // 2) entra el nuevo
     PORTRAITS.stage = 'entering';
     _startSlide(nextNode, nextNode.inX, ()=>{
-      // 3) cuando el nuevo terminó de entrar → mostrar texto
       PORTRAITS.stage = 'speaking';
       openDialog([next], true);
     });
