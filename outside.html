@@ -184,7 +184,8 @@ const PORTRAITS = {
   script:[],
   idx:0,
   left:{}, right:{},
-  stage:'idle', // 'entering' | 'speaking' | 'exiting' | 'ending'
+  stage:'idle',
+  forceBlurFallback: false
 };
 
 const PORTRAIT_SCALES = {
@@ -1025,12 +1026,16 @@ function drawBlurFallback(srcCanvas, dstCtx, clipRect){
 function portraitsDrawOverlay(){
   if (!PORTRAITS.active) return;
 
+  if (BACKBUF.width !== canvas.width || BACKBUF.height !== canvas.height){
+    BACKBUF.width = canvas.width; BACKBUF.height = canvas.height;
+  }
+
   // --- blur del fondo dentro del rectángulo de juego ---
   BACKCTX.clearRect(0, 0, BACKBUF.width, BACKBUF.height);
   BACKCTX.drawImage(canvas, 0, 0);
   const blurPx = Math.round((PORTRAITS.blurPx || 100) * (PORTRAITS.blurK || 0));
 
-  if (supportsCanvasFilter()){
+    if (supportsCanvasFilter() && !PORTRAITS.forceBlurFallback){
     ctx.save();
     ctx.beginPath();
     ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
@@ -1040,8 +1045,10 @@ function portraitsDrawOverlay(){
     ctx.filter = 'none';
     ctx.restore();
   } else {
+    // ← fallback robusto que ya tienes implementado
     drawBlurFallback(BACKBUF, ctx, screenRect);
   }
+
 
   const drawSide = (N)=>{
     if (!N?.img) return;
@@ -1992,6 +1999,7 @@ player.frameTime = 0;
   // Preparar overlay
   PORTRAITS.active = true;
   PORTRAITS.blurK = 0;
+    PORTRAITS.forceBlurFallback = true;
   PORTRAITS.stage = 'entering';
   // instancias de lados
   PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
