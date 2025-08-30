@@ -3025,8 +3025,8 @@ const dx = Math.round(px - dw/2), dy = Math.round(py - dh);
         if (p._isPotion){
   ctx.save();
   // posición del “pie” del sprite (ajusta offsetY si tu sprite tiene más aire arriba)
-  const footX = Math.round(px + dw/2);
-  const footY = Math.round(py + dh*0.92);
+  const footX = Math.round(px + dw/2 - 7);
+  const footY = Math.round(py + dh*0.92 - 20);
 
   // tamaño de la elipse (escala con el sprite)
   const rx = Math.max(6, dw*0.28);
