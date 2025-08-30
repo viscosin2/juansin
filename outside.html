@@ -783,13 +783,14 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
 
 /* ========== UTILS ========== */
 
-  let JUAN_HALO = { active:false, until:0, color:'80,160,255' };
+let JUAN_HALO = { active:false, permanent:false, until:0, color:'80,160,255' };
 
-function startJuanBlueHalo(ms=1000){
+// arrancar halo (temporal o permanente)
+function startJuanBlueHalo(ms=1000, { permanent=false } = {}){
   JUAN_HALO.active = true;
-  JUAN_HALO.until = performance.now() + ms;
+  JUAN_HALO.permanent = permanent;
+  JUAN_HALO.until = permanent ? Infinity : (performance.now() + (ms|0));
 }
-
 
   function spawnPotionWithHalo(){
   // Escoge una zona “random maja” o fija (ejemplo fijo en % del mundo)
@@ -2092,7 +2093,6 @@ CUT.onEnd = ()=>{
     GAME_FLAGS.need_potion = true;
     GAME_FLAGS.has_potion  = false;
     spawnPotionWithHalo();           // crea la pócima en el mapa
-    showToast('Has recibido una pista: busca la pócima (parece una flor).', 2200);
   });
 };
 
@@ -2945,7 +2945,7 @@ if (GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
       // bloquear un segundo con halo azul en Juan
       ambientLock = true;
       ambientLockOwner = 'potion_pick'; // opcional, por consistencia
-      startJuanBlueHalo(1000);
+      startJuanBlueHalo(0, { permanent:true });
       setTimeout(()=>{
         ambientLock = false; ambientLockOwner = null;
         openDialog([{ speaker:'Juan', text:'¡Ahora sí!' }], true);
@@ -3158,6 +3158,9 @@ zlist.push({
     ctx.fill();
 
       if (JUAN_HALO.active){
+        if (!JUAN_HALO.permanent && performance.now() > JUAN_HALO.until){
+    JUAN_HALO.active = false;
+  }
   if (performance.now() > JUAN_HALO.until) JUAN_HALO.active = false;
   const baseR = Math.max(jw, jh) * 0.70;
   const t = performance.now() * 0.002;
