@@ -157,22 +157,23 @@ const FOG = {
 /* ====== CAMERA TWEEN ====== */
 const CAM_TWEEN = { on:false, t:0, dur:1000, sx:0, sy:0, ex:0, ey:0 };
 
-/* ====== PORTRAITS (modo cine mejorado) ====== */
+/* ====== PORTRAITS (secuenciados) ====== */
 const PORTRAITS = {
   active:false,
   blurPx:3,
-  blurK:0,          // 0..1 intensidad del blur/oscurecido
+  blurK:0,
   blurInMs:250,
   blurOutMs:250,
   slideMs:450,
   script:[],
   idx:0,
   left:{}, right:{},
-  waitingForPortrait:false, // hasta que el retrato esté colocado no mostramos texto
+  stage:'idle', // 'entering' | 'speaking' | 'exiting' | 'ending'
 };
 
-let IMG_GANDALF_SMALL=null, IMG_GANDALF=null, IMG_JUAN_BIG=null;
 const _ease = x => x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
+
+let IMG_GANDALF_SMALL=null, IMG_GANDALF=null, IMG_JUAN_BIG=null;
   
   const DEFAULT_SHADOW = {
   alpha: 0.30,     // opacidad
@@ -673,7 +674,7 @@ function isNPCFxActive(npc){
 
 // --------------------- FUNCIONES PORTRAITS
 
-  function _makeSide(img, side){
+function _makeSide(img, side){
   const padX = 24, padBottom = 12;
   const maxW = Math.floor(screenRect.dw * 0.52);
   const s = Math.min(1, maxW / img.naturalWidth);
@@ -682,33 +683,30 @@ function isNPCFxActive(npc){
   const y = screenRect.dy + screenRect.dh - padBottom;
 
   if (side === 'left'){
-    return {
-      img, w, h,
-      x: screenRect.dx - w - 80,            // off a la izquierda
-      inX: screenRect.dx + padX,            // destino visible
-      outX: screenRect.dx - w - 80,         // off
-      y, side:'left',
-      t:0, from:0, to:0, anim:false
+    return {img,w,h, y, side,
+      x: screenRect.dx - w - 80,     // off a la izq
+      inX: screenRect.dx + padX,     // destino visible
+      outX: screenRect.dx - w - 80,  // fuera
+      t:0, from:0, to:0, anim:false, onDone:null
     };
   } else {
-    return {
-      img, w, h,
-      x: screenRect.dx + screenRect.dw + 80,             // off a la derecha
-      inX: screenRect.dx + screenRect.dw - padX - w,     // destino visible
-      outX: screenRect.dx + screenRect.dw + 80,          // off
-      y, side:'right',
-      t:0, from:0, to:0, anim:false
+    return {img,w,h, y, side,
+      x: screenRect.dx + screenRect.dw + 80,         // off a la dcha
+      inX: screenRect.dx + screenRect.dw - padX - w, // destino visible
+      outX: screenRect.dx + screenRect.dw + 80,      // fuera
+      t:0, from:0, to:0, anim:false, onDone:null
     };
   }
 }
 
-function _startSlide(node, toX){
+function _startSlide(node, toX, cb){
   node.anim = true; node.t = 0;
   node.from = node.x; node.to = toX;
+  node.onDone = typeof cb === 'function' ? cb : null;
 }
 
-function _atTarget(node){
-  return Math.abs(node.x - node.to) <= 1 && !node.anim;
+function _nodeForSpeaker(name){
+  return (name === 'Gandalf') ? PORTRAITS.left : PORTRAITS.right;
 }
 
 function portraitsOpen(script){
@@ -716,72 +714,59 @@ function portraitsOpen(script){
   PORTRAITS.script = script.slice();
   PORTRAITS.idx = 0;
   PORTRAITS.blurK = 0;
+  PORTRAITS.stage = 'entering';
 
-  // construir nodos con medidas ya calculadas según pantalla
-  PORTRAITS.left  = _makeSide(IMG_GANDALF,   'left');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,  'right');
+  // construir nodos y dejarlos fuera de escena
+  PORTRAITS.left  = _makeSide(IMG_GANDALF,  'left');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right');
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // primer speaker entra; aún NO mostramos texto
-  const line = PORTRAITS.script[PORTRAITS.idx];
-  PORTRAITS.waitingForPortrait = true;
-  if (line.speaker === 'Gandalf'){
-    PORTRAITS.left.x = PORTRAITS.left.outX;  // asegurar off
-    _startSlide(PORTRAITS.left, PORTRAITS.left.inX);
-  } else {
-    PORTRAITS.right.x = PORTRAITS.right.outX;
-    _startSlide(PORTRAITS.right, PORTRAITS.right.inX);
-  }
+  // primer speaker: ENTRA y solo cuando termina, abrimos su línea
+  const line0 = PORTRAITS.script[PORTRAITS.idx];
+  const node0 = _nodeForSpeaker(line0.speaker);
+  _startSlide(node0, node0.inX, ()=>{
+    PORTRAITS.stage = 'speaking';
+    openDialog([line0], true);
+  });
 
-  // Acción durante portraits: avanzar/terminar línea o cambiar speaker
+  // Acción durante portraits
   CUT.hijackAction = ()=>{
     if (dialogOpen){ advanceDialog(); return; }
-    _portraitsNextStep(); // cambiar de speaker o terminar cine
+    _nextPortraitLine();
   };
 }
 
-function _openCurrentLineWhenReady(){
-  if (!PORTRAITS.waitingForPortrait) return;
-  const line = PORTRAITS.script[PORTRAITS.idx] || {speaker:'',text:''};
-  const node = (line.speaker==='Gandalf') ? PORTRAITS.left : PORTRAITS.right;
-  if (_atTarget(node)){
-    PORTRAITS.waitingForPortrait = false;
-    openDialog([line], true);
-  }
-}
-
-function _portraitsNextStep(){
-  // cerrar diálogo de la línea actual si aún está abierto
-  if (dialogOpen){ closeDialog(); return; }
-
-  // siguiente línea del script
+function _nextPortraitLine(){
+  // si el texto ya se cerró, preparamos la transición al siguiente speaker
   PORTRAITS.idx++;
   if (PORTRAITS.idx >= PORTRAITS.script.length){
-    // fin → salir de portraits
-    _endPortraits();
+    // fin
+    _endPortraits(); 
     return;
   }
 
-  // animar salida del speaker anterior y entrada del nuevo
   const prev = PORTRAITS.script[PORTRAITS.idx-1];
   const next = PORTRAITS.script[PORTRAITS.idx];
 
-  if (prev.speaker === 'Gandalf'){
-    _startSlide(PORTRAITS.left, PORTRAITS.left.outX);
-  } else {
-    _startSlide(PORTRAITS.right, PORTRAITS.right.outX);
-  }
+  const prevNode = _nodeForSpeaker(prev.speaker);
+  const nextNode = _nodeForSpeaker(next.speaker);
 
-  if (next.speaker === 'Gandalf'){
-    _startSlide(PORTRAITS.left, PORTRAITS.left.inX);
-  } else {
-    _startSlide(PORTRAITS.right, PORTRAITS.right.inX);
-  }
-
-  PORTRAITS.waitingForPortrait = true; // el texto se abrirá cuando el nuevo esté en sitio
+  PORTRAITS.stage = 'exiting';
+  // 1) sale el anterior
+  _startSlide(prevNode, prevNode.outX, ()=>{
+    // 2) entra el nuevo
+    PORTRAITS.stage = 'entering';
+    _startSlide(nextNode, nextNode.inX, ()=>{
+      // 3) cuando el nuevo terminó de entrar → mostrar texto
+      PORTRAITS.stage = 'speaking';
+      openDialog([next], true);
+    });
+  });
 }
 
 function _endPortraits(){
-  // fade out blur y desactivar
+  PORTRAITS.stage = 'ending';
   const t0 = performance.now();
   const dur = PORTRAITS.blurOutMs;
   function tick(){
@@ -801,7 +786,7 @@ function portraitsUpdate(dt){
   if (!PORTRAITS.active) return;
 
   // blur in
-  if (PORTRAITS.blurK < 1){
+  if (PORTRAITS.stage !== 'ending' && PORTRAITS.blurK < 1){
     PORTRAITS.blurK = Math.min(1, PORTRAITS.blurK + (dt*1000)/PORTRAITS.blurInMs);
   }
 
@@ -810,19 +795,20 @@ function portraitsUpdate(dt){
     node.t = Math.min(1, node.t + (dt*1000)/PORTRAITS.slideMs);
     const k = _ease(node.t);
     node.x = node.from + (node.to - node.from)*k;
-    if (node.t>=1){ node.anim=false; node.x=node.to; }
+    if (node.t>=1){
+      node.anim = false;
+      node.x = node.to;
+      if (node.onDone){ const cb = node.onDone; node.onDone=null; cb(); }
+    }
   };
   upd(PORTRAITS.left);
   upd(PORTRAITS.right);
-
-  // cuando el portrait que habla esté en destino, abre su línea
-  _openCurrentLineWhenReady();
 }
 
 function portraitsDrawOverlay(){
   if (!PORTRAITS.active) return;
 
-  // 1) blur + oscurecido proporcional a blurK
+  // blur + oscurecido
   BACKCTX.clearRect(0,0,BACKBUF.width,BACKBUF.height);
   BACKCTX.drawImage(canvas,0,0);
   ctx.save();
@@ -833,7 +819,7 @@ function portraitsDrawOverlay(){
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
-  // 2) retratos
+  // retratos
   const L = PORTRAITS.left, R = PORTRAITS.right;
   if (L.img){
     const lx = Math.round(L.x), ly = Math.round(L.y - L.h);
@@ -843,7 +829,6 @@ function portraitsDrawOverlay(){
     const rx = Math.round(R.x), ry = Math.round(R.y - R.h);
     ctx.drawImage(R.img, 0,0, R.img.naturalWidth, R.img.naturalHeight, rx, ry, R.w, R.h);
   }
-
   ctx.restore();
 }
 
