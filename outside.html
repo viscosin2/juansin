@@ -1989,13 +1989,12 @@ function spawnTempGandalfAhead(targetCamY){
 }
 
 
-  function endCine(){
-    CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
-    ambientLock=false;
-    fogResetAim();   
-    fogUseScreen();   // vuelve al modo normal si lo quieres así tras la cine
-    setTimeout(() => startBushPulse('bush_hideout'), 600);
-  }
+function endCine3(){
+  CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
+  ambientLock=false;
+  setTimeout(() => startBushPulse('bush_hideout'), 500); // retardo suave opcional
+}
+
 
 // **************************** CINEMATICA 3
 
