@@ -2055,7 +2055,7 @@ function cine3_hitReaction(node){
 
 function cine3_openNarrator(){
   openDialog([
-    { speaker:'', text:'SSJ ataca a Juan con no sé qué. Juan tenía solo un 10% de vida de los combates anteriores (esta es la cinemática 3) y con el ataque se le queda al 1%.' }
+    {speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' }
   ], true);
 
   CUT.hijackAction = ()=>{
@@ -2063,7 +2063,7 @@ function cine3_openNarrator(){
     if (dialogOpen){
       // mostrar segunda línea
       closeDialog();
-      openDialog([{ speaker:'', text:'Juan está demasiado débil. ¡Rápido! Escóndete en algún sitio.' }], true);
+      openDialog([{ speaker:'', text:'Estás muy debilitado.' },{ speaker:'', text:'¡Rápido! Escóndete en algún sitio.' ], true);
       // siguiente Acción cierra y hace fade out total
       CUT.hijackAction = ()=>{
         if (dialogOpen){ closeDialog(); }
