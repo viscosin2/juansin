@@ -2413,7 +2413,10 @@ function spawnTempGandalfAhead(targetCamY){
   }
   requestAnimationFrame(tick);
 }
-
+function endCine(){
+  CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
+  ambientLock=false;
+}
 
 function endCine3(){
   CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
