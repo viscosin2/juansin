@@ -331,7 +331,7 @@ const NPC_PLACED = {
     }],
   juansin_idle: [{
     id:'juansin_other',
-    type:'percent', x: 70, y: 83,
+    type:'percent', x: 80, y: 83,
     interact: { x:-14, y: 12, w:28, h:16 }
   }],
 };
@@ -1812,7 +1812,7 @@ async function swapOtherJuanToSSJ(){
   }
 
   // Carga el nuevo PNG y aplica (actualiza tamaño si cambia)
-  const img = await loadImage('assets/npcs/juansin_ssj.png');
+  const img = await loadImage('assets/npcs/juan_ssj.png');
   if (img){
     other.img = img;
     other.iw  = img.naturalWidth  || other.iw;
