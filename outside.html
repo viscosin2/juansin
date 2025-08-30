@@ -767,8 +767,10 @@ function portraitsOpen(script){
 
   const line0 = PORTRAITS.script[PORTRAITS.idx];
   const node0 = _nodeForSpeaker(line0.speaker);
+  setCinematicPixelMode(true); 
   _startSlide(node0, node0.inX, ()=>{
     PORTRAITS.stage = 'speaking';
+    
     openDialog([line0], true);
   });
 
@@ -832,6 +834,7 @@ function _endPortraits(){
     else {
       PORTRAITS.active = false;
       CUT.hijackAction = null;
+      setCinematicPixelMode(true); 
       if (typeof CUT.onEnd === 'function') CUT.onEnd();
     }
   }
@@ -866,6 +869,17 @@ function portraitsUpdate(dt){
   upd(PORTRAITS.left);
   upd(PORTRAITS.right);
 }
+function setCinematicPixelMode(on){
+  // Desactiva el pixel-art mientras dura la cine para que el blur se vea suave
+  const c = document.getElementById('game');
+  if (on){
+    c.style.imageRendering = 'auto';      // quita pixelated
+    ctx.imageSmoothingEnabled = true;     // por si acaso
+  } else {
+    c.style.imageRendering = 'pixelated'; // vuelve al look Game Boy
+    ctx.imageSmoothingEnabled = false;
+  }
+}
 
 function portraitsDrawOverlay(){
   if (!PORTRAITS.active) return;
@@ -882,12 +896,13 @@ function portraitsDrawOverlay(){
   ctx.clip();
 
   // blur + oscurecido
-  ctx.globalAlpha = PORTRAITS.blurK ?? 1;
+  ctx.globalAlpha = Math.max(0, Math.min(1, PORTRAITS.blurK ?? 0)); 
   ctx.filter = `blur(${PORTRAITS.blurPx}px) grayscale(35%)`;
   ctx.drawImage(BACKBUF,0,0);
   ctx.filter = 'none';
   ctx.globalAlpha = 1;
-  ctx.fillStyle = 'rgba(0,0,0,0.40)';
+  ctx.globalAlpha = (PORTRAITS.blurK ?? 0) * 0.40;                  
+  ctx.fillStyle = '#000';
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
   // retratos
