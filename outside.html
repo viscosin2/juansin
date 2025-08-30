@@ -1292,9 +1292,14 @@ function startBushHideSequence(){
 }
 
 function spawnGandalfWhiteAtPlayer(){
-  const x = player.x + 20;     // X ≈ Juan + 5
-  const yEnd = player.y - 10;      // misma Y que Juan
-  const yStart = cam.y - Math.round(JUAN.size.h * JUAN.scale) - 16; // justo fuera por arriba
+  // ===== knobs =====
+  const DROP_PX     = 60;   // distancia de bajada (px en mundo). Prueba 40–80.
+  const DURATION_MS = 650;  // velocidad del slide (ms). Más bajo = más rápido.
+  // =================
+
+  const x     = player.x + 10;           // X ≈ Juan + 20
+  const yEnd  = player.y - 10;           // destino final (un pelín por encima de Juan)
+  const yStart= yEnd - DROP_PX;          // <<< empieza cerquita del destino
 
   const npc = {
     id:'gandalf_white',
@@ -1313,11 +1318,11 @@ function spawnGandalfWhiteAtPlayer(){
   BUSH_SCENE.active = true;
   BUSH_SCENE.gandalf = npc;
   BUSH_SCENE.t = 0;
-  BUSH_SCENE.dur = 900;
+  BUSH_SCENE.dur = DURATION_MS;   // <<< más cortita
   BUSH_SCENE.yStart = yStart;
   BUSH_SCENE.yEnd = yEnd;
 
-  // Niebla “nube” bajo Gandalf: localizada y siguiendo al NPC
+  // Niebla “nube” acompaña a Gandalf
   fogUseWorld({ x, y: yStart });
   fogStart();
   FOG.color = '255,255,255';
@@ -1325,8 +1330,9 @@ function spawnGandalfWhiteAtPlayer(){
   FOG.targetDensity = 180;
   FOG.areaW = 120;
   FOG.areaH = 70;
-  fogBeginFill({ dur:600, density:0.9, areaW:FOG.areaW, areaH:FOG.areaH });
+  fogBeginFill({ dur: 600, density: 0.9, areaW: FOG.areaW, areaH: FOG.areaH });
 }
+
 
 function updateBushScene(dt){
   if (!BUSH_SCENE.active || !BUSH_SCENE.gandalf) return;
