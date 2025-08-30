@@ -682,27 +682,56 @@ function isNPCFxActive(npc){
 // --------------------- FUNCIONES PORTRAITS
 
 function _makeSide(img, side, name){
-  // ... (lo que ya tienes de escalas/posiciones)
-  const base = {
-    img, name, side, w, h, yBottom,
+  if (!img) {
+    // Seguridad: crea un dummy para no romper si falta la imagen
+    img = { naturalWidth: 64, naturalHeight: 64 };
+  }
+
+  // Escala base: que quepa en ~52% del ancho útil
+  const maxW = Math.floor(screenRect.dw * 0.52);
+  const baseScale = Math.min(1, maxW / img.naturalWidth);
+
+  // Escala por personaje (Gandalf más grande, etc.)
+  const charScale = (PORTRAIT_SCALES && PORTRAIT_SCALES[name]) ? PORTRAIT_SCALES[name] : 1;
+
+  // Altura disponible: pantalla útil menos aire arriba y padding abajo
+  const yBottom = screenRect.dy + screenRect.dh - PORTRAIT_BOTTOM_PAD;
+  const availH  = screenRect.dh - (PORTRAIT_TOP_AIR + PORTRAIT_BOTTOM_PAD);
+
+  // Escala combinada y clamp por altura disponible
+  let s = baseScale * charScale;
+  let w = Math.round(img.naturalWidth  * s);
+  let h = Math.round(img.naturalHeight * s);
+  if (h > availH) {
+    s = s * (availH / h);
+    w = Math.round(img.naturalWidth  * s);
+    h = Math.round(img.naturalHeight * s);
+  }
+
+  const common = {
+    img, name, side,
+    w, h,
+    yBottom,            // <- tope inferior común
     t:0, from:0, to:0, anim:false, onDone:null,
-    alpha: 0, aFrom: 0, aTo: 0   // <<< NUEVO
+    alpha:0, aFrom:0, aTo:1
   };
+
   if (side === 'left'){
-    return { ...base,
-      x: screenRect.dx - w - 80,
-      inX: screenRect.dx + 24,
-      outX: screenRect.dx - w - 80,
+    return {
+      ...common,
+      x:   screenRect.dx - w - 80,              // fuera, a la izq
+      inX: screenRect.dx + 24,                  // dentro
+      outX: screenRect.dx - w - 80              // fuera
     };
   } else {
-    return { ...base,
-      x: screenRect.dx + screenRect.dw + 80,
+    return {
+      ...common,
+      x:   screenRect.dx + screenRect.dw + 80,  // fuera, a la dcha
       inX: screenRect.dx + screenRect.dw - 24 - w,
-      outX: screenRect.dx + screenRect.dw + 80,
+      outX: screenRect.dx + screenRect.dw + 80
     };
   }
 }
-
 
 
 function _startSlide(node, toX, cb){
@@ -712,16 +741,11 @@ function _startSlide(node, toX, cb){
   node.to = toX;
   node.onDone = (typeof cb === 'function') ? cb : null;
 
-  // Fade segun si entra o sale
-  if (toX === node.inX){
-    node.aFrom = 0; node.aTo = 1;
-  } else if (toX === node.outX){
-    node.aFrom = 1; node.aTo = 0;
-  } else {
-    // por si haces panes intermedios
-    node.aFrom = node.alpha ?? 1; node.aTo = node.alpha ?? 1;
-  }
+  if (toX === node.inX){ node.aFrom = 0; node.aTo = 1; }
+  else if (toX === node.outX){ node.aFrom = 1; node.aTo = 0; }
+  else { node.aFrom = node.alpha ?? 1; node.aTo = node.alpha ?? 1; }
 }
+
 
 
 function _nodeForSpeaker(name){
@@ -735,14 +759,12 @@ function portraitsOpen(script){
   PORTRAITS.blurK = 0;
   PORTRAITS.stage = 'entering';
 
-  // construir nodos y dejarlos fuera de escena
   PORTRAITS.left  = _makeSide(IMG_GANDALF,  'left',  'Gandalf');
-PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
 
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // primer speaker: ENTRA y solo cuando termina, abrimos su línea
   const line0 = PORTRAITS.script[PORTRAITS.idx];
   const node0 = _nodeForSpeaker(line0.speaker);
   _startSlide(node0, node0.inX, ()=>{
@@ -750,31 +772,26 @@ PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
     openDialog([line0], true);
   });
 
-  // Acción durante portraits: 1 pulsación = cerrar línea actual y pasar al siguiente speaker
-CUT.hijackAction = () => {
-  if (!PORTRAITS.active) return;
-
-  if (dialogOpen) {
-    if (isTyping) {
-      // si está escribiendo, terminar de escribir (misma semántica que avanzas 1ª vez)
-      clearInterval(typingTimer);
-      isTyping = false;
-      const full = dialogScript[dialogIndex]?.text ?? '';
-      dialogTextEl.textContent = full;
-      dialogEl.classList.add('ready');
-      dialogHintEl.style.opacity = 1;
+  CUT.hijackAction = () => {
+    if (!PORTRAITS.active) return;
+    if (dialogOpen){
+      if (isTyping){
+        clearInterval(typingTimer);
+        isTyping = false;
+        const full = dialogScript[dialogIndex]?.text ?? '';
+        dialogTextEl.textContent = full;
+        dialogEl.classList.add('ready');
+        dialogHintEl.style.opacity = 1;
+        return;
+      }
+      // cerrar y pasar al siguiente speaker en UNA sola pulsación
+      closeDialog();
+      _nextPortraitLine();
       return;
     }
-    // texto ya completo: cerrar y SALTAR a la transición de portraits en la MISMA pulsación
-    closeDialog();
-    _nextPortraitLine();
-    return;
-  }
-
-  // si no hay diálogo abierto (p. ej. entre animaciones), ignoramos o dejamos que _nextPortraitLine lo gestione
-};
-
+  };
 }
+
 
 function _nextPortraitLine(){
   // si el texto ya se cerró, preparamos la transición al siguiente speaker
