@@ -1914,47 +1914,68 @@ async function startCinematic3(){
   CUT.active = true; CUT.id='cine3'; CUT.phase='start';
   ambientLock = true; player.moving=false;
 
-  // 1) Cambia el "otro Juan" a SSJ y muestra auto-línea
-  const other = await applyOtherJuanSSJ({boostHalo:true});
+  // 1) Espera 1s antes de mostrar el primer diálogo
+  setTimeout(()=>{
+    // Diálogo en dos pasos: "...?" → "¿Ese soy yo?"
+    openDialog([
+      { speaker:'Juan', text:'...?' },
+      { speaker:'Juan', text:'¿Ese soy yo?' }
+    ], true);
 
-  // Mensaje automático (sin tocar Acción)
-  openDialog([{ speaker:'Juan', text:'Pues no, no soy yo.' }], true);
+    // Acción solo avanza/cierra este diálogo
+    CUT.hijackAction = ()=>{
+      if (dialogOpen){ advanceDialog(); return; }
+    };
 
-  // 2) Acción → autowalk hacia la izquierda hasta colocarse frente al otro Juan
-  CUT.hijackAction = ()=>{
-    if (dialogOpen){ closeDialog(); }
-    CUT.hijackAction = null;
+    // 2) Al cerrar este diálogo, esperamos 1s y cambiamos el sprite del otro Juan (flash)
+    onDialogClosed = ()=>{
+      CUT.hijackAction = null;
+      setTimeout(async ()=>{
+        const other = await applyOtherJuanSSJ({ boostHalo:true }); // cambia PNG + destello
+        if (!other){ endCine3(); return; }
 
-    if (!other){ endCine3(); return; }
+        // 3) Autowalk a posición frente al SSJ y continuamos la coreografía original
+        const offset  = 22;
+        const targetX = other.x + offset;
+        const targetY = player.y;
 
-    // target: un poco a la derecha del SSJ, misma Y del jugador, y mirar hacia arriba
-    const offset = 22;
-    const targetX = other.x + offset;
-    const targetY = player.y;
+        cineAutoWalkTo(targetX, targetY, 700, ()=>{
+          player.dir = 'up';
 
-    cineAutoWalkTo(targetX, targetY, 700, ()=>{
-      player.dir = 'up'; // se gira hacia arriba
-      // 3) Halo más intenso 1s
-      if (other && other.halo){
-        const startA = other.halo.alpha||0.6, startR = other.halo.radius||30;
-        const t0 = performance.now(), dur=1000;
-        (function tick(){
-          const k = Math.min(1,(performance.now()-t0)/dur);
-          other.halo.alpha = startA + (0.9 - startA)*k;
-          other.halo.radius = startR + (46 - startR)*k;
-          if (k<1) requestAnimationFrame(tick);
-        })();
-      }
+          // Intensificar halo 1s
+          if (other && other.halo){
+            const startA = other.halo.alpha || 0.6;
+            const startR = other.halo.radius || 30;
+            const t0 = performance.now(), dur = 1000;
+            (function tick(){
+              const k = Math.min(1,(performance.now()-t0)/dur);
+              other.halo.alpha  = startA + (0.9 - startA)*k;
+              other.halo.radius = startR + (46  - startR)*k;
+              if (k<1) requestAnimationFrame(tick);
+            })();
+          }
 
-      // 4) Diálogo SSJ "Grr" → Acción → Juan "Omaigos" → Acción → modo cine
-      openDialog([{speaker:'SSJ', text:'Grr'}], true);
-      CUT.hijackAction = ()=>{
-        if (dialogOpen){ closeDialog(); openDialog([{speaker:'Juan', text:'Omaigos'}], true); return; }
-      };
-      onDialogClosed = ()=>{ CUT.hijackAction=null; cine3_beginPortraits(); };
-    });
-  };
+          // 4) Diálogos cortos “Grr” → “Omaigos” y salto a retratos como ya tenías
+          openDialog([{speaker:'SSJ', text:'Grr'}], true);
+
+          CUT.hijackAction = ()=>{
+            if (dialogOpen){
+              closeDialog();
+              openDialog([{speaker:'Juan', text:'Omaigos'}], true);
+              return;
+            }
+          };
+
+          onDialogClosed = ()=>{
+            CUT.hijackAction = null;
+            cine3_beginPortraits();
+          };
+        });
+      }, 1000);
+    };
+  }, 1000);
 }
+
 
   function cine3_beginPortraits(){
   // Preparar overlay
