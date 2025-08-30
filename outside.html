@@ -1871,13 +1871,12 @@ async function applyOtherJuanSSJ({boostHalo=true} = {}){
   return other;
 }
 
-function cineAutoWalkTo(targetX, targetY, ms, onDone){
+function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false } = {}){
   CUT.phase = 'autowalk';
   const sx = player.x, sy = player.y;
   const t0 = performance.now();
   const dur = Math.max(200, ms|0);
 
-  // actualizar la dirección del sprite mientras camina
   const face = ()=>{
     const dx = targetX - player.x, dy = targetY - player.y;
     player.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
@@ -1889,13 +1888,13 @@ function cineAutoWalkTo(targetX, targetY, ms, onDone){
     player.y = sy + (targetY - sy) * k;
     face();
 
-    // animación de caminar durante el auto-walk
+    // animación de caminar
     player.moving = true;
     player.frameTime += 1/60;
-    if (player.frameTime >= 0.12){
-      player.frame = (player.frame + 1) % 2;
-      player.frameTime = 0;
-    }
+    if (player.frameTime >= 0.12){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
+
+    // 👇 hace que la cámara siga a Juan durante este autowalk
+    if (followCam) centerCameraOnPlayer();
 
     if (k < 1){
       requestAnimationFrame(step);
@@ -1905,6 +1904,7 @@ function cineAutoWalkTo(targetX, targetY, ms, onDone){
     }
   })();
 }
+
 
 
 async function startCinematic3(){
@@ -1951,17 +1951,16 @@ async function startCinematic3(){
             // 4) Autowalk hasta delante del SSJ, quedarse en idle up
             const offset  = 22;
             // 4) Caminata en dos tramos: primero a la X del SSJ, luego subir hasta y = SSJ.y - 20
-const targetX1 = other.x;           // alinearse a la X del SSJ
-const targetY1 = player.y;          // misma Y actual
+const targetX1 = other.x;        // alinearse a la X del SSJ
+const targetY1 = player.y;       // misma Y actual
+
 cineAutoWalkTo(targetX1, targetY1, 500, () => {
-  const targetX2 = other.x;         // mantiene X del SSJ
-  const targetY2 = other.y - 20;    // 20 px por encima del SSJ
+  const targetX2 = other.x;      // mantiene X del SSJ
+  const targetY2 = other.y - 20; // parar 20px por encima del SSJ
   cineAutoWalkTo(targetX2, targetY2, 700, () => {
-    // parar frente al SSJ en idle up
     player.dir = 'up';
     player.moving = false;
 
-    // 5) Espera 1s y muestra "Grr"
     setTimeout(() => {
       openDialog([{ speaker:'SSJ', text:'Grr' }], true);
 
@@ -1977,8 +1976,8 @@ cineAutoWalkTo(targetX1, targetY1, 500, () => {
         cine3_beginPortraits();
       };
     }, 1000);
-  });
-});
+  }, { followCam:true });
+}, { followCam:true });
 
           };
         }, 1000);
