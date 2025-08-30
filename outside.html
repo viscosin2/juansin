@@ -175,7 +175,8 @@ const PORTRAITS = {
   Gandalf: 1.3, // 130% de su tamaño normal
   Juan:    1.0  // escala normal
 };
-
+const PORTRAIT_TOP_AIR = 52;   // aire fijo por arriba (px relativos a screenRect)
+const PORTRAIT_BOTTOM_PAD = 12; // “colchón” desde abajo
 
 const _ease = x => x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
 
@@ -681,37 +682,39 @@ function isNPCFxActive(npc){
 // --------------------- FUNCIONES PORTRAITS
 
 function _makeSide(img, side, name){
-  const padX = 24, padBottom = 12;
   const maxW = Math.floor(screenRect.dw * 0.52);
+  const maxH = Math.floor(screenRect.dh - PORTRAIT_TOP_AIR - PORTRAIT_BOTTOM_PAD);
 
-  let baseScale = Math.min(1, maxW / img.naturalWidth);
+  // escala base: que quepa por ancho y por alto
+  let baseScale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight);
 
-  // aplicar override si existe para este speaker
-  if (PORTRAIT_SCALES[name]) {
-    baseScale *= PORTRAIT_SCALES[name];
-  }
+  // override por personaje
+  if (PORTRAIT_SCALES[name]) baseScale *= PORTRAIT_SCALES[name];
 
-  const w = Math.round(img.naturalWidth * baseScale);
+  const w = Math.round(img.naturalWidth  * baseScale);
   const h = Math.round(img.naturalHeight * baseScale);
-  const y = screenRect.dy + screenRect.dh - padBottom;
 
-  // resto igual que tenías
-  if (side === 'left') {
-    return { img, w, h, y, side, name,
-      x: screenRect.dx - w - 80,
-      inX: screenRect.dx + padX,
-      outX: screenRect.dx - w - 80,
+  const yBottom = screenRect.dy + screenRect.dh - PORTRAIT_BOTTOM_PAD; // todos comparten “suelo”
+
+  if (side === 'left'){
+    return {
+      img, name, side, w, h, yBottom,
+      x: screenRect.dx - w - 80,                // off a la izq
+      inX: screenRect.dx + 24,                  // visible
+      outX: screenRect.dx - w - 80,             // fuera
       t:0, from:0, to:0, anim:false, onDone:null
     };
   } else {
-    return { img, w, h, y, side, name,
-      x: screenRect.dx + screenRect.dw + 80,
-      inX: screenRect.dx + screenRect.dw - padX - w,
+    return {
+      img, name, side, w, h, yBottom,
+      x: screenRect.dx + screenRect.dw + 80,    // off a la dcha
+      inX: screenRect.dx + screenRect.dw - 24 - w,
       outX: screenRect.dx + screenRect.dw + 80,
       t:0, from:0, to:0, anim:false, onDone:null
     };
   }
 }
+
 
 
 function _startSlide(node, toX, cb){
@@ -843,29 +846,40 @@ function portraitsUpdate(dt){
 function portraitsDrawOverlay(){
   if (!PORTRAITS.active) return;
 
-  // blur + oscurecido
+  // preparar blur del frame actual
   BACKCTX.clearRect(0,0,BACKBUF.width,BACKBUF.height);
   BACKCTX.drawImage(canvas,0,0);
+
   ctx.save();
-  ctx.globalAlpha = PORTRAITS.blurK;
+
+  // CLIP a la pantalla útil
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
+
+  // blur + oscurecido
+  ctx.globalAlpha = PORTRAITS.blurK ?? 1;
   ctx.filter = `blur(${PORTRAITS.blurPx}px)`;
   ctx.drawImage(BACKBUF,0,0);
   ctx.filter = 'none';
+  ctx.globalAlpha = 1;
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
   // retratos
   const L = PORTRAITS.left, R = PORTRAITS.right;
-  if (L.img){
-    const lx = Math.round(L.x), ly = Math.round(L.y - L.h);
+  if (L?.img){
+    const lx = Math.round(L.x), ly = Math.round(L.yBottom - L.h);
     ctx.drawImage(L.img, 0,0, L.img.naturalWidth, L.img.naturalHeight, lx, ly, L.w, L.h);
   }
-  if (R.img){
-    const rx = Math.round(R.x), ry = Math.round(R.y - R.h);
+  if (R?.img){
+    const rx = Math.round(R.x), ry = Math.round(R.yBottom - R.h);
     ctx.drawImage(R.img, 0,0, R.img.naturalWidth, R.img.naturalHeight, rx, ry, R.w, R.h);
   }
+
   ctx.restore();
 }
+
 
   // -------------------- FUNCIONES NIEBLA
 function fogUseWorld(anchor){
