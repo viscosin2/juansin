@@ -1449,19 +1449,33 @@ function spawnGandalfWhiteAtPlayer(){
         if (!dialogOpen){ return; }
         // MISMO TAP: cerrar “maricona…” y abrir las dos de Juan
         closeDialog();
-        openDialog([
-          { speaker:'Juan', text:'??!!' },
-          { speaker:'Juan', text:'¿Se puede saber dónde estabas? Llegas tarde.' }
-        ], true);
+// tras cerrar "maricona..." abrimos las dos de Juan:
+openDialog([
+  { speaker:'Juan', text:'??!!' },
+  { speaker:'Juan', text:'¿Se puede saber dónde estabas? Llegas tarde.' }
+], true);
 
-        // Siguiente tap: cerrar y abrir el SOLO épico (retrato blanco)
-        CUT.hijackAction = () => {
-          if (dialogOpen){ closeDialog(); }
-          CUT.hijackAction = null;
-          openSoloGandalfEpic([
-            {speaker:'Gandalf', text:'Un mago nunca llega tarde, Johnny Barrett, ni pronto. Llega justamente cuando se lo propone.' }
-          ]);
-        };
+// handler correcto: 1º completa typing, 2º avanza a la 2ª línea, 3º lanza el solo
+CUT.hijackAction = () => {
+  if (!dialogOpen) return;
+
+  // 1) si está escribiendo, completar
+  if (isTyping){ advanceDialog(); return; }
+
+  // 2) si aún no estamos en la última línea, avanzar a la siguiente ("¿Se puede saber...?")
+  if (dialogIndex < dialogScript.length - 1){
+    advanceDialog();
+    return;
+  }
+
+  // 3) ya estamos en la última línea -> cerrar y abrir el solo épico
+  closeDialog();
+  CUT.hijackAction = null;
+  openSoloGandalfEpic([
+    { speaker:'Gandalf', text:'Un mago nunca llega tarde, Johnny Barrett, ni pronto. Llega justamente cuando se lo propone.' }
+  ]);
+};
+
       };
     }, { followCam:true });
   }, AFTER_MS);
