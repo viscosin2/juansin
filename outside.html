@@ -220,47 +220,58 @@ function drawHPBars(){
   if(!HPBARS.active || HPBARS.alpha<=0) return;
   const a = Math.max(0, Math.min(1, HPBARS.alpha));
 
-  const padX = Math.round(screenRect.dw*0.12);
-  const barW = Math.round(screenRect.dw*0.76);
-  const barH = 12;
-  const gap  = 8;
-  const x = Math.round(screenRect.dx + padX);
-  const topY = Math.round(screenRect.dy + 10);
+  const padSide   = Math.round(screenRect.dw * 0.02);  // margen lateral
+  const gapCenter = Math.round(screenRect.dw * 0.04);  // hueco central
+  const barW      = Math.round(screenRect.dw * 0.46);  // ancho de cada barra
+  const barH      = 14;                                // alto barra
+  const nameGap   = 10;                                // espacio entre nombre y barra
+  const yTop      = Math.round(screenRect.dy + 16);    // todo pegado arriba
+
+  const leftX  = Math.round(screenRect.dx + padSide);
+  const rightX = Math.round(screenRect.dx + screenRect.dw - padSide - barW);
+
+  const bgStyle   = 'rgba(255,255,255,0.18)';
+  const frameStyle= 'rgba(255,255,255,0.35)';
+
+  // Fuentes/nombres (rollo retro)
+  const nameFont  = '12px "Press Start 2P", system-ui, sans-serif';
+  const nameColor = '#E6F6FF';
+
+  // Escalas de relleno
+  const wSSJ  = Math.round(barW * (HPBARS.ssj/100));
+  const wJuan = Math.round(barW * (HPBARS.juan/100));
 
   ctx.save();
   ctx.globalAlpha = a;
 
-  // SSJ (rojo) arriba
-  ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x, topY, barW, barH);
-  ctx.fillStyle = '#e03232';
-  ctx.fillRect(x, topY, Math.round(barW * (HPBARS.ssj/100)), barH);
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.strokeRect(x+0.5, topY+0.5, barW-1, barH-1);
-  ctx.font = '600 11px system-ui'; ctx.fillStyle='#ffd2d2';
-  ctx.fillText(`SSJ ${Math.round(HPBARS.ssj)}%`, x+6, topY+barH-3);
+  // Nombres encima
+  ctx.font = nameFont;
+  ctx.fillStyle = nameColor;
+  ctx.textBaseline = 'bottom';
 
-  // Juan (azul) abajo
-  const y2 = topY + barH + gap;
-  ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x, y2, barW, barH);
-  ctx.fillStyle = '#3c88ff';
-  ctx.fillRect(x, y2, Math.round(barW * (HPBARS.juan/100)), barH);
-  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.strokeRect(x+0.5, y2+0.5, barW-1, barH-1);
-  ctx.fillStyle='#cfe6ff';
-  ctx.fillText(`Juan ${Math.round(HPBARS.juan)}%`, x+6, y2+barH-3);
+  ctx.fillText('SSJ',  leftX,  yTop - 2);           // izquierda
+  ctx.fillText('Juan', rightX + barW - ctx.measureText('Juan').width, yTop - 2); // derecha alineado dcha
+
+  // Barras: fondo + relleno + marco
+  // -- SSJ (izquierda)
+  ctx.fillStyle = bgStyle;
+  ctx.fillRect(leftX, yTop + nameGap, barW, barH);
+  ctx.fillStyle = '#e03232'; // rojo SSJ
+  ctx.fillRect(leftX, yTop + nameGap, wSSJ, barH);
+  ctx.strokeStyle = frameStyle;
+  ctx.strokeRect(leftX + 0.5, yTop + nameGap + 0.5, barW - 1, barH - 1);
+
+  // -- Juan (derecha)
+  ctx.fillStyle = bgStyle;
+  ctx.fillRect(rightX, yTop + nameGap, barW, barH);
+  ctx.fillStyle = '#3c88ff'; // azul Juan
+  ctx.fillRect(rightX, yTop + nameGap, wJuan, barH);
+  ctx.strokeStyle = frameStyle;
+  ctx.strokeRect(rightX + 0.5, yTop + nameGap + 0.5, barW - 1, barH - 1);
 
   ctx.restore();
 }
 
-const _ease = x => x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
-
-let IMG_GANDALF_SMALL=null, IMG_GANDALF=null, IMG_JUAN_BIG=null, IMG_JUAN_SSJ=null;
-
-  
-  const DEFAULT_SHADOW = {
-  alpha: 0.30,     // opacidad
-  offsetY: -3,     // cuánto “sube”/“baja” desde el pie
-  scaleX: 1/2.4,   // ancho relativo al dw del sprite
-  scaleY: 1/7,     // alto relativo al dh del sprite
-};
 
 /* ========== ASSETS ========== */
 const BG_SRC = "assets/locations/outside.png";
@@ -1970,7 +1981,7 @@ player.frameTime = 0;
 
 
     setTimeout(() => {
-      openDialog([{ speaker:'SSJ', text:'Grr' }], true);
+      openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'Grr' }], true);
 
       CUT.hijackAction = () => {
         if (dialogOpen){
@@ -1995,43 +2006,49 @@ player.frameTime = 0;
 }
 
 
-  function cine3_beginPortraits(){
-  // Preparar overlay
+function cine3_beginPortraits(){
+  // Misma lógica que la cine1: mismo sizing/posiciones/transiciones
   PORTRAITS.active = true;
   PORTRAITS.blurK = 0;
-    PORTRAITS.forceBlurFallback = true;
+  PORTRAITS.forceBlurFallback = false;     // <- igual que cine1
   PORTRAITS.stage = 'entering';
-  // instancias de lados
+
+  // Construidos con _makeSide (como en cine1)
   PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan');
-    PORTRAITS.left.flipX = true;
+
+  // Mantener flip del SSJ
+  PORTRAITS.left.flipX = true;
+
+  // Parten fuera de pantalla (como cine1)
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Barras de vida: Juan al 10%, SSJ al 100%
-  HPBARS.show(10, 100);
+  // Barras de vida (valores iniciales de esta escena)
+  HPBARS.show(10, 100); // Juan 10%, SSJ 100%
 
-  // Entra primero SSJ por la izquierda
+  // Entra primero SSJ por la izquierda con la misma transición
   _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
-    // Sin pulsar nada, hace un ataque rápido
+    // dash in + back (animación rápida de ataque)
     cine3_attackSequence(()=>{
-      // sale SSJ por la izq y entra Juan por la dcha
+      // sale SSJ y entra Juan
       _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
         _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
-          // animación de "recibir golpe" y bajar vida del 10% → 1%
+          // feedback de golpe a Juan y bajar vida a 1%
           cine3_hitReaction(PORTRAITS.right);
           HPBARS.setTargets(1, 100);
 
-          // Narrador (dos líneas). Acción para avanzar y Acción para cerrar
+          // Narrador y flujo de cierres como ya tenías
           cine3_openNarrator();
         });
       });
     });
   });
 
-  // El botón Acción durante la coreografía no hace nada hasta el narrador
+  // Durante la coreografía no hay acción hasta que aparezca el narrador
   CUT.hijackAction = null;
 }
+
 
 function cine3_attackSequence(done){
   // Dash de SSJ hacia el centro y atrás
@@ -2596,6 +2613,7 @@ if (DEBUG_CINE && CINE_BUILT.length){
 
   // Retratos / modo cine
   portraitsDrawOverlay();
+  drawHPBars();
 }
 
 
