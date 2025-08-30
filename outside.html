@@ -462,9 +462,21 @@ function showToast(msg, ms=1800){
   
   async function preloadNPCs(){
   const entries = Object.entries(NPC_CATALOG);
-  const res = await Promise.all(entries.map(([k,v]) => loadImage(v.src).then(img => [k,img])));
-  res.forEach(([k,img]) => { NPC_IMAGES[k] = img; });
+  const res = await Promise.all(entries.map(async ([k, v]) => {
+    if (v.variants && typeof v.variants === 'object'){
+      const pairs = await Promise.all(
+        Object.entries(v.variants).map(async ([name, path]) => [name, await loadImage(path)])
+      );
+      const images = Object.fromEntries(pairs.filter(([,img]) => !!img));
+      return [k, images]; // guardamos un diccionario de variantes
+    } else {
+      const img = await loadImage(v.src);
+      return [k, img];
+    }
+  }));
+  res.forEach(([k, payload]) => { NPC_IMAGES[k] = payload; });
 }
+
 
 function buildNPCs(){
   NPCS = [];
@@ -683,12 +695,12 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
         openDialog(npc.dialog, true);
       }
 
-
    }
-      if (npc.onFire){
-        setTimeout(() => { triggerNPCShot(npc); }, 1500);
-        GAME_FLAGS.talked_gunner = true;
-      }
+      if (npc && npc.onFire){
+  setTimeout(() => { triggerNPCShot(npc); }, 1500);
+  GAME_FLAGS.talked_gunner = true;
+}
+
       return;
     }
   }
@@ -888,7 +900,7 @@ function _endPortraits(){
     else {
       PORTRAITS.active = false;
       CUT.hijackAction = null;
-      setCinematicPixelMode(true); 
+      setCinematicPixelMode(false); 
       if (typeof CUT.onEnd === 'function') CUT.onEnd();
     }
   }
@@ -2156,6 +2168,9 @@ async function init(){
   buildPropsAndObstacles();
     buildNPCs();                  // << NUEVO
 
+  const superProp = PROPS.find(p => p.type === 'super');
+if (superProp) initDonutFog(superProp);
+  
   centerCameraOnPlayer();
 
   // Arranque del ambiente base desde 0 con fade
