@@ -451,7 +451,7 @@ const CATALOG = {
   river1:       { src:'assets/objects/rio1.png',   scale:1, collider:null, forceBack: true},
   river2:       { src:'assets/objects/rio2.png',   scale:1, collider:null, forceBack: true},
   super:        { src:'assets/objects/super.png',  scale:1, collider:{x:-63,y:-5,w:120, h:23}, depthBand:1, depthAnchorY:1},
-  potion: { src: 'assets/objects/pocima.png', scale: 1.0},
+  potion: { src: 'assets/objects/pocima.png', scale: 0.08},
 };
 
 const PLACED = {
@@ -793,7 +793,7 @@ function startJuanBlueHalo(ms=1000){
 
   function spawnPotionWithHalo(){
   // Escoge una zona “random maja” o fija (ejemplo fijo en % del mundo)
-  const spot = percentToWorld({ x: 62, y: 72 });  // ajústalo si quieres
+  const spot = percentToWorld({ x: 2, y: 50 });  // ajústalo si quieres
 
   // Crea el prop a mano (sin pasar por PLACED) y añádelo a PROPS
   const img = PROP_IMAGES['potion'];
