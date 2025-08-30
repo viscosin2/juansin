@@ -802,46 +802,52 @@ function isNPCFxActive(npc){
 // --------------------- FUNCIONES PORTRAITS
 
 function _makeSide(img, side, name, slotOverride){
+  // Imagen fallback por si no ha cargado
   if (!img) {
     img = { naturalWidth: 64, naturalHeight: 64 };
   }
 
-  // área horizontal base (seguimos respetando el ancho del área de juego para insets)
+  // Área horizontal máxima (relativa al área de juego)
   const maxW = Math.floor(screenRect.dw * 0.52);
+
+  // Escala específica por personaje (si existe)
   const charScale = (PORTRAIT_SCALES && PORTRAIT_SCALES[name]) ? PORTRAIT_SCALES[name] : 1;
 
-  // ---- cálculo de altura disponible:
-  // modo normal -> dentro del área de juego
-  // modo letterbox -> dentro de la banda negra superior/inferior
+  // ¿Usamos layout "letterbox"?
   const useLetterbox = (PORTRAITS.layout === 'letterbox');
-  const topBarH    = Math.max(0, Math.round(screenRect.dy));
-  const bottomBarH = Math.max(0, Math.round(canvas.height - (screenRect.dy + screenRect.dh)));
-  const padTop = 6, padBottom = 8; // acolchados discretos
+
+  // Acolchados
+  const padTop = 6, padBottom = 8;
 
   let availH, yBottom;
 
   if (useLetterbox){
+    // —— letterbox DENTRO del área de juego (NO en las bandas negras exteriores) ——
     const slot = slotOverride || (side === 'left' ? 'top' : 'bottom');
+
+    // Altura de cada franja interna (ajusta a gusto: 0.40–0.48)
+    const slotH = Math.round(screenRect.dh * 0.44);
+
     if (slot === 'top'){
-      // ocupa la banda negra superior
-      availH  = Math.max(0, topBarH - padTop - padBottom);
-      yBottom = screenRect.dy - padBottom; // borde inferior de la banda superior
+      // Parte superior INTERIOR
+      availH  = Math.max(0, slotH - padTop - padBottom);
+      yBottom = screenRect.dy + slotH - padBottom; // borde inferior del slot superior
     } else {
-      // ocupa la banda negra inferior
-      availH  = Math.max(0, bottomBarH - padTop - padBottom);
-      yBottom = canvas.height - padBottom; // borde inferior del canvas
+      // Parte inferior INTERIOR
+      availH  = Math.max(0, slotH - padTop - padBottom);
+      yBottom = screenRect.dy + screenRect.dh - padBottom; // borde inferior del área de juego
     }
   } else {
-    // diseño clásico (dentro del área del juego)
-    const PORTRAIT_TOP_AIR = 15;
-    const PORTRAIT_BOTTOM_PAD = -40;
+    // —— diseño clásico (retrato sobre el “suelo” dentro del área de juego) ——
+    const PORTRAIT_TOP_AIR = 15;     // aire por arriba
+    const PORTRAIT_BOTTOM_PAD = -40; // colchón inferior (puede ser negativo)
     const yBaseBottom = screenRect.dy + screenRect.dh - PORTRAIT_BOTTOM_PAD;
     const availInGame = screenRect.dh - (PORTRAIT_TOP_AIR + PORTRAIT_BOTTOM_PAD);
     availH  = Math.max(0, availInGame);
     yBottom = yBaseBottom;
   }
 
-  // escala base (por ancho) y clamp por alto disponible
+  // Escala por ancho + clamp por altura disponible
   let s = Math.min(1, (maxW / img.naturalWidth)) * charScale;
   let w = Math.round(img.naturalWidth  * s);
   let h = Math.round(img.naturalHeight * s);
@@ -851,34 +857,35 @@ function _makeSide(img, side, name, slotOverride){
     h = Math.round(img.naturalHeight * s);
   }
 
+  // Propiedades comunes del nodo
   const common = {
     img, name, side,
     w, h,
-    yBottom,            // límite inferior donde “apoya” el retrato
+    yBottom,               // límite inferior donde “apoya” el retrato
     t:0, from:0, to:0, anim:false, onDone:null,
     alpha:0, aFrom:0, aTo:1
   };
 
-  // inset horizontal relativo al área de juego (queda elegante)
-  const PORTRAIT_EDGE_INSET = -0.12;
-  const inset = Math.round(screenRect.dw * PORTRAIT_EDGE_INSET);
+  // Inset horizontal relativo al área de juego (queda elegante)
+  const inset = Math.round(screenRect.dw * (PORTRAIT_EDGE_INSET ?? -0.12));
 
   if (side === 'left'){
     return {
       ...common,
-      x:   screenRect.dx - w - 80,
-      inX: screenRect.dx + inset,
-      outX: screenRect.dx - w - 80
+      x:    screenRect.dx - w - 80,           // off-screen inicial
+      inX:  screenRect.dx + inset,            // posición final dentro del juego
+      outX: screenRect.dx - w - 80            // posición de salida (izquierda)
     };
   } else {
     return {
       ...common,
-      x:   screenRect.dx + screenRect.dw + 80,
-      inX: screenRect.dx + screenRect.dw - inset - w,
-      outX: screenRect.dx + screenRect.dw + 80
+      x:    screenRect.dx + screenRect.dw + 80,                     // off-screen inicial
+      inX:  screenRect.dx + screenRect.dw - inset - w,              // posición final dentro del juego
+      outX: screenRect.dx + screenRect.dw + 80                      // salida (derecha)
     };
   }
 }
+
 
 
 
@@ -1090,16 +1097,19 @@ function drawBlurFallback(srcCanvas, dstCtx, clipRect){
 function portraitsDrawOverlay(){
   if (!PORTRAITS.active) return;
 
+  // Asegura tamaño del backbuffer
   if (BACKBUF.width !== canvas.width || BACKBUF.height !== canvas.height){
     BACKBUF.width = canvas.width; BACKBUF.height = canvas.height;
   }
 
-  // --- blur del fondo dentro del rectángulo de juego ---
+  // Copia del frame actual para aplicar blur
   BACKCTX.clearRect(0, 0, BACKBUF.width, BACKBUF.height);
   BACKCTX.drawImage(canvas, 0, 0);
+
   const blurPx = Math.round((PORTRAITS.blurPx || 100) * (PORTRAITS.blurK || 0));
 
-    if (supportsCanvasFilter() && !PORTRAITS.forceBlurFallback){
+  // —— BLUR SOLO DENTRO DEL ÁREA DE JUEGO ——
+  if (supportsCanvasFilter() && !PORTRAITS.forceBlurFallback){
     ctx.save();
     ctx.beginPath();
     ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
@@ -1109,10 +1119,15 @@ function portraitsDrawOverlay(){
     ctx.filter = 'none';
     ctx.restore();
   } else {
-    // ← fallback robusto que ya tienes implementado
+    // Fallback robusto (downsample/upsample)
     drawBlurFallback(BACKBUF, ctx, screenRect);
   }
 
+  // —— CLIP DE SEGURIDAD: nunca dibujar retratos fuera del área de juego ——
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
 
   const drawSide = (N)=>{
     if (!N?.img) return;
@@ -1136,7 +1151,10 @@ function portraitsDrawOverlay(){
 
   drawSide(PORTRAITS.left);
   drawSide(PORTRAITS.right);
+
+  ctx.restore(); // salir del clip
 }
+
 
 
 
