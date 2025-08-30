@@ -285,7 +285,7 @@ let NPC_IMAGES = {}, NPCS = [];
 const NPC_CATALOG = {
   abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.35 }},
   soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },fireFxMs: 140},
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }}
 };
@@ -1892,8 +1892,38 @@ for (const n of NPCS){
       ctx.fill();
       ctx.restore();
 
-      if (!n.img) { ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh); }
-      else { ctx.drawImage(n.img,0,0,n.iw,n.ih,dx,dy,dw,dh); }
+      if (n.type === 'voldemort_perfil') {
+  const halo = n.halo || { color:'80,255,140', radius:34, alpha:0.35 };
+
+  // centro del halo: un poco por encima del pie (mitad del sprite)
+  const cx = Math.round(px);
+  const cy = Math.round(py - dh * 0.55);
+
+  // radio escalado a la cámara
+  const R = Math.max(10, halo.radius * Math.max(mapScaleX, mapScaleY));
+
+  // suave respiración/pulso muy sutil
+  const t = performance.now() * 0.0015;
+  const pulse = 1 + Math.sin(t * 2.7) * 0.04;
+  const Rp = R * pulse;
+
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rp);
+  g.addColorStop(0.00, `rgba(${halo.color}, ${halo.alpha})`);
+  g.addColorStop(0.55, `rgba(${halo.color}, ${halo.alpha * 0.35})`);
+  g.addColorStop(1.00, `rgba(${halo.color}, 0)`);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter'; // suma luz
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, Rp, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// (después de esto, dibujas el sprite como ya haces)
+if (!n.img) { ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh); }
+else { ctx.drawImage(n.img,0,0,n.iw,n.ih,dx,dy,dw,dh); }
 
       // FX disparo (igual que antes)
       if (isNPCFxActive(n)) {
