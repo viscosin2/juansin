@@ -1293,12 +1293,12 @@ function startBushHideSequence(){
 
 function spawnGandalfWhiteAtPlayer(){
   // ===== knobs =====
-  const DROP_PX     = 60;   // distancia de bajada (px en mundo). Prueba 40–80.
-  const DURATION_MS = 650;  // velocidad del slide (ms). Más bajo = más rápido.
+  const DROP_PX     = 30;   // distancia de bajada (px en mundo). Prueba 40–80.
+  const DURATION_MS = 3000;  // velocidad del slide (ms). Más bajo = más rápido.
   // =================
 
-  const x     = player.x + 10;           // X ≈ Juan + 20
-  const yEnd  = player.y - 10;           // destino final (un pelín por encima de Juan)
+  const x     = player.x + 30;           // X ≈ Juan + 20
+  const yEnd  = player.y - 15;           // destino final (un pelín por encima de Juan)
   const yStart= yEnd - DROP_PX;          // <<< empieza cerquita del destino
 
   const npc = {
