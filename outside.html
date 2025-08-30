@@ -941,24 +941,31 @@ function portraitsOpen(script){
     openDialog([line0], true);
   });
 
-  CUT.hijackAction = () => {
-    if (!PORTRAITS.active) return;
-    if (dialogOpen){
-      if (isTyping){
-        clearInterval(typingTimer);
-        isTyping = false;
-        const full = dialogScript[dialogIndex]?.text ?? '';
-        dialogTextEl.textContent = full;
-        dialogEl.classList.add('ready');
-        dialogHintEl.style.opacity = 1;
-        return;
-      }
-      // cerrar y pasar al siguiente speaker en UNA sola pulsación
-      closeDialog();
-      _nextPortraitLine();
-      return;
-    }
-  };
+CUT.hijackAction = () => {
+  if (!PORTRAITS.active) return;
+  if (!dialogOpen) return;
+
+  // 1) si está escribiendo, completar
+  if (isTyping){ advanceDialog(); return; }
+
+  // 2) ¿hay siguiente línea?
+  const next = PORTRAITS.script[PORTRAITS.idx+1];
+  const cur  = dialogScript[dialogIndex]; // la línea actual mostrada
+
+  if (next && cur && next.speaker === cur.speaker){
+    // MISMO SPEAKER -> NO cerrar ni animar retratos, solo cambiar texto
+    PORTRAITS.idx++;
+    dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
+    dialogScript = [ next ]; dialogIndex = 0;
+    renderCurrentLine(true);
+    return;
+  }
+
+  // 3) cambio de speaker -> flujo normal (cierra y anima)
+  closeDialog();
+  _nextPortraitLine();
+};
+
 }
 
 
@@ -1972,13 +1979,25 @@ function unfreezeIdle(){
     openDialog([first], true);
 
     CUT.active = true; CUT.id = 'bush_chain';
-    CUT.hijackAction = ()=>{
-      if (dialogOpen){
-        if (isTyping){ advanceDialog(); return; }
-        closeDialog();
-        _nextPortraitLine();
-      }
-    };
+CUT.hijackAction = ()=>{
+  if (!dialogOpen) return;
+  if (isTyping){ advanceDialog(); return; }
+
+  const next = PORTRAITS.script[PORTRAITS.idx+1];
+  const cur  = dialogScript[dialogIndex];
+
+  if (next && cur && next.speaker === cur.speaker){
+    PORTRAITS.idx++;
+    dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
+    dialogScript = [ next ]; dialogIndex = 0;
+    renderCurrentLine(true);
+    return;
+  }
+
+  closeDialog();
+  _nextPortraitLine();
+};
+
   });
 
   // Al terminar TODAS las líneas, fade out + desaparición
