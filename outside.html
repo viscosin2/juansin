@@ -1276,7 +1276,7 @@ function smokeDraw(){
   // === Evento: esconderse en arbusto → aparece Gandalf Blanco desde arriba ===
 const BUSH_SCENE = {
   active:false, triggered:false,
-  gandalf:null, t:0, dur:900,
+  gandalf:null, t:0, dur:3000,
   yStart:0, yEnd:0
 };
 
@@ -1292,8 +1292,8 @@ function startBushHideSequence(){
 }
 
 function spawnGandalfWhiteAtPlayer(){
-  const x = player.x + 5;     // X ≈ Juan + 5
-  const yEnd = player.y;      // misma Y que Juan
+  const x = player.x + 20;     // X ≈ Juan + 5
+  const yEnd = player.y - 10;      // misma Y que Juan
   const yStart = cam.y - Math.round(JUAN.size.h * JUAN.scale) - 16; // justo fuera por arriba
 
   const npc = {
