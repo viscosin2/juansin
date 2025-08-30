@@ -303,7 +303,9 @@ let _nowSec = 0;  // tiempo en segundos (lo llenamos en loop)
 
 const GAME_FLAGS = {
   talked_gunner: false,
-  juansin_other_halo: false
+  juansin_other_halo: false,
+  need_potion:false,   // ← nuevo: SSJ bloqueado hasta tomarla
+  has_potion:false     // ← nuevo: ya recogida/consumida
 };
 
   
@@ -448,7 +450,8 @@ const CATALOG = {
   puente2:      { src:'assets/objects/puente2.png', scale:1, collider:null},
   river1:       { src:'assets/objects/rio1.png',   scale:1, collider:null, forceBack: true},
   river2:       { src:'assets/objects/rio2.png',   scale:1, collider:null, forceBack: true},
-  super:        { src:'assets/objects/super.png',  scale:1, collider:{x:-63,y:-5,w:120, h:23}, depthBand:1, depthAnchorY:1}
+  super:        { src:'assets/objects/super.png',  scale:1, collider:{x:-63,y:-5,w:120, h:23}, depthBand:1, depthAnchorY:1},
+  potion: { src: 'assets/objects/pocima.png', scale: 1.0},
 };
 
 const PLACED = {
@@ -736,6 +739,10 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
   if (npcHit){
     const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
     if (npc){   
+          if (npc.id === 'juansin_other' && GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
+      showToast('No tienes fuerza suficiente.', 1600);
+      return;
+    }
       
     if (npc.id === 'juansin_other' && !GAME_FLAGS.juansin_other_halo){
       npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
@@ -775,6 +782,38 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
 
 
 /* ========== UTILS ========== */
+
+  let JUAN_HALO = { active:false, until:0, color:'80,160,255' };
+
+function startJuanBlueHalo(ms=1000){
+  JUAN_HALO.active = true;
+  JUAN_HALO.until = performance.now() + ms;
+}
+
+
+  function spawnPotionWithHalo(){
+  // Escoge una zona “random maja” o fija (ejemplo fijo en % del mundo)
+  const spot = percentToWorld({ x: 62, y: 72 });  // ajústalo si quieres
+
+  // Crea el prop a mano (sin pasar por PLACED) y añádelo a PROPS
+  const img = PROP_IMAGES['potion'];
+  if (!img){
+    console.warn('pocima img no cargada aún; reintento en 200ms');
+    return setTimeout(spawnPotionWithHalo, 200);
+  }
+  const prop = {
+    id: 'potion_' + Math.random().toString(36).slice(2,7),
+    type: 'potion',
+    img, x: spot.x, y: spot.y,
+    iw: img.naturalWidth, ih: img.naturalHeight,
+    scale: 1.0,
+    // marca especial para draw + pickup
+    _isPotion: true,
+    _halo: { color:'80,160,255', radius:26, alpha:0.50, pulse:0.08, offsetY:0.65 }
+  };
+  PROPS.push(prop);
+}
+
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const loadImage=src=>new Promise(r=>{ const i=new Image(); i.onload=()=>r(i); i.onerror=()=>{console.warn('No carga',src); r(null)}; i.src=src; });
 async function preloadSprites(map){
@@ -2043,13 +2082,20 @@ CUT.hijackAction = ()=>{
 
   });
 
-  // Al terminar TODAS las líneas, fade out + desaparición
-  CUT.onEnd = ()=>{
-    fadeOutFogAndGandalf(()=>{ 
-      ambientLock = false;
-      CUT.active = false; CUT.id=null; CUT.hijackAction=null; CUT.onEnd=null;
-    });
-  };
+// Al terminar TODAS las líneas, fade out + desaparición
+CUT.onEnd = ()=>{
+  fadeOutFogAndGandalf(()=>{ 
+    ambientLock = false;
+    CUT.active = false; CUT.id=null; CUT.hijackAction=null; CUT.onEnd=null;
+
+    // === NUEVO: activar objetivo y spawnear pócima ===
+    GAME_FLAGS.need_potion = true;
+    GAME_FLAGS.has_potion  = false;
+    spawnPotionWithHalo();           // crea la pócima en el mapa
+    showToast('Has recibido una pista: busca la pócima (parece una flor).', 2200);
+  });
+};
+
 }
 
 function fadeOutFogAndGandalf(done){
@@ -2880,6 +2926,34 @@ function update(dt){
   updateBushScene(dt);
 
   updateBushPulse(dt);
+  // === NUEVO: pickup de pócima si existe y todavía no la tenemos ===
+if (GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
+  const feet = feetWorld();
+  const pot = PROPS.find(p => p._isPotion);
+  if (pot){
+    // comprobar solapado de pies con un pequeño radio alrededor de la base del prop
+    const rx = 10, ry = 8; // radios “pie” para pickup
+    const rect = { x: pot.x - rx, y: pot.y - ry, w: rx*2, h: ry*2 };
+    if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, rect)){
+      // recoger
+      const idx = PROPS.indexOf(pot);
+      if (idx >= 0) PROPS.splice(idx, 1);
+
+      GAME_FLAGS.has_potion = true;
+      GAME_FLAGS.need_potion = false;
+
+      // bloquear un segundo con halo azul en Juan
+      ambientLock = true;
+      ambientLockOwner = 'potion_pick'; // opcional, por consistencia
+      startJuanBlueHalo(1000);
+      setTimeout(()=>{
+        ambientLock = false; ambientLockOwner = null;
+        openDialog([{ speaker:'Juan', text:'¡Ahora sí!' }], true);
+      }, 1000);
+    }
+  }
+}
+
 }
 
 
@@ -2941,6 +3015,25 @@ const dx = Math.round(px - dw/2), dy = Math.round(py - dh);
         ctx.drawImage(p.img, 0,0, p.iw,p.ih, -dx-dw, dy, dw, dh);
         ctx.restore();
       } else {
+        // halo opcional para props (usado por la pócima)
+if (p._halo){
+  const halo = Object.assign({ radius:28, alpha:0.55, pulse:0.06, offsetY:0.6, color:'255,255,160' }, p._halo);
+  const cx = Math.round(px);
+  const cy = Math.round(py - dh * halo.offsetY);
+  const R  = Math.max(10, halo.radius * Math.max(mapScaleX, mapScaleY));
+  const t  = performance.now() * 0.0015;
+  const Rp = R * (1 + Math.sin(t * 2.7) * halo.pulse);
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Rp);
+  g.addColorStop(0.00, `rgba(${halo.color}, ${halo.alpha})`);
+  g.addColorStop(0.55, `rgba(${halo.color}, ${halo.alpha*0.35})`);
+  g.addColorStop(1.00,  `rgba(${halo.color}, 0)`);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, Rp, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
         ctx.drawImage(p.img, 0,0, p.iw,p.ih, dx,dy, dw,dh);
       }
     }
@@ -3063,6 +3156,25 @@ zlist.push({
     ctx.beginPath();
     ctx.ellipse(footX, footY - 4, jw/2.5, jh/6, 0, 0, Math.PI*2);
     ctx.fill();
+
+      if (JUAN_HALO.active){
+  if (performance.now() > JUAN_HALO.until) JUAN_HALO.active = false;
+  const baseR = Math.max(jw, jh) * 0.70;
+  const t = performance.now() * 0.002;
+  const r = baseR * (1 + 0.05 * Math.sin(t*7.2)); // leve pulso
+  const cx = footX;
+  const cy = footY - jh*0.55;
+
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0.00, `rgba(${JUAN_HALO.color},0.55)`);
+  g.addColorStop(0.60, `rgba(${JUAN_HALO.color},0.25)`);
+  g.addColorStop(1.00, `rgba(${JUAN_HALO.color},0.00)`);
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
 
     // respiración
     const canBreathe = !player.moving && !dialogOpen && !ambientLock && !introActive;
