@@ -1877,15 +1877,38 @@ async function applyOtherJuanSSJ({boostHalo=true} = {}){
 function cineAutoWalkTo(targetX, targetY, ms, onDone){
   CUT.phase = 'autowalk';
   const sx = player.x, sy = player.y;
-  const t0 = performance.now(); const dur = Math.max(200, ms|0);
+  const t0 = performance.now();
+  const dur = Math.max(200, ms|0);
+
+  // actualizar la dirección del sprite mientras camina
   const face = ()=>{
     const dx = targetX - player.x, dy = targetY - player.y;
-    player.dir = Math.abs(dx)>Math.abs(dy) ? (dx<0?'left':'right') : (dy<0?'up':'down');
+    player.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
   };
+
   (function step(){
-    const k = Math.min(1, (performance.now()-t0)/dur);
-    player.x = sx + (targetX - sx)*k;
-    player.y =
+    const k = Math.min(1, (performance.now() - t0) / dur);
+    player.x = sx + (targetX - sx) * k;
+    player.y = sy + (targetY - sy) * k;
+    face();
+
+    // animación de caminar durante el auto-walk
+    player.moving = true;
+    player.frameTime += 1/60;
+    if (player.frameTime >= 0.12){
+      player.frame = (player.frame + 1) % 2;
+      player.frameTime = 0;
+    }
+
+    if (k < 1){
+      requestAnimationFrame(step);
+    } else {
+      player.moving = false;
+      if (typeof onDone === 'function') onDone();
+    }
+  })();
+}
+
 
 async function startCinematic3(){
   CUT.active = true; CUT.id='cine3'; CUT.phase='start';
