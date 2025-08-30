@@ -662,7 +662,7 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
 
       // (Opcional) mini destello de 300ms al activarse
       npc._fxActive = true;
-      npc._fxUntil  = performance.now() + 300;
+      npc._fxUntil  = performance.now() + 1000;
     }
 
       if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
@@ -2207,19 +2207,27 @@ if (!n.img) { ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh); }
 else { ctx.drawImage(n.img,0,0,n.iw,n.ih,dx,dy,dw,dh); }
 
       // FX disparo (igual que antes)
-      if (isNPCFxActive(n)) {
-        const mx = Math.round(px + (n.muzzleOffset.x * mapScaleX));
-        const my = Math.round(py + (n.muzzleOffset.y * mapScaleY));
-        const r = Math.max(10, 18 * Math.max(mapScaleX, mapScaleY));
-        const g = ctx.createRadialGradient(mx, my, 0, mx, my, r);
-        g.addColorStop(0, 'rgba(255,240,200,.95)');
-        g.addColorStop(0.5, 'rgba(255,200,80,.55)');
-        g.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI * 2); ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-      }
+     if (isNPCFxActive(n)) {
+  const mx = Math.round(px + (n.muzzleOffset.x * mapScaleX));
+  const my = Math.round(py + (n.muzzleOffset.y * mapScaleY));
+
+  // 🔥 radio base + pulso
+  const baseR = 20 * Math.max(mapScaleX, mapScaleY);
+  const t = performance.now() * 0.02; // velocidad del parpadeo
+  const pulsito = 1 + 0.25 * Math.sin(t * 12); // 25% de variación
+  const r = baseR * pulsito;
+
+  const g = ctx.createRadialGradient(mx, my, 0, mx, my, r);
+  g.addColorStop(0, 'rgba(255,240,200,.95)');
+  g.addColorStop(0.5, 'rgba(255,200,80,.55)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(mx, my, r, 0, Math.PI * 2); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+}
+
     }
   });
 }
