@@ -1362,7 +1362,7 @@ function openSoloGandalfEpic(script){
 
   // zoom épico progresivo mientras habla (hasta tope)
   const maxScaleBoost = 1.30; // ~+10%
-  const growMs = 1800;
+  const growMs = 5000;
   (function epicZoom(t0 = performance.now()){
     if (!PORTRAITS.active || !PORTRAITS.soloEpic) return;
     const k = Math.min(1, (performance.now()-t0)/growMs);
