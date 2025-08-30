@@ -326,6 +326,7 @@ async function preloadCinematicImages(){
   IMG_GANDALF       = await loadImage('assets/portraits/gandalf_portrait.png');
   IMG_JUAN_BIG      = await loadImage('assets/portraits/juansin_portrait.png');
   IMG_JUAN_SSJ      = await loadImage('assets/portraits/juansin_ssj_portrait.png');
+  IMG_GANDALF_WHITE = await loadImage('assets/npcs/gandalfblanco.png');
 }
 
   // ------------------------ ZONAS CINE
@@ -1272,6 +1273,82 @@ function smokeDraw(){
 }
 // ********************** FUNCIONES ARBUSTO
 
+  // === Evento: esconderse en arbusto → aparece Gandalf Blanco desde arriba ===
+const BUSH_SCENE = {
+  active:false, triggered:false,
+  gandalf:null, t:0, dur:900,
+  yStart:0, yEnd:0
+};
+
+function startBushHideSequence(){
+  if (BUSH_SCENE.triggered) return;
+  BUSH_SCENE.triggered = true;
+
+  // Bloquear movimiento al esconderse
+  ambientLock = true;
+
+  // Tras 1s, entra Gandalf Blanco deslizándose
+  setTimeout(()=>{ spawnGandalfWhiteAtPlayer(); }, 1000);
+}
+
+function spawnGandalfWhiteAtPlayer(){
+  const x = player.x + 5;     // X ≈ Juan + 5
+  const yEnd = player.y;      // misma Y que Juan
+  const yStart = cam.y - Math.round(JUAN.size.h * JUAN.scale) - 16; // justo fuera por arriba
+
+  const npc = {
+    id:'gandalf_white',
+    type:'gandalf_white',
+    img: IMG_GANDALF_WHITE,
+    x, y: yStart,
+    iw: IMG_GANDALF_WHITE ? IMG_GANDALF_WHITE.naturalWidth  : 32,
+    ih: IMG_GANDALF_WHITE ? IMG_GANDALF_WHITE.naturalHeight : 32,
+    scale: 0.6,
+    depthBand: DEPTH_BAND,
+    depthAnchorY: 1,
+    shadow:{ alpha:0.20, offsetY:-2, scaleX:1/3, scaleY:1/9 }
+  };
+  NPCS.push(npc);
+
+  BUSH_SCENE.active = true;
+  BUSH_SCENE.gandalf = npc;
+  BUSH_SCENE.t = 0;
+  BUSH_SCENE.dur = 900;
+  BUSH_SCENE.yStart = yStart;
+  BUSH_SCENE.yEnd = yEnd;
+
+  // Niebla “nube” bajo Gandalf: localizada y siguiendo al NPC
+  fogUseWorld({ x, y: yStart });
+  fogStart();
+  FOG.color = '255,255,255';
+  FOG.baseAlpha = 0.06;
+  FOG.targetDensity = 180;
+  FOG.areaW = 120;
+  FOG.areaH = 70;
+  fogBeginFill({ dur:600, density:0.9, areaW:FOG.areaW, areaH:FOG.areaH });
+}
+
+function updateBushScene(dt){
+  if (!BUSH_SCENE.active || !BUSH_SCENE.gandalf) return;
+
+  BUSH_SCENE.t = Math.min(1, BUSH_SCENE.t + (dt*1000)/BUSH_SCENE.dur);
+  const k = _ease(BUSH_SCENE.t);
+  BUSH_SCENE.gandalf.y = BUSH_SCENE.yStart + (BUSH_SCENE.yEnd - BUSH_SCENE.yStart)*k;
+
+  // La nube de niebla sigue al Gandalf que baja
+  if (FOG.space === 'world' && FOG.anchorWorld){
+    FOG.anchorWorld = { x: BUSH_SCENE.gandalf.x, y: BUSH_SCENE.gandalf.y };
+  }
+
+  if (BUSH_SCENE.t >= 1){
+    // Detén el “llenado” (deja niebla suave persistente)
+    FOG.filling = false;
+    BUSH_SCENE.active = false;
+    // (Dejamos ambientLock=true hasta que nos digas qué pasa después)
+  }
+}
+
+
   /* ====== BUSH PULSE (arbusto que late hasta que Juan interactúa) ====== */
 const BUSH_PULSE = {
   active: false,
@@ -1313,17 +1390,20 @@ function isPlayerInsidePropInteract(prop){
 
 function updateBushPulse(dt){
   if (!BUSH_PULSE.active) return;
+
   // anima escala (latido)
   BUSH_PULSE.t += dt * BUSH_PULSE.speed;           // 2π por segundo
-  const s = BUSH_PULSE.base + Math.sin(BUSH_PULSE.t) * BUSH_PULSE.amp;
-  BUSH_PULSE.scale = s;
+  BUSH_PULSE.scale = BUSH_PULSE.base + Math.sin(BUSH_PULSE.t) * BUSH_PULSE.amp;
 
-  // si Juan entra en la zona de interacción del arbusto -> parar
+  // si Juan entra en la zona de interacción del arbusto -> parar y lanzar escena
   const prop = getBushProp();
   if (isPlayerInsidePropInteract(prop)){
+    if (!BUSH_SCENE.triggered) startBushHideSequence(); // 👈 arranca escena
     stopBushPulse();
+    return;
   }
 }
+
 
   
   // -------------------- FUNCIONES NIEBLA
@@ -2503,6 +2583,8 @@ function update(dt){
       : a + (t - a) * Math.min(1, (dt * 1000) / AMBIENT.fadeMs);
   }
   smokeUpdate(dt);
+  updateBushScene(dt);
+
   updateBushPulse(dt);
 }
 
