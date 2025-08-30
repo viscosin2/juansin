@@ -177,7 +177,8 @@ const PORTRAITS = {
 };
 const PORTRAIT_TOP_AIR = 15;   // aire fijo por arriba (px relativos a screenRect)
 const PORTRAIT_BOTTOM_PAD = -40; // “colchón” desde abajo
-
+const PORTRAIT_EDGE_INSET = 0.04;
+  
 const _ease = x => x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
 
 let IMG_GANDALF_SMALL=null, IMG_GANDALF=null, IMG_JUAN_BIG=null;
@@ -716,21 +717,24 @@ function _makeSide(img, side, name){
     alpha:0, aFrom:0, aTo:1
   };
 
-  if (side === 'left'){
-    return {
-      ...common,
-      x:   screenRect.dx - w - 80,              // fuera, a la izq
-      inX: screenRect.dx + 24,                  // dentro
-      outX: screenRect.dx - w - 80              // fuera
-    };
-  } else {
-    return {
-      ...common,
-      x:   screenRect.dx + screenRect.dw + 80,  // fuera, a la dcha
-      inX: screenRect.dx + screenRect.dw - 24 - w,
-      outX: screenRect.dx + screenRect.dw + 80
-    };
-  }
+const inset = Math.round(screenRect.dw * PORTRAIT_EDGE_INSET);
+
+if (side === 'left'){
+  return {
+    ...common,
+    x:   screenRect.dx - w - 80,           // fuera, a la izq
+    inX: screenRect.dx + inset,            // dentro, pegado al borde con inset
+    outX: screenRect.dx - w - 80
+  };
+} else {
+  return {
+    ...common,
+    x:   screenRect.dx + screenRect.dw + 80,       // fuera, a la dcha
+    inX: screenRect.dx + screenRect.dw - inset - w, // dentro, pegado al borde con inset
+    outX: screenRect.dx + screenRect.dw + 80
+  };
+}
+
 }
 
 
