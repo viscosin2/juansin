@@ -1361,8 +1361,8 @@ function openSoloGandalfEpic(script){
   openDialog([line0], true);
 
   // zoom épico progresivo mientras habla (hasta tope)
-  const maxScaleBoost = 1.30; // ~+10%
-  const growMs = 5000;
+  const maxScaleBoost = 1.20; // ~+10%
+  const growMs = 10000;
   (function epicZoom(t0 = performance.now()){
     if (!PORTRAITS.active || !PORTRAITS.soloEpic) return;
     const k = Math.min(1, (performance.now()-t0)/growMs);
@@ -2507,7 +2507,7 @@ function cine3_beginPortraits(){
         // (2) SSJ sale y entra Juan
         _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
           // >>> MOSTRAR LA LÍNEA DE ATAQUE ANTES DE QUE ENTRE JUAN <<<
-          openDialog([{ speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' }], true);
+          openDialog([{ speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' },{ speaker:'', text:'No puedes seguir luchando.'},{ speaker:'', text:'¡Rápido! ¡Escóndete en algún sitio!'}], true);
 
           // Mientras dura la coreografía, bloquear el botón Acción para que no cierren el texto
           CUT.hijackAction = ()=>{}; // no-op
@@ -2517,9 +2517,6 @@ function cine3_beginPortraits(){
             setTimeout(()=>{
               cine3_hitReaction(PORTRAITS.right);
               HPBARS.setTargets(1, 100);
-
-              // A partir de aquí, permitir avanzar: al pulsar, cerrar la 1ª línea
-              // y mostrar las siguientes (“Estás muy debilitado…”)
               cine3_openNarrator();
             }, 1000);
           });
