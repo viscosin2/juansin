@@ -171,6 +171,12 @@ const PORTRAITS = {
   stage:'idle', // 'entering' | 'speaking' | 'exiting' | 'ending'
 };
 
+  const PORTRAIT_SCALES = {
+  Gandalf: 1.3, // 130% de su tamaño normal
+  Juan:    1.0  // escala normal
+};
+
+
 const _ease = x => x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
 
 let IMG_GANDALF_SMALL=null, IMG_GANDALF=null, IMG_JUAN_BIG=null;
@@ -674,30 +680,39 @@ function isNPCFxActive(npc){
 
 // --------------------- FUNCIONES PORTRAITS
 
-function _makeSide(img, side){
+function _makeSide(img, side, name){
   const padX = 24, padBottom = 12;
   const maxW = Math.floor(screenRect.dw * 0.52);
-  const s = Math.min(1, maxW / img.naturalWidth);
-  const w = Math.round(img.naturalWidth * s);
-  const h = Math.round(img.naturalHeight* s);
+
+  let baseScale = Math.min(1, maxW / img.naturalWidth);
+
+  // aplicar override si existe para este speaker
+  if (PORTRAIT_SCALES[name]) {
+    baseScale *= PORTRAIT_SCALES[name];
+  }
+
+  const w = Math.round(img.naturalWidth * baseScale);
+  const h = Math.round(img.naturalHeight * baseScale);
   const y = screenRect.dy + screenRect.dh - padBottom;
 
-  if (side === 'left'){
-    return {img,w,h, y, side,
-      x: screenRect.dx - w - 80,     // off a la izq
-      inX: screenRect.dx + padX,     // destino visible
-      outX: screenRect.dx - w - 80,  // fuera
+  // resto igual que tenías
+  if (side === 'left') {
+    return { img, w, h, y, side, name,
+      x: screenRect.dx - w - 80,
+      inX: screenRect.dx + padX,
+      outX: screenRect.dx - w - 80,
       t:0, from:0, to:0, anim:false, onDone:null
     };
   } else {
-    return {img,w,h, y, side,
-      x: screenRect.dx + screenRect.dw + 80,         // off a la dcha
-      inX: screenRect.dx + screenRect.dw - padX - w, // destino visible
-      outX: screenRect.dx + screenRect.dw + 80,      // fuera
+    return { img, w, h, y, side, name,
+      x: screenRect.dx + screenRect.dw + 80,
+      inX: screenRect.dx + screenRect.dw - padX - w,
+      outX: screenRect.dx + screenRect.dw + 80,
       t:0, from:0, to:0, anim:false, onDone:null
     };
   }
 }
+
 
 function _startSlide(node, toX, cb){
   node.anim = true; node.t = 0;
@@ -717,8 +732,9 @@ function portraitsOpen(script){
   PORTRAITS.stage = 'entering';
 
   // construir nodos y dejarlos fuera de escena
-  PORTRAITS.left  = _makeSide(IMG_GANDALF,  'left');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right');
+  PORTRAITS.left  = _makeSide(IMG_GANDALF,  'left',  'Gandalf');
+PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
+
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
