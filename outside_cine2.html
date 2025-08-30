@@ -41,7 +41,17 @@
   pointer-events:none;
 }
 
-
+.attack-menu{
+  position:absolute; left:12px; bottom:126px; /* encima del diálogo, pegado a la izq */
+  background:rgba(10,12,24,.95); border:1px solid #3cf; border-radius:8px;
+  padding:6px; z-index:8; image-rendering:pixelated; min-width:160px;
+  transform:translateY(10px); opacity:0; transition:.18s ease;
+}
+.attack-menu.show{ transform:translateY(0); opacity:1; }
+.attack-menu .opt{
+  font:600 14px/1.2 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:#aee; padding:6px 8px;
+}
+.attack-menu .opt.selected{ background:rgba(60,200,255,.18); outline:1px dashed #3cf; }
   /* Toast */
   .toast{
     position:absolute; top:19px; left:50%; transform:translateX(-50%);
@@ -65,13 +75,6 @@
   .dialog-text{ font-family:'VT323',monospace; font-size:18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
   .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
   .dialog.ready .dialog-hint{ opacity:.9; }
-
-/* === CINE2 UI (menú + rayo) === */
-.cine-menu{ position:absolute; left:8px; bottom:130px; background:rgba(12,12,24,.92); border:1px solid #3cf; border-radius:8px; padding:6px 8px; z-index:8; display:none; }
-.cine-menu .opt{ font-family:'Press Start 2P', system-ui; font-size:9px; color:#B8D7FF; padding:4px 6px; white-space:nowrap; }
-.cine-menu .opt.sel{ color:#0ef; background:rgba(0,255,255,.08); border-left:3px solid #0ef; }
-.fx-ray{ position:absolute; width:6px; height:3px; background:#00ff66; box-shadow:0 0 10px #00ff66, 0 0 18px #00ff66; transform-origin:left center; z-index:8; display:none; }
-
 </style>
 </head>
 <body>
@@ -80,15 +83,16 @@
     <div class="screen">
       <div id="blackfade"></div>
       <div id="toast" class="toast"></div>
-
+<div id="attackMenu" class="attack-menu" hidden>
+  <div data-i="0" class="opt selected">Golpe rápido</div>
+  <div data-i="1" class="opt">Corte cargado</div>
+</div>
       <div id="dialog" class="dialog">
         <div id="dialogName" class="dialog-name"></div>
         <div id="dialogText" class="dialog-text"></div>
         <div id="dialogHint" class="dialog-hint">→</div>
       </div>
 
-      <div id="cineMenu" class="cine-menu"></div>
-      <div id="rayFx" class="fx-ray"></div>
       <canvas id="game"></canvas>
     </div>
   </div>
@@ -113,7 +117,7 @@ const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
 const DEBUG_OBS = false;
 const DEBUG_INTER = false;
 const DEBUG_AMBIENT = false;
-const DEBUG_CINE = false; 
+const DEBUG_CINE = true; 
 const DEPTH_BAND = 12;
 let interactBlocked = true;     
 let initialDialogLock = false;  
@@ -184,63 +188,6 @@ const CAM_TWEEN = { on:false, t:0, dur:1000, sx:0, sy:0, ex:0, ey:0 };
 
 /* ====== PORTRAITS (secuenciados) ====== */
 const PORTRAITS = {
-
-// ====== CINE2 helpers (menú y rayo) ======
-const CINE_MENU = {
-  el: null, active:false, options:[], index:0, onSelect:null,
-  ensure(){ if(!this.el) this.el = document.getElementById('cineMenu'); return this.el; },
-  show(opts, onSelect){ this.ensure(); this.options = opts.slice(); this.index=0; this.onSelect=onSelect; this.active=true; this.render(); this.el.style.display='block'; },
-  hide(){ if(this.el) this.el.style.display='none'; this.active=false; this.onSelect=null; },
-  render(){ const el=this.ensure(); el.innerHTML=this.options.map((t,i)=>`<div class="opt ${i===this.index?'sel':''}">${t}</div>`).join(''); },
-  move(d){ if(!this.active) return; this.index=(this.index+d+this.options.length)%this.options.length; this.render(); },
-  select(){ if(!this.active) return; const cb=this.onSelect, idx=this.index; this.hide(); if(typeof cb==='function') cb(this.options[idx], idx); }
-};
-['btn-up','btn-down','btn-left','btn-right'].forEach(id=>{
-  const delta = (id==='btn-up'||id==='btn-left') ? -1 : +1;
-  const el = document.getElementById(id); if(!el) return;
-  el.addEventListener('touchstart', e=>{ if (CINE_MENU.active){ e.preventDefault(); CINE_MENU.move(delta); } }, {passive:false});
-});
-// Acción: si menú activo -> seleccionar; si no, deja pasar a tu handler existente
-function playVoldemortRayFx(fromNpc){
-  const ray = document.getElementById('rayFx'); if(!ray || !fromNpc) return;
-  const px = screenRect.dx + (fromNpc.x - cam.x) * mapScaleX;
-  const py = screenRect.dy + (fromNpc.y - cam.y) * mapScaleY - 30;
-  const len = Math.max(40, screenRect.dw * 0.5);
-  ray.style.left = (px|0) + 'px';
-  ray.style.top  = (py|0) + 'px';
-  ray.style.transform = `translateX(0) scaleX(0)`;
-  ray.style.width = len + 'px';
-  ray.style.display = 'block';
-  ray.animate([{ transform:`translateX(0) scaleX(0)` }, { transform:`translateX(-${len}px) scaleX(1)` }], { duration: 360, easing:'ease-out' });
-  setTimeout(()=>{ ray.style.display='none'; }, 380);
-}
-
-function findVoldemortNPC(){ return NPCS.find(n=> n.type==='voldemort_perfil' || n.name==='Voldemort' || /voldemort/i.test(n.type||'')); }
-
-function portraitsStaticOpen(){
-  PORTRAITS.active = true;
-  PORTRAITS.blurK = 1;
-  PORTRAITS.stage = 'speaking';
-  PORTRAITS.left  = _makeSide(IMG_GANDALF,  'left',  'Voldemort');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
-  PORTRAITS.left.x = PORTRAITS.left.inX;  PORTRAITS.left.alpha = 1;
-  PORTRAITS.right.x = PORTRAITS.right.inX; PORTRAITS.right.alpha = 1;
-}
-
-function askAttackCine2(onChoice){
-  openDialog([{speaker:'', text:'¿Cómo quieres atacar?'}], true);
-  CUT.hijackAction = ()=>{
-    if (!dialogOpen) return;
-    if (isTyping){ advanceDialog(); return; }
-    closeDialog();
-    // abre menú
-    CINE_MENU.show(['Golpe Rápido','Ataque Cargado'], (txt, idx)=>{
-      setTimeout(()=>{ if (typeof onChoice==='function') onChoice(idx); }, 1000);
-    });
-  };
-}
-
-
   active:false,
   blurPx:100,
   blurK:0,
@@ -401,12 +348,12 @@ async function preloadCinematicImages(){
 }
 
   // ------------------------ ZONAS CINE
-  const CINE_ZONES = [
-  { id:'cine2', rect:{type:'percent', x:79, y:11, w:8, h:9}, _done:false },
+const CINE_ZONES = [
   { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
+  { id:'cine2', rect:{type:'percent', x:79, y:13, w:10, h:16}, _done:false }, // << NUEVA
   { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
-
 ];
+
   function buildCineZones(){
   return CINE_ZONES.map(z=>{
     const r=z.rect;
@@ -586,6 +533,85 @@ let screenRect={dx:0,dy:0,dw:0,dh:0}, mapScaleX=1, mapScaleY=1;
 const player={x:0,y:0,dir:'down',speed:150,moving:false,frame:0,frameTime:0};
 
 /* ========== INPUT (SOLO D-PAD EN PANTALLA) ========== */
+
+// ---- Menú de ataques (Cine 2)
+const ATTACK_MENU = {
+  el: document.getElementById('attackMenu'),
+  opened:false, idx:0, onSelect:null,
+  open(opts=['Golpe rápido','Corte cargado'], onSelect){
+    this.onSelect = onSelect;
+    this.el.innerHTML = opts.map((t,i)=>`<div data-i="${i}" class="opt${i===0?' selected':''}">${t}</div>`).join('');
+    this.idx=0; this.opened=true; this.el.hidden=false;
+    requestAnimationFrame(()=> this.el.classList.add('show'));
+  },
+  close(){
+    this.opened=false; this.el.classList.remove('show');
+    setTimeout(()=>{ this.el.hidden=true; },180);
+  },
+  nav(d){
+    if(!this.opened) return;
+    const opts = [...this.el.querySelectorAll('.opt')];
+    opts[this.idx]?.classList.remove('selected');
+    this.idx = (this.idx + d + opts.length) % opts.length;
+    opts[this.idx]?.classList.add('selected');
+  },
+  select(){
+    if(!this.opened) return;
+    const pick = this.idx;
+    this.close();
+    if (typeof this.onSelect==='function') this.onSelect(pick);
+  }
+};
+
+// Navegación del menú con D-pad (solo cuando está abierto)
+document.getElementById('btn-up').addEventListener('touchstart',e=>{
+  if(ATTACK_MENU.opened){ e.preventDefault(); ATTACK_MENU.nav(-1); }
+},{passive:false});
+document.getElementById('btn-down').addEventListener('touchstart',e=>{
+  if(ATTACK_MENU.opened){ e.preventDefault(); ATTACK_MENU.nav(+1); }
+},{passive:false});
+
+// ========= Helpers CINE 2 =========
+function portraitsOpenVS({leftImg, leftName, rightImg, rightName}){
+  PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
+  PORTRAITS.active = true; PORTRAITS.blurK = 0; PORTRAITS.stage='entering';
+  PORTRAITS.left  = _makeSide(leftImg  || IMG_VOLDEMORT_P || IMG_GANDALF, 'left',  leftName  || 'Voldemort','top');
+  PORTRAITS.right = _makeSide(rightImg || IMG_JUAN_BIG,                  'right', rightName || 'Juan',     'bottom');
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
+}
+
+function attackFromRight(done){ // espejo del dash de cine3
+  const R = PORTRAITS.right;
+  const mid  = R.inX - Math.round(screenRect.dw*0.04);
+  const back = R.inX;
+  R.sFrom=1.00; R.sTo=1.06;
+  _startSlide(R, mid, ()=>{
+    R.sFrom=1.06; R.sTo=1.00;
+    _startSlide(R, back, ()=>{ if (typeof done==='function') done(); });
+  });
+}
+
+function hitFromLeft(node){
+  const orig = node.inX;
+  const kick = orig - Math.round(screenRect.dw*0.02);
+  node.sFrom=1.00; node.sTo=0.96;
+  _startSlide(node, kick, ()=>{
+    node.sFrom=0.96; node.sTo=1.00;
+    _startSlide(node, orig, null);
+  });
+}
+
+// Rayo "en el mundo" desde un NPC hacia la izquierda (flash breve)
+const RAY = {active:false,x1:0,y1:0,x2:0,y2:0,until:0};
+function spawnRayFromNPCLeft(npc, ms=300){
+  if(!npc) return;
+  RAY.active=true;
+  RAY.x1=npc.x-10; RAY.y1=npc.y-10;
+  RAY.x2=RAY.x1-140; RAY.y2=RAY.y1;
+  RAY.until = performance.now()+ms;
+}
+
 const keys={up:false,down:false,left:false,right:false};
 function bindHold(btn,on,off){
   const start=e=>{e.preventDefault();on();};
@@ -1024,7 +1050,7 @@ function _startSlide(node, toX, cb){
 
 
 function _nodeForSpeaker(name){
-  if (name === 'Gandalf' || name === 'SSJ' || name === 'Voldemort') return PORTRAITS.left;
+  if (name === 'Gandalf' || name === 'SSJ') return PORTRAITS.left;
   return PORTRAITS.right;
 }
 
@@ -2513,13 +2539,6 @@ async function applyOtherJuanSSJ({boostHalo=true} = {}){
 }
 
 // ——— reemplazo completo ———
-function cineWalkToBySpeed(targetX, targetY, speedPxPerSec=120, onDone, opts={}){
-  const dx = targetX - player.x, dy = targetY - player.y; const dist = Math.hypot(dx,dy);
-  const spd = Math.max(1, speedPxPerSec|0);
-  const ms = Math.round((dist / spd) * 1000);
-  return cineAutoWalkTo(targetX, targetY, ms, onDone, opts);
-}
-
 function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepPeriodMs = 120 } = {}){
   CUT.phase = 'autowalk';
   const sx = player.x, sy = player.y;
@@ -2553,216 +2572,211 @@ function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepP
     }
   })();
 }
-
-
-// ——— reemplazo completo ———
-async 
-async function startCinematic2(){
-  // 1-3) Trigger, bloqueo, 1s
-  CUT.active = true; CUT.id='cine2'; CUT.phase='start';
+// ========== CINEMÁTICA 2 ==========
+function startCinematic2(){
+  CUT.active = true; CUT.id='cine2'; CUT.phase='lock';
   ambientLock = true; player.moving=false;
-  setTimeout(()=>{
-    // 4) Diálogo "acércate chico"
-    openDialog([{speaker:'???', text:'Chico, acércate.'}], true);
+
+  // 1-4) Entrar zona, bloqueo, 1s, "Acércate chico"
+  setTimeout(()=> {
+    openDialog([{speaker:'???', text:'Acércate, chico.'}], true);
+
+    // 5-7) Acción → cerrar y autowalk hasta x = voldemort.x - 5, y = voldemort.y
     CUT.hijackAction = ()=>{
       if (!dialogOpen) return;
-      if (isTyping){ advanceDialog(); return; }
-      // 6) Cierra diálogo
-      closeDialog();
-      CUT.hijackAction = null;
-      // 7) Movimiento automático a (x = Vold.x - 5, y = Vold.y)
-      const vold = findVoldemortNPC();
-      if (!vold){ endCine2(); return; }
-      const target = { x: vold.x - 5, y: vold.y };
-      cineWalkToBySpeed(target.x, target.y, 90, ()=>{
-        player.dir='right'; player.moving=false; player.frame=0;
-        // 8) Secuencia de 3 diálogos fuera de overlay
-        openDialog([{speaker:'Juan', text:'¿Quién eres?'}], true);
+      closeDialog(); CUT.hijackAction = null;
+
+      const vold = NPCS.find(n => n.type==='voldemort_perfil') || null;
+      const tx = vold ? (vold.x - 5) : player.x;
+      const ty = vold ?  vold.y      : player.y;
+      cineAutoWalkTo(tx, ty, 800, ()=>{
+
+        // 8) Diálogo cadena (Juan / ??? / Juan)
+        openDialog([
+          {speaker:'Juan', text:'¿Quién eres?'},
+          {speaker:'???',  text:'Adivina.'},
+          {speaker:'Juan', text:'No tengo tiempo.'}
+        ], true);
+
         CUT.hijackAction = ()=>{
           if (!dialogOpen) return;
           if (isTyping){ advanceDialog(); return; }
-          closeDialog();
-          openDialog([{speaker:'???', text:'Adivina.'}], true);
-          CUT.hijackAction = ()=>{
-            if (!dialogOpen) return;
-            if (isTyping){ advanceDialog(); return; }
-            closeDialog();
-            openDialog([{speaker:'Juan', text:'No tengo tiempo.'}], true);
-            CUT.hijackAction = ()=>{
-              if (!dialogOpen) return;
-              if (isTyping){ advanceDialog(); return; }
-              closeDialog();
-              // 1s y reveal
-              setTimeout(async ()=>{
-                const vold = findVoldemortNPC();
-                if (vold){
-                  const img = await loadImage('assets/npcs/voldemort.png').catch(()=>null);
-                  if (img){ vold.img = img; vold.iw=img.naturalWidth||vold.iw; vold.ih=img.naturalHeight||vold.ih; }
-                }
-                openDialog([{speaker:'Voldemort', text:'Soy Lord Voldemort.'}], true);
-                CUT.hijackAction = ()=>{
-                  if (!dialogOpen) return;
-                  if (isTyping){ advanceDialog(); return; }
-                  closeDialog();
-                  openDialog([{speaker:'Juan', text:'Buena, va.'}], true);
-                  CUT.hijackAction = ()=>{
-                    if (!dialogOpen) return;
-                    if (isTyping){ advanceDialog(); return; }
-                    closeDialog();
-                    // === Overlay con portraits ===
-                    const script = [
-                      {speaker:'Voldemort', text:'Sorpresa.'},
-                      {speaker:'Juan',      text:'Yias.'},
-                      {speaker:'Voldemort', text:'¿Luchamos?'},
-                      {speaker:'Juan',      text:'Ok.'}
-                    ];
-                    portraitsOpen(script);
-                    // Al terminar ese mini-script, seguimos con barras y combate
-                    CUT.onEnd = ()=>{
-                      // Barras al 100 con fade lentito
-                      const prevFade = HPBARS.fadeInMs; HPBARS.fadeInMs = 700;
-                      HPBARS.show(100,100);
-                      HPBARS.fadeInMs = prevFade;
-                      // Cambiar portrait de Juan a pelea con fade lentito
-                      const R = PORTRAITS.right;
-                      const oldSlide = PORTRAITS.slideMs; PORTRAITS.slideMs = 600;
-                      if (IMG_JUAN_FIGHT){ R.alpha=0; R.img = IMG_JUAN_FIGHT; _startSlide(R, R.inX, ()=>{ PORTRAITS.slideMs = oldSlide; }); }
-                      else { PORTRAITS.slideMs = oldSlide; }
-                      // Pregunta ataque (narrador)
-                      askAttackCine2((choiceIdx)=>{
-                        // RONDA 1
-                        const R1 = PORTRAITS.right, L1 = PORTRAITS.left;
-                        // Juan dash -> golpe -> sale por derecha
-                        const midR = R1.inX - Math.round(screenRect.dw*0.04);
-                        R1.sFrom=1.00; R1.sTo=1.06;
-                        _startSlide(R1, midR, ()=>{
-                          cine3_hitReaction(L1);
-                          R1.sFrom=1.06; R1.sTo=1.00;
-                          _startSlide(R1, R1.outX, ()=>{
-                            // Entra Voldemort (por si no estaba)
-                            _startSlide(L1, L1.inX, ()=>{
-                              // media vida a Voldemort
-                              HPBARS.setTargets(null, 50);
-                              setTimeout(()=>{
-                                openDialog([{speaker:'Voldemort', text:'¡Te vas a enterar!'}], true);
-                                // Cambiar NPC mundo a perfil
-                                const vold = findVoldemortNPC();
-                                if (vold){
-                                  loadImage('assets/npcs/voldemort_perfil.png').then(imgP=>{ if(imgP){ vold.img = imgP; vold.iw=imgP.naturalWidth||vold.iw; vold.ih=imgP.naturalHeight||vold.ih; } }).catch(()=>{});
-                                }
-                                CUT.hijackAction = ()=>{
-                                  if (!dialogOpen) return;
-                                  if (isTyping){ advanceDialog(); return; }
-                                  closeDialog();
-                                  // Cerrar barras y overlay con fade
-                                  HPBARS.hide();
-                                  _endPortraits();
-                                  // 1s y rayo in-world + diálogo
-                                  setTimeout(()=>{
-                                    const vold2 = findVoldemortNPC(); if (vold2) playVoldemortRayFx(vold2);
-                                    openDialog([{speaker:'Voldemort', text:'¡Avada Kedavra!'}], true);
-                                    CUT.hijackAction = ()=>{
-                                      if (!dialogOpen) return;
-                                      if (isTyping){ advanceDialog(); return; }
-                                      closeDialog();
-                                      setTimeout(()=>{
-                                        // Volver overlay y barras con fade
-                                        portraitsStaticOpen();
-                                        const prevFade2 = HPBARS.fadeInMs; HPBARS.fadeInMs = 700; HPBARS.show(HPBARS.juan, HPBARS.ssj); HPBARS.fadeInMs = prevFade2;
-                                        // Juan recibe (cine3) y queda al 10%
-                                        cine3_hitReaction(PORTRAITS.right);
-                                        HPBARS.setTargets(10, HPBARS.ssj);
-                                        setTimeout(()=>{
-                                          // Segunda pregunta de ataque
-                                          askAttackCine2((choice2)=>{
-                                            // Traemos a Juan si estaba fuera
-                                            const R2 = PORTRAITS.right, L2 = PORTRAITS.left;
-                                            if (R2.x !== R2.inX){
-                                              _startSlide(R2, R2.inX, ()=>{
-                                                // dash y remate
-                                                const midR2 = R2.inX - Math.round(screenRect.dw*0.04);
-                                                R2.sFrom=1.00; R2.sTo=1.06;
-                                                _startSlide(R2, midR2, ()=>{
-                                                  cine3_hitReaction(L2);
-                                                  R2.sFrom=1.06; R2.sTo=1.00;
-                                                  _startSlide(R2, R2.inX, ()=>{
-                                                    HPBARS.setTargets(HPBARS.juan, 0);
-                                                    // Diálogo final y salida hacia abajo del NPC + cierre
-                                                    openDialog([{speaker:'Voldemort', text:'¿Cómo es posible?'}], true);
-                                                    CUT.hijackAction = ()=>{
-                                                      if (!dialogOpen) return;
-                                                      if (isTyping){ advanceDialog(); return; }
-                                                      closeDialog();
-                                                      const vold3 = findVoldemortNPC();
-                                                      if (vold3){
-                                                        const t0 = performance.now(), dur=700, sy=vold3.y;
-                                                        (function step(){ const k = Math.min(1, (performance.now()-t0)/dur); vold3.y = sy + k*140; if (k<1) requestAnimationFrame(step); else { const i=NPCS.indexOf(vold3); if(i>=0) NPCS.splice(i,1); postVoldemortEnd(); } })();
-                                                      } else postVoldemortEnd();
-                                                    };
-                                                  });
-                                                });
-                                              });
-                                            } else {
-                                              const midR2 = R2.inX - Math.round(screenRect.dw*0.04);
-                                              R2.sFrom=1.00; R2.sTo=1.06;
-                                              _startSlide(R2, midR2, ()=>{
-                                                cine3_hitReaction(L2);
-                                                R2.sFrom=1.06; R2.sTo=1.00;
-                                                _startSlide(R2, R2.inX, ()=>{
-                                                  HPBARS.setTargets(HPBARS.juan, 0);
-                                                  openDialog([{speaker:'Voldemort', text:'¿Cómo es posible?'}], true);
-                                                  CUT.hijackAction = ()=>{
-                                                    if (!dialogOpen) return;
-                                                    if (isTyping){ advanceDialog(); return; }
-                                                    closeDialog();
-                                                    const vold3 = findVoldemortNPC();
-                                                    if (vold3){
-                                                      const t0 = performance.now(), dur=700, sy=vold3.y;
-                                                      (function step(){ const k = Math.min(1, (performance.now()-t0)/dur); vold3.y = sy + k*140; if (k<1) requestAnimationFrame(step); else { const i=NPCS.indexOf(vold3); if(i>=0) NPCS.splice(i,1); postVoldemortEnd(); } })();
-                                                    } else postVoldemortEnd();
-                                                  };
-                                                });
-                                              });
-                                            }
-                                          });
-                                        }, 1000);
-                                      }, 1000);
-                                    };
-                                  };
-                                };
-                              }, 1000);
-                            });
-                          });
-                        });
-                      });
-                    };
-                  };
-                };
-              }, 1000);
-            };
-          };
+          if (dialogIndex < dialogScript.length - 1){ advanceDialog(); return; }
+          closeDialog(); CUT.hijackAction=null;
+
+          // 9-12) 1s → cambia sprite a voldemort.png → "Lord Voldemort" → Acción → "Buena va" → Acción → retratos
+          setTimeout(async ()=>{
+            const v = NPCS.find(n => n.type==='voldemort_perfil' || n.type==='voldemort');
+            if (v){
+              const img = IMG_VOLDEMORT_NPC || await loadImage('assets/npcs/voldemort.png').catch(()=>null);
+              if (img){ v.img=img; v.iw=img.naturalWidth; v.ih=img.naturalHeight; v.type='voldemort'; }
+            }
+            openDialog([{speaker:'Voldemort', text:'Lord Voldemort.'}], true);
+            CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog(); CUT.hijackAction=null;
+              openDialog([{speaker:'Juan', text:'Buena va.'}], true);
+              CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog(); CUT.hijackAction=null; cine2_beginPortraits(); } };
+            }};
+          }, 1000);
         };
-      }, {followCam:true});
+      }, { followCam:true });
     };
   }, 1000);
 }
 
-function postVoldemortEnd(){
-  // Cierra overlay y barras con fade, dice "Ños" y desbloquea
-  _endPortraits();
-  HPBARS.hide();
-  setTimeout(()=>{
-    openDialog([{speaker:'Juan', text:'Ños.'}], true);
-    CUT.hijackAction = ()=>{
-      if (!dialogOpen) return;
-      if (isTyping){ advanceDialog(); return; }
-      closeDialog();
-      ambientLock = false; CUT.active=false; CUT.id=null; CUT.phase=null;
-    };
-  }, 300);
+function cine2_beginPortraits(){
+  // retratos on
+  portraitsOpenVS({ leftImg: IMG_VOLDEMORT_P, leftName:'Voldemort', rightImg: IMG_JUAN_BIG, rightName:'Juan' });
+
+  // Voldemort entra por la izquierda → "sorpresa"
+  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
+    openDialog([{speaker:'Voldemort', text:'Sorpresa.'}], true);
+
+    CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog();
+      // sale Voldemort izq, entra Juan der → "yias"
+      _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
+        _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
+          openDialog([{speaker:'Juan', text:'Yias.'}], true);
+
+          CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog();
+            // sale Juan der, entra Voldemort izq → "¿luchamos?"
+            _startSlide(PORTRAITS.right, PORTRAITS.right.outX, ()=>{
+              _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
+                openDialog([{speaker:'Voldemort', text:'¿Luchamos?'}], true);
+
+                CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog();
+                  // sale Voldemort, entra Juan → "ok"
+                  _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
+                    _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
+                      openDialog([{speaker:'Juan', text:'Ok.'}], true);
+                      CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog();
+
+                        // ----- BARRAS ON (100/100) + cambiar portrait de Juan a pelea -----
+                        HPBARS.fadeInMs = 900; HPBARS.show(100,100);
+                        if (IMG_JUAN_FIGHT_P){ PORTRAITS.right.img = IMG_JUAN_FIGHT_P; } // fade suave ya lo da HPBARS
+
+                        // ----- Prompt "¿Cómo quieres atacar?" + desplegable -----
+                        openDialog([{speaker:'', text:'¿Cómo quieres atacar?'}], true);
+                        CUT.hijackAction = ()=>{ if (dialogOpen){ advanceDialog();
+                          // abrir menú; selección con D-pad; acción = seleccionar
+                          ATTACK_MENU.open(['Golpe rápido','Corte cargado'], (pick)=>{
+                            CUT.hijackAction = ()=>{}; // bloquea mientras coreo
+                            setTimeout(()=>{
+                              // ATAQUE DE JUAN (desde derecha)
+                              attackFromRight(()=>{
+                                // Juan sale der; Vold entra izq y recibe → Voldemort 50%
+                                _startSlide(PORTRAITS.right, PORTRAITS.right.outX, ()=>{
+                                  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
+                                    setTimeout(()=>{
+                                      hitFromLeft(PORTRAITS.left);
+                                      HPBARS.setTargets(100, 50);
+
+                                      // "te vas a enterar" (Voldemort)
+                                      setTimeout(()=>{
+                                        openDialog([{speaker:'Voldemort', text:'Te vas a enterar.'}], true);
+                                        CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog();
+
+                                          // ocultar barras + overlay (fade) → mundo real
+                                          HPBARS.hide();
+                                          _endPortraits();
+
+                                          // 1s → rayo del npc al mundo + "Avada Kedavra"
+                                          setTimeout(()=>{
+                                            const vNpc = NPCS.find(n => n.type==='voldemort' || n.type==='voldemort_perfil');
+                                            spawnRayFromNPCLeft(vNpc, 320);
+                                            openDialog([{speaker:'Voldemort', text:'Avada Kedavra.'}], true);
+                                            CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog();
+
+                                              // 1s → vuelve overlay y barras; Juan recibe y pierde 90%
+                                              setTimeout(()=>{
+                                                portraitsOpenVS({ leftImg: IMG_VOLDEMORT_P, leftName:'Voldemort', rightImg: IMG_JUAN_FIGHT_P||IMG_JUAN_BIG, rightName:'Juan' });
+                                                _startSlide(PORTRAITS.left,  PORTRAITS.left.inX,  ()=>{
+                                                  _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
+                                                    HPBARS.show(10, 50); // re-aparece con valores actuales objetivos
+                                                    HPBARS.setTargets(10, 50); // asegúrate
+                                                    setTimeout(()=>{
+                                                      cine3_hitReaction(PORTRAITS.right); // la anim de "recibir" que ya tienes
+                                                      // Pregunta de nuevo cómo atacar
+                                                      setTimeout(()=>{
+                                                        openDialog([{speaker:'', text:'¿Cómo quieres atacar?'}], true);
+                                                        CUT.hijackAction = ()=>{ if (dialogOpen){ advanceDialog();
+                                                          ATTACK_MENU.open(['Golpe rápido','Corte cargado'], (pick2)=>{
+                                                            CUT.hijackAction = ()=>{}; // bloquea mientras
+                                                            setTimeout(()=>{
+                                                              attackFromRight(()=>{
+                                                                // segundo ataque: derrota total de Voldemort
+                                                                _startSlide(PORTRAITS.right, PORTRAITS.right.outX, ()=>{
+                                                                  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
+                                                                    setTimeout(()=>{
+                                                                      hitFromLeft(PORTRAITS.left);
+                                                                      HPBARS.setTargets(10, 0);
+
+                                                                      // "¿Cómo es posible?"
+                                                                      setTimeout(()=>{
+                                                                        openDialog([{speaker:'Voldemort', text:'¿Cómo es posible?'}], true);
+                                                                        CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog();
+
+                                                                          // Voldemort se desliza hacia abajo y desaparece (y borramos npc del mundo)
+                                                                          const L = PORTRAITS.left;
+                                                                          const drop = L.inX; // usamos inX y bajamos y en draw natural
+                                                                          // hack: sTo para simular caída (reutilizamos slide horizontal sin romper nada)
+                                                                          _startSlide(PORTRAITS.left, L.outX, ()=>{
+                                                                            // borra NPC
+                                                                            const i = NPCS.findIndex(n => n.type==='voldemort' || n.type==='voldemort_perfil');
+                                                                            if (i>=0) NPCS.splice(i,1);
+
+                                                                            // cerrar overlay y barras
+                                                                            HPBARS.hide();
+                                                                            _endPortraits();
+
+                                                                            // epílogo "Ños" y devolver control
+                                                                            setTimeout(()=>{
+                                                                              openDialog([{speaker:'Juan', text:'Ños.'}], true);
+                                                                              CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog();
+                                                                                CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
+                                                                                ambientLock=false; // movimiento libre otra vez
+                                                                              }};
+                                                                            }, 300);
+                                                                          });
+                                                                        }};
+                                                                      }, 400);
+                                                                    }, 450);
+                                                                  });
+                                                                });
+                                                              });
+                                                            }, 220);
+                                                          });
+                                                        }};
+                                                      }, 400);
+                                                    }, 200);
+                                                  });
+                                                });
+                                              }, 700);
+                                            }};
+                                          }, 500);
+                                        }};
+                                      }, 400);
+                                    }, 350);
+                                  });
+                                });
+                              });
+                            }, 220);
+                          });
+                        }};
+                      }};
+                    });
+                  });
+                }};
+              });
+            });
+          }};
+        });
+      }};
+    }};
+  });
 }
 
-function startCinematic3(){
+// ——— reemplazo completo ———
+async function startCinematic3(){
   CUT.active = true; CUT.id='cine3'; CUT.phase='start';
   ambientLock = true; player.moving = false;
 
@@ -3061,11 +3075,11 @@ function update(dt){
     const feet = feetWorld();
     const cz = CINE_BUILT.find(z=> !z._done && feet.x>=z.x && feet.x<=z.x+z.w && feet.y>=z.y && feet.y<=z.y+z.h);
     if (cz){
-      cz._done = true;
-      if (cz.id==='cine1'){ startCinematic1(); return; }
-      if (cz.id==='cine2'){ startCinematic2(); return; }
-      if (cz.id === 'cine3'){ startCinematic3(); return; }
-    }
+  cz._done = true;
+  if (cz.id === 'cine1'){ startCinematic1(); return; }
+  if (cz.id === 'cine2'){ startCinematic2(); return; } // << NUEVA
+  if (cz.id === 'cine3'){ startCinematic3(); return; }
+}
   }
 
 
@@ -3646,6 +3660,20 @@ if (DEBUG_CINE && CINE_BUILT.length){
   fogDraw();
   smokeDraw();
   ctx.restore();
+
+// --- FX RAY ---
+if (RAY.active){
+  if (performance.now() > RAY.until){ RAY.active=false; }
+  else {
+    const sx1 = screenRect.dx + (RAY.x1 - cam.x) * mapScaleX;
+    const sy1 = screenRect.dy + (RAY.y1 - cam.y) * mapScaleY;
+    const sx2 = screenRect.dx + (RAY.x2 - cam.x) * mapScaleX;
+    const sy2 = screenRect.dy + (RAY.y2 - cam.y) * mapScaleY;
+    ctx.strokeStyle = 'rgba(120,255,180,.9)';
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(sx1,sy1); ctx.lineTo(sx2,sy2); ctx.stroke();
+  }
+}
 
   // Retratos / modo cine
   portraitsDrawOverlay();
