@@ -160,7 +160,7 @@ const CAM_TWEEN = { on:false, t:0, dur:1000, sx:0, sy:0, ex:0, ey:0 };
 /* ====== PORTRAITS (secuenciados) ====== */
 const PORTRAITS = {
   active:false,
-  blurPx:3,
+  blurPx:10,
   blurK:0,
   blurInMs:250,
   blurOutMs:250,
@@ -883,11 +883,11 @@ function portraitsDrawOverlay(){
 
   // blur + oscurecido
   ctx.globalAlpha = PORTRAITS.blurK ?? 1;
-  ctx.filter = `blur(${PORTRAITS.blurPx}px)`;
+  ctx.filter = `blur(${PORTRAITS.blurPx}px) grayscale(35%)`;
   ctx.drawImage(BACKBUF,0,0);
   ctx.filter = 'none';
   ctx.globalAlpha = 1;
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillStyle = 'rgba(0,0,0,0.40)';
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
   // retratos
