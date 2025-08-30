@@ -1900,6 +1900,8 @@ function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false } = {}
       requestAnimationFrame(step);
     } else {
       player.moving = false;
+      player.frame = 0;          // frame base de idle
+      player.frameTime = 0;      // reset del tiempo de animación
       if (typeof onDone === 'function') onDone();
     }
   })();
@@ -1959,7 +1961,10 @@ cineAutoWalkTo(targetX1, targetY1, 500, () => {
   const targetY2 = other.y + 30; // parar 20px por encima del SSJ
   cineAutoWalkTo(targetX2, targetY2, 700, () => {
     player.dir = 'up';
-    player.moving = false;
+player.moving = false;
+player.frame = 0;      // idle total
+player.frameTime = 0;
+
 
     setTimeout(() => {
       openDialog([{ speaker:'SSJ', text:'Grr' }], true);
