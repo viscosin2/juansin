@@ -866,48 +866,100 @@ function portraitsUpdate(dt){
   upd(PORTRAITS.left);
   upd(PORTRAITS.right);
 }
+// ——— BLUR SUPPORT + FALLBACK ———
+function supportsCanvasFilter(){
+  // algunos navegadores exponen ctx.filter pero lo ignoran; probamos con un draw mínimo
+  try{
+    const c = document.createElement('canvas');
+    c.width = c.height = 2;
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0,0,2,2);
+    x.filter = 'blur(1px)';
+    x.drawImage(c,0,0);
+    return typeof x.filter === 'string';
+  }catch(e){ return false; }
+}
 
+// buffer para blur barato
+const _BLURBUF = document.createElement('canvas');
+const _BLURCTX = _BLURBUF.getContext('2d');
+
+// “barato”: baja resolución y la vuelves a subir para simular blur
+function drawBlurFallback(srcCanvas, dstCtx, clipRect){
+  const w = srcCanvas.width, h = srcCanvas.height;
+
+  // tamaño de reducción: cuanto menor, más blur
+  const scale = 0.15; // 15% → blur potente
+  const tw = Math.max(2, (w*scale)|0);
+  const th = Math.max(2, (h*scale)|0);
+
+  _BLURBUF.width = tw; _BLURBUF.height = th;
+
+  // 1) baja
+  _BLURCTX.imageSmoothingEnabled = true;
+  _BLURCTX.clearRect(0,0,tw,th);
+  _BLURCTX.drawImage(srcCanvas, 0,0, w,h, 0,0, tw,th);
+
+  // 2) sube (ya “lavado”)
+  dstCtx.save();
+  dstCtx.beginPath();
+  dstCtx.rect(clipRect.dx, clipRect.dy, clipRect.dw, clipRect.dh);
+  dstCtx.clip();
+  dstCtx.globalCompositeOperation = 'source-over';
+  dstCtx.globalAlpha = 1; // cubre totalmente lo nítido
+  dstCtx.drawImage(_BLURBUF, 0,0, tw,th, 0,0, w,h);
+  dstCtx.restore();
+}
+
+  
 function portraitsDrawOverlay(){
   if (!PORTRAITS.active) return;
 
-  // preparar blur del frame actual
+  // “captura” el frame ya dibujado
   BACKCTX.clearRect(0,0,BACKBUF.width,BACKBUF.height);
   BACKCTX.drawImage(canvas,0,0);
 
   ctx.save();
-
-  // CLIP a la pantalla útil
   ctx.beginPath();
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
 
-  // blur + oscurecido
-  ctx.globalAlpha = PORTRAITS.blurK ?? 1;
-  ctx.filter = `blur(${PORTRAITS.blurPx}px) grayscale(35%)`;
-  ctx.drawImage(BACKBUF,0,0);
-  ctx.filter = 'none';
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = 'rgba(0,0,0,0.40)';
+  // —— BLUR fuerte + oscurecido ——
+  const k = PORTRAITS.blurK ?? 1;        // 0→1
+  const wantAlpha = Math.min(1, 0.95*k); // casi tapa del todo
+  const canFilter = supportsCanvasFilter();
+
+  if (canFilter){
+    // usa filtro nativo (muy marcado)
+    ctx.globalAlpha = wantAlpha;
+    ctx.filter = `blur(28px) contrast(0.95) saturate(0.9)`; // blur gordo
+    ctx.drawImage(BACKBUF,0,0);
+    ctx.filter = 'none';
+  } else {
+    // fallback: downscale/upscale para garantizar “borrosidad”
+    drawBlurFallback(BACKBUF, ctx, screenRect);
+  }
+
+  // capa de oscurecido para separar bien los retratos
+  ctx.globalAlpha = 0.38 * k;            // sombra suave escalada por k
+  ctx.fillStyle = '#000';
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
-  // retratos
+  // — retratos —
   const L = PORTRAITS.left, R = PORTRAITS.right;
+
   if (L?.img){
-  const lx = Math.round(L.x), ly = Math.round(L.yBottom - L.h);
-  ctx.save();
-  ctx.globalAlpha = (L.alpha ?? 1);
-  ctx.drawImage(L.img, 0,0, L.img.naturalWidth, L.img.naturalHeight, lx, ly, L.w, L.h);
+    const lx = Math.round(L.x), ly = Math.round(L.yBottom - L.h);
+    ctx.save(); ctx.globalAlpha = (L.alpha ?? 1); ctx.drawImage(L.img,0,0,L.img.naturalWidth,L.img.naturalHeight,lx,ly,L.w,L.h); ctx.restore();
+  }
+  if (R?.img){
+    const rx = Math.round(R.x), ry = Math.round(R.yBottom - R.h);
+    ctx.save(); ctx.globalAlpha = (R.alpha ?? 1); ctx.drawImage(R.img,0,0,R.img.naturalWidth,R.img.naturalHeight,rx,ry,R.w,R.h); ctx.restore();
+  }
+
   ctx.restore();
 }
-if (R?.img){
-  const rx = Math.round(R.x), ry = Math.round(R.yBottom - R.h);
-  ctx.save();
-  ctx.globalAlpha = (R.alpha ?? 1);
-  ctx.drawImage(R.img, 0,0, R.img.naturalWidth, R.img.naturalHeight, rx, ry, R.w, R.h);
-  ctx.restore();
-}
-  ctx.restore();
-}
+
 
 
   // -------------------- FUNCIONES NIEBLA
