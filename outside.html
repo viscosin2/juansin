@@ -714,7 +714,7 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
       
     if (npc.id === 'juansin_other' && !GAME_FLAGS.juansin_other_halo){
       npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
-      GAME_FLAGS.juasin_other_halo = true;
+      GAME_FLAGS.juansin_other_halo = true;
 
       // (Opcional) mini destello de 300ms al activarse
       npc._fxActive = true;
@@ -1855,7 +1855,38 @@ function spawnTempGandalfAhead(targetCamY){
 
 // **************************** CINEMATICA 3
 
-// ========== CINEMÁTICA 3 — JUAN vs SSJ ==========
+// === Helpers globales para la cine 3 ===
+async function applyOtherJuanSSJ({boostHalo=true} = {}){
+  const other = NPCS.find(n => n.id === 'juansin_other');
+  if(!other) return null;
+  const img = await loadImage('assets/npcs/juan_ssj.png');
+  if (img){
+    other.img = img;
+    other.iw  = img.naturalWidth  || other.iw;
+    other.ih  = img.naturalHeight || other.ih;
+  }
+  if (boostHalo){
+    other.halo = { color:'255,255,160', radius:38, alpha:0.8, pulse:0.08, offsetY:0.62 };
+    other._fxActive = true;
+    other._fxUntil  = performance.now() + 600;
+  }
+  GAME_FLAGS.juansin_other_halo = true;
+  return other;
+}
+
+function cineAutoWalkTo(targetX, targetY, ms, onDone){
+  CUT.phase = 'autowalk';
+  const sx = player.x, sy = player.y;
+  const t0 = performance.now(); const dur = Math.max(200, ms|0);
+  const face = ()=>{
+    const dx = targetX - player.x, dy = targetY - player.y;
+    player.dir = Math.abs(dx)>Math.abs(dy) ? (dx<0?'left':'right') : (dy<0?'up':'down');
+  };
+  (function step(){
+    const k = Math.min(1, (performance.now()-t0)/dur);
+    player.x = sx + (targetX - sx)*k;
+    player.y =
+
 async function startCinematic3(){
   CUT.active = true; CUT.id='cine3'; CUT.phase='start';
   ambientLock = true; player.moving=false;
@@ -1997,35 +2028,6 @@ async function swapOtherJuanToSSJ(){
     endCine3();
     return;
   }
-
-  async function applyOtherJuanSSJ({boostHalo=true}={}){
-  const other = NPCS.find(n => n.id === 'juansin_other');
-  if(!other) return null;
-  const img = await loadImage('assets/npcs/juan_ssj.png');
-  if (img){ other.img = img; other.iw = img.naturalWidth||other.iw; other.ih = img.naturalHeight||other.ih; }
-  if (boostHalo){
-    other.halo = { color:'255,255,160', radius:38, alpha:0.8, pulse:0.08, offsetY:0.62 };
-    other._fxActive = true; other._fxUntil = performance.now() + 600;
-  }
-  GAME_FLAGS.juansin_other_halo = true;
-  return other;
-}
-  function cineAutoWalkTo(targetX, targetY, ms, onDone){
-  CUT.phase = 'autowalk';
-  const sx = player.x, sy = player.y;
-  const t0 = performance.now(); const dur = Math.max(200, ms|0);
-  const face = ()=>{ const dx = targetX - player.x, dy = targetY - player.y; player.dir = Math.abs(dx)>Math.abs(dy) ? (dx<0?'left':'right') : (dy<0?'up':'down'); };
-  (function step(){
-    const k = Math.min(1, (performance.now()-t0)/dur);
-    player.x = sx + (targetX - sx)*k;
-    player.y = sy + (targetY - sy)*k;
-    face();
-    if (k<1) requestAnimationFrame(step);
-    else { CUT.phase=null; if(onDone) onDone(); }
-  })();
-}
-
-
 
   // Carga el nuevo PNG y aplica (actualiza tamaño si cambia)
   const img = await loadImage('assets/npcs/juan_ssj.png');
