@@ -1953,31 +1953,36 @@ async function startCinematic3(){
 
             // 4) Autowalk hasta delante del SSJ, quedarse en idle up
             const offset  = 22;
-            const targetX = other ? (other.x + offset) : player.x;
-            const targetY = player.y;
+            // 4) Caminata en dos tramos: primero a la X del SSJ, luego subir hasta y = SSJ.y - 20
+const targetX1 = other.x;           // alinearse a la X del SSJ
+const targetY1 = player.y;          // misma Y actual
+cineAutoWalkTo(targetX1, targetY1, 500, () => {
+  const targetX2 = other.x;         // mantiene X del SSJ
+  const targetY2 = other.y - 20;    // 20 px por encima del SSJ
+  cineAutoWalkTo(targetX2, targetY2, 700, () => {
+    // parar frente al SSJ en idle up
+    player.dir = 'up';
+    player.moving = false;
 
-            cineAutoWalkTo(targetX, targetY, 700, () => {
-              player.dir = 'up';     // idle up
-              player.moving = false;
+    // 5) Espera 1s y muestra "Grr"
+    setTimeout(() => {
+      openDialog([{ speaker:'SSJ', text:'Grr' }], true);
 
-              // 5) Espera 1s y muestra "Grr"
-              setTimeout(() => {
-                openDialog([{ speaker:'SSJ', text:'Grr' }], true);
+      CUT.hijackAction = () => {
+        if (dialogOpen){
+          closeDialog();
+          CUT.hijackAction = null;
+          cine3_beginPortraits();
+        }
+      };
+      onDialogClosed = () => {
+        CUT.hijackAction = null;
+        cine3_beginPortraits();
+      };
+    }, 1000);
+  });
+});
 
-                // Al cerrar "Grr" seguimos con tu secuencia de retratos
-                CUT.hijackAction = () => {
-                  if (dialogOpen){
-                    closeDialog();
-                    CUT.hijackAction = null;
-                    cine3_beginPortraits();
-                  }
-                };
-                onDialogClosed = () => {
-                  CUT.hijackAction = null;
-                  cine3_beginPortraits();
-                };
-              }, 1000);
-            });
           };
         }, 1000);
       })();
