@@ -1425,9 +1425,12 @@ function spawnGandalfWhiteAtPlayer(){
  BUSH_SCENE._onLanded = () => {
   setTimeout(() => {
     cineAutoWalkTo(npc.x, player.y, WALK_MS, () => {
-      player.dir = 'up';
-      player.moving = false;
-      player.frame = 0; player.frameTime = 0;
+        CUT.phase = 'idle';
+  player.dir = 'up';
+  player.moving = false;
+  player.vx = 0; player.vy = 0;
+  player.frame = 0;
+  player.frameTime = 0;
 
       openDialog([{ speaker:'Gandalf', text:'Maricona... Quiero decir...' }], true);
 
@@ -1908,6 +1911,34 @@ function feetWorld(){ return { x: player.x, y: player.y + FEET_OFFSET_Y }; }
 function pointInRect(px,py,r){return px>=r.x && px<=r.x+r.w && py>=r.y && py<=r.y+r.h;}
 
 /* === LINTERNA: helpers + draw === */
+
+  function freezeIdle(dir = 'up'){
+  // dirección final
+  player.dir = dir;
+
+  // parar cualquier movimiento y animación
+  player.moving = false;
+  player.vx = 0; player.vy = 0;
+  player.frame = 0; 
+  player.frameTime = 0;
+
+  // soltar teclas por si quedó algo pillado
+  if (typeof KEYS !== 'undefined'){
+    KEYS.up = KEYS.down = KEYS.left = KEYS.right = false;
+  }
+
+  // bandera dura para el bucle de animación
+  CUT = CUT || {};
+  CUT.forceIdle = true;
+
+  // micro-debounce por si el loop pisa un frame más
+  setTimeout(()=>{ player.frame = 0; player.moving = false; }, 0);
+}
+
+function unfreezeIdle(){
+  if (CUT) CUT.forceIdle = false;
+}
+
 
   function startGandalfWhitePortraitChain(){
   const script = [
