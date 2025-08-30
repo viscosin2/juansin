@@ -2007,20 +2007,29 @@ function buildPropsAndObstacles(){
 
 /* ========== AMBIENTE: zonas + overlay ========== */
 function buildAmbientZones(){
-  const out=[];
+  const out = [];
   for (const z of AMBIENT_ZONES){
-    if (z.rect?.type==='percent'){
+    if (z.rect?.type === 'percent'){
       out.push({
         ...z,
-        x: Math.round(world.w*(z.rect.x/100)),
-        y: Math.round(world.h*(z.rect.y/100)),
-        w: Math.round(world.w*(z.rect.w/100)),
-        h: Math.round(world.h*(z.rect.h/100)),
+        x: Math.round(world.w * (z.rect.x/100)),
+        y: Math.round(world.h * (z.rect.y/100)),
+        w: Math.round(world.w * (z.rect.w/100)),
+        h: Math.round(world.h * (z.rect.h/100)),
       });
-    } else out.push({...z, x:z.rect.x, y:z.rect.y, w:z.rect.w, h:z.rect.h});
+    } else {
+      out.push({
+        ...z,
+        x: z.rect.x,
+        y: z.rect.y,
+        w: z.rect.w,
+        h: z.rect.h
+      });
+    }
   }
   return out;
 }
+
 function feetWorld(){ return { x: player.x, y: player.y + FEET_OFFSET_Y }; }
 function pointInRect(px,py,r){return px>=r.x && px<=r.x+r.w && py>=r.y && py<=r.y+r.h;}
 
