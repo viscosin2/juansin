@@ -2266,7 +2266,41 @@ zlist.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){ /* ... igual que antes ... */ }
   if (DEBUG_OBS){ /* ... igual que antes ... */ }
   if (DEBUG_INTER){ /* ... igual que antes ... */ }
-  if (DEBUG_CINE && CINE_BUILT.length){ /* ... igual que antes ... */ }
+if (DEBUG_CINE && CINE_BUILT.length){
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
+
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6,4]);
+
+  for (const z of CINE_BUILT){
+    const sx = Math.round(screenRect.dx + (z.x - cam.x) * mapScaleX);
+    const sy = Math.round(screenRect.dy + (z.y - cam.y) * mapScaleY);
+    const sw = Math.round(z.w * mapScaleX);
+    const sh = Math.round(z.h * mapScaleY);
+
+    // relleno suave
+    ctx.fillStyle = 'rgba(0,255,255,0.15)'; // cian semitransparente
+    ctx.fillRect(sx, sy, sw, sh);
+
+    // borde
+    ctx.strokeStyle = '#00FFFF';
+    ctx.strokeRect(sx, sy, sw, sh);
+
+    // etiqueta
+    ctx.setLineDash([]);
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(sx+4, sy+4, ctx.measureText(z.id).width + 8, 18);
+    ctx.fillStyle = '#00FFFF';
+    ctx.fillText(z.id, sx+8, sy+18);
+    ctx.setLineDash([6,4]);
+  }
+
+  ctx.restore();
+}
 
   
 
