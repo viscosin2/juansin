@@ -794,7 +794,7 @@ function startJuanBlueHalo(ms=1000, { permanent=false } = {}){
 
   function spawnPotionWithHalo(){
   // Escoge una zona “random maja” o fija (ejemplo fijo en % del mundo)
-  const spot = percentToWorld({ x: 50, y: 2 });  // ajústalo si quieres
+  const spot = percentToWorld({ x: 44, y: 4 });  // ajústalo si quieres
 
   // Crea el prop a mano (sin pasar por PLACED) y añádelo a PROPS
   const img = PROP_IMAGES['potion'];
@@ -807,7 +807,7 @@ function startJuanBlueHalo(ms=1000, { permanent=false } = {}){
     type: 'potion',
     img, x: spot.x, y: spot.y,
     iw: img.naturalWidth, ih: img.naturalHeight,
-    scale: 0.08,
+    scale: 0.12,
     // marca especial para draw + pickup
     _isPotion: true,
     _halo: { color:'80,160,255', radius:26, alpha:0.70, pulse:0.08, offsetY:0.65 }
