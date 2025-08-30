@@ -2298,36 +2298,39 @@ function cine3_hitReaction(node){
 }
 
 function cine3_openNarrator(){
-  // Ahora mismo ya está visible la primera línea del narrador (la del ataque).
-  // Reconfiguramos el handler para que, al pulsar, pasemos a las siguientes líneas.
+  // Ya está mostrada la 1ª línea del narrador ("…te ataca con una bola de energía.")
+  // Reconfiguramos Acción para avanzar a las siguientes y cerrar la cine.
   CUT.hijackAction = ()=>{
-    if (dialogOpen){
-      // Cierra la primera línea (“te ataca con una bola de energía”)
+    if (!dialogOpen) return;
+
+    // 1) Cierra la 1ª línea del narrador…
+    closeDialog();
+
+    // 2) …y muestra las dos últimas
+    openDialog([
+      { speaker:'', text:'Estás muy debilitado.' },
+      { speaker:'', text:'¡Rápido! Escóndete en algún sitio.' }
+    ], true);
+
+    // 3) Acción ahora cierra estas líneas y dispara el cierre de la cine
+    CUT.hijackAction = ()=>{
+      if (!dialogOpen) return;
+
       closeDialog();
+      CUT.hijackAction = null;
 
-      // Abre las siguientes y cambia el handler para cerrar y volver al mundo
-      openDialog([
-        { speaker:'', text:'Estás muy debilitado.' },
-        { speaker:'', text:'¡Rápido! Escóndete en algún sitio.' }
-      ], true);
+      // Apaga barras y prepara el callback de fin de retratos
+      HPBARS.hide();
 
-      CUT.hijackAction = ()=>{
-        if (dialogOpen){
-          closeDialog();
-          CUT.hijackAction = null;
-
-          // Fade out de barras + retratos y vuelta al mundo
-          HPBARS.hide();
-// cuando terminan de desvanecerse los retratos (justo tras cerrar "¡Rápido!..."):
-CUT.onEnd = ()=>{
-  startBushPulse('bush_hideout'); // ← aquí arranca el “latido”
-  endCine3();
-};
-_endPortraits(); // cierre estándar con blur out
-
-        }
+      // OJO: el latido empieza SOLO al terminar el fade-out de retratos
+      CUT.onEnd = ()=>{
+        startBushPulse('bush_hideout'); // 👈 empieza a latir cuando termina “¡Rápido!…”
+        endCine3();                     // 👈 y aquí cerramos de verdad la cinematica 3
       };
-    }
+
+      // Fade-out de retratos + blur (al terminar llamará CUT.onEnd)
+      _endPortraits();
+    };
   };
 }
 
@@ -2364,8 +2367,15 @@ if (!GAME_FLAGS.juansin_other_halo){
 }
 
 function endCine3(){
-  CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
-  ambientLock=false;
+  // Cierre limpio de la cinematica 3 (sin arrancar el latido aquí)
+  CUT.active = false;
+  CUT.id = null;
+  CUT.phase = null;
+  CUT.hijackAction = null;
+  CUT.onEnd = null;
+
+  // Devuelve el control al jugador
+  ambientLock = false;
 }
 
   
