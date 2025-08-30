@@ -2561,33 +2561,33 @@ function cine3_hitReaction(node){
 }
 
 function cine3_openNarrator(){
-  // Ya está mostrada la 1ª línea del narrador ("…te ataca con una bola de energía.")
-  // Reconfiguramos Acción para avanzar a las siguientes y cerrar la cine.
-// ——— reemplazo del hijack que dispara “¡Rápido!” ———
-CUT.hijackAction = ()=>{
+// 3) Acción ahora avanza bien las dos líneas y, al final, cierra y dispara el fin de la cine
+CUT.hijackAction = ()=> {
   if (!dialogOpen) return;
 
-  // cerrar la 1ª línea y abrir las dos últimas en la MISMA pulsación
+  // A) si está escribiendo, completar
+  if (isTyping){ advanceDialog(); return; }
+
+  // B) si NO estamos aún en la última línea (i.e., estamos en "Estás muy debilitado.")
+  if (dialogIndex < dialogScript.length - 1){
+    advanceDialog();  // -> muestra "¡Rápido! Escóndete en algún sitio."
+    return;
+  }
+
+  // C) ya estamos en la última -> cerrar y continuar
   closeDialog();
-  openDialog([
-    { speaker:'', text:'Estás muy debilitado.' },
-    { speaker:'', text:'¡Rápido! Escóndete en algún sitio.' }
-  ], true);
+  CUT.hijackAction = null;
 
-  // la SIGUIENTE pulsación cierra y arranca el arbusto + fin cine3
-  CUT.hijackAction = ()=>{
-    if (!dialogOpen) return;
-    closeDialog();
-    CUT.hijackAction = null;
-    HPBARS.hide();
+  HPBARS.hide();
 
-    CUT.onEnd = ()=>{
-      startBushPulse('bush_hideout');
-      endCine3();
-    };
-    _endPortraits();
+  CUT.onEnd = ()=>{
+    startBushPulse('bush_hideout');
+    endCine3();
   };
+
+  _endPortraits();
 };
+
 
 }
 
