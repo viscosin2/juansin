@@ -502,6 +502,11 @@ function buildNPCs(){
         _fxUntil: 0,
         shadow: { ...DEFAULT_SHADOW, ...(spec.shadow||{}), ...(p.shadow||{}) }
       };
+      // heredar halo del catálogo y permitir override desde placement
+if ((NPC_CATALOG[type] && NPC_CATALOG[type].halo) || p.halo){
+  npc.halo = { ...(NPC_CATALOG[type].halo || {}), ...(p.halo || {}) };
+}
+
 
       // collider opcional (bloquea como obstáculo)
       if (spec.collider){
@@ -524,7 +529,7 @@ function buildNPCs(){
     sound: npc.sound
   }];
 }
-if (npc.id === 'juansin_other' && GAME_FLAGS.juasin_other_halo) {
+if (npc.id === 'juansin_other' && GAME_FLAGS.juansin_other_halo) {
   npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
 }
       NPCS.push(npc);
@@ -651,7 +656,7 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
     const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
     if (npc){   
       
-    if (npc.id === 'juansin_other' && !GAME_FLAGS.juasin_other_halo){
+    if (npc.id === 'juansin_other' && !GAME_FLAGS.juansin_other_halo){
       npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
       GAME_FLAGS.juasin_other_halo = true;
 
@@ -1834,6 +1839,12 @@ async function swapOtherJuanToSSJ(){
   // (Opcional) pequeño destello para remarcar el cambio
   other._fxActive = true;
   other._fxUntil  = performance.now() + 300;
+
+  // asegúrate de que el halo quede permanente tras el cambio de sprite
+if (!GAME_FLAGS.juansin_other_halo){
+  other.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
+  GAME_FLAGS.juansin_other_halo = true;
+}
 
   // Termina la cine
   endCine3();
