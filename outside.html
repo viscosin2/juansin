@@ -151,18 +151,6 @@ const FOG = {
   areaH: 140
 };
 
-  const DONUT_FOG = {
-  active: false,
-  anchor: {x:0, y:0},   // se rellena con el centro del super
-  radius: 60,           // radio del anillo
-  thickness: 15,        // grosor del donut
-  parts: [],
-  color: '60,60,60',    // gris oscuro
-  alpha: 0.25,          // opacidad base
-  swirlSpeed: 0.2       // velocidad de giro (rad/s)
-};
-
-
 
 
 
@@ -187,8 +175,8 @@ const PORTRAITS = {
   Gandalf: 1.3, // 130% de su tamaño normal
   Juan:    1.0  // escala normal
 };
-const PORTRAIT_TOP_AIR = 30;   // aire fijo por arriba (px relativos a screenRect)
-const PORTRAIT_BOTTOM_PAD = -25; // “colchón” desde abajo
+const PORTRAIT_TOP_AIR = 52;   // aire fijo por arriba (px relativos a screenRect)
+const PORTRAIT_BOTTOM_PAD = 12; // “colchón” desde abajo
 
 const _ease = x => x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
 
@@ -238,8 +226,8 @@ const LIGHT = {
 
 async function preloadCinematicImages(){
   IMG_GANDALF_SMALL = await loadImage('assets/npcs/gandalf.png');
-  IMG_GANDALF       = await loadImage('assets/characters/gandalf_big.PNG');
-  IMG_JUAN_BIG      = await loadImage('assets/characters/juansin_big.PNG');
+  IMG_GANDALF       = await loadImage('assets/portraits/gandalf_portrait.png');
+  IMG_JUAN_BIG      = await loadImage('assets/portraits/juansin_portrait.png');
 }
 
   // ------------------------ ZONAS CINE
@@ -296,8 +284,8 @@ let NPC_IMAGES = {}, NPCS = [];
 // Catálogo de tipos de NPC (sprite, escala, collider, etc.)
 const NPC_CATALOG = {
   abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:1, scaleX:1/1.8, scaleY:1/8 }},
-  voldemort_perfil: {variants: {base: 'assets/npcs/voldemort_perfil.png', alt: 'assets/npcs/voldemort.png'}, defaultVariant: 'base', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.55 }},
+  gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.35 }},
   soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },fireFxMs: 140},
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }}
 };
@@ -448,61 +436,26 @@ function showToast(msg, ms=1800){
   
 /* ====== NPCS ====== */
 
-  function setNPCVariant(npc, variant){
-  if (!npc || !npc.images) return false;
-  const img = npc.images[variant];
-  if (!img) return false;
-  npc.variant = variant;
-  npc.img = img;
-  npc.iw = img.naturalWidth;
-  npc.ih = img.naturalHeight;
-  return true;
-}
-
   
   async function preloadNPCs(){
   const entries = Object.entries(NPC_CATALOG);
-  const res = await Promise.all(entries.map(async ([k, v]) => {
-    if (v.variants && typeof v.variants === 'object'){
-      const pairs = await Promise.all(
-        Object.entries(v.variants).map(async ([name, path]) => [name, await loadImage(path)])
-      );
-      const images = Object.fromEntries(pairs.filter(([,img]) => !!img));
-      return [k, images]; // guardamos un diccionario de variantes
-    } else {
-      const img = await loadImage(v.src);
-      return [k, img];
-    }
-  }));
-  res.forEach(([k, payload]) => { NPC_IMAGES[k] = payload; });
+  const res = await Promise.all(entries.map(([k,v]) => loadImage(v.src).then(img => [k,img])));
+  res.forEach(([k,img]) => { NPC_IMAGES[k] = img; });
 }
-
 
 function buildNPCs(){
   NPCS = [];
   for (const [type, list] of Object.entries(NPC_PLACED)){
     const spec = NPC_CATALOG[type];
-    const imgLoaded  = NPC_IMAGES[type];
+    const img  = NPC_IMAGES[type];
     if(!spec || !list?.length) continue;
 
     for (const p of list){
       const pos = (p.type === 'percent') ? percentToWorld(p) : { x:p.x, y:p.y };
       const s   = spec.scale || 1;
-
-
-    let images = null, variant = null, img = null;
-     if (imgLoaded && typeof imgLoaded === 'object' && !(imgLoaded instanceof Image)){
-       images  = imgLoaded;                                  // {base:Image, alt:Image,...}
-       variant = spec.defaultVariant || 'base';
-       img     = images[variant] || Object.values(images)[0];
-     } else {
-       img     = imgLoaded || null;                          // Image simple
-     }
-      
       const npc = {
         id: p.id || `${type}_${Math.random().toString(36).slice(2,7)}`,
         type, img,
-        images, variant,
         x: pos.x, y: pos.y,
         iw: img ? img.naturalWidth  : 32,
         ih: img ? img.naturalHeight : 32,
@@ -518,9 +471,7 @@ function buildNPCs(){
         fireFxMs: spec.fireFxMs || 120,
         _fxActive: false,
         _fxUntil: 0,
-        shadow: { ...DEFAULT_SHADOW, ...(spec.shadow||{}), ...(p.shadow||{}) },
-        variantOnTalk: p.variantOnTalk || null,
-        revertOnDialogClose: !!p.revertOnDialogClose
+        shadow: { ...DEFAULT_SHADOW, ...(spec.shadow||{}), ...(p.shadow||{}) }
       };
 
       // collider opcional (bloquea como obstáculo)
@@ -677,30 +628,13 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
         }
         return;
       }
-
       if (npc.dialog && npc.dialog.length){
-
-  let _reverted = false;
-  let _prevVariant = npc.variant;
-  if (npc.variantOnTalk && setNPCVariant(npc, npc.variantOnTalk) && npc.revertOnDialogClose){
-    const prevOnClosed = onDialogClosed;
-    onDialogClosed = ()=>{
-      if (!_reverted){
-        setNPCVariant(npc, _prevVariant || 'base');
-        _reverted = true;
-      }
-      if (typeof prevOnClosed === 'function') prevOnClosed();
-    };
-  }
         openDialog(npc.dialog, true);
       }
-
-   }
-      if (npc && npc.onFire){
-  setTimeout(() => { triggerNPCShot(npc); }, 1500);
-  GAME_FLAGS.talked_gunner = true;
-}
-
+      if (npc.onFire){
+        setTimeout(() => { triggerNPCShot(npc); }, 1500);
+        GAME_FLAGS.talked_gunner = true;
+      }
       return;
     }
   }
@@ -833,10 +767,8 @@ function portraitsOpen(script){
 
   const line0 = PORTRAITS.script[PORTRAITS.idx];
   const node0 = _nodeForSpeaker(line0.speaker);
-  setCinematicPixelMode(true); 
   _startSlide(node0, node0.inX, ()=>{
     PORTRAITS.stage = 'speaking';
-    
     openDialog([line0], true);
   });
 
@@ -900,7 +832,6 @@ function _endPortraits(){
     else {
       PORTRAITS.active = false;
       CUT.hijackAction = null;
-      setCinematicPixelMode(false); 
       if (typeof CUT.onEnd === 'function') CUT.onEnd();
     }
   }
@@ -935,17 +866,6 @@ function portraitsUpdate(dt){
   upd(PORTRAITS.left);
   upd(PORTRAITS.right);
 }
-function setCinematicPixelMode(on){
-  // Desactiva el pixel-art mientras dura la cine para que el blur se vea suave
-  const c = document.getElementById('game');
-  if (on){
-    c.style.imageRendering = 'auto';      // quita pixelated
-    ctx.imageSmoothingEnabled = true;     // por si acaso
-  } else {
-    c.style.imageRendering = 'pixelated'; // vuelve al look Game Boy
-    ctx.imageSmoothingEnabled = false;
-  }
-}
 
 function portraitsDrawOverlay(){
   if (!PORTRAITS.active) return;
@@ -962,13 +882,12 @@ function portraitsDrawOverlay(){
   ctx.clip();
 
   // blur + oscurecido
-  ctx.globalAlpha = Math.max(0, Math.min(1, PORTRAITS.blurK ?? 0)); 
+  ctx.globalAlpha = PORTRAITS.blurK ?? 1;
   ctx.filter = `blur(${PORTRAITS.blurPx}px) grayscale(35%)`;
   ctx.drawImage(BACKBUF,0,0);
   ctx.filter = 'none';
   ctx.globalAlpha = 1;
-  ctx.globalAlpha = (PORTRAITS.blurK ?? 0) * 0.40;                  
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = 'rgba(0,0,0,0.40)';
   ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
 
   // retratos
@@ -1219,55 +1138,6 @@ function fogDraw(){
   ctx.restore();
 }
 
-// ****************************** DONUT FOG
-
-  function initDonutFog(superProp){
-  DONUT_FOG.anchor = { x: superProp.x, y: superProp.y - 20 }; // -20 para anclar un poco más arriba si hace falta
-  DONUT_FOG.parts = [];
-  for (let i=0; i<80; i++){  // 80 partículas
-    const angle = Math.random() * Math.PI*2;
-    const r = DONUT_FOG.radius + (Math.random()-0.5)*DONUT_FOG.thickness;
-    DONUT_FOG.parts.push({
-      angle,
-      r,
-      phase: Math.random()*Math.PI*2
-    });
-  }
-  DONUT_FOG.active = true;
-}
-
-  function updateDonutFog(dt){
-  if (!DONUT_FOG.active) return;
-  for (const p of DONUT_FOG.parts){
-    p.angle += DONUT_FOG.swirlSpeed * dt; // órbita
-  }
-}
-
-  function drawDonutFog(){
-  if (!DONUT_FOG.active) return;
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-
-  for (const p of DONUT_FOG.parts){
-    // posición mundo → pantalla
-    const wx = DONUT_FOG.anchor.x + Math.cos(p.angle) * p.r;
-    const wy = DONUT_FOG.anchor.y + Math.sin(p.angle) * p.r;
-    const px = screenRect.dx + (wx - cam.x) * mapScaleX;
-    const py = screenRect.dy + (wy - cam.y) * mapScaleY;
-
-    const r = 18; // tamaño partícula
-    const g = ctx.createRadialGradient(px, py, 0, px, py, r);
-    g.addColorStop(0.0, `rgba(${DONUT_FOG.color}, ${DONUT_FOG.alpha})`);
-    g.addColorStop(1.0, `rgba(${DONUT_FOG.color}, 0)`);
-
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(px, py, r, 0, Math.PI*2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
 
 
 
@@ -1923,9 +1793,6 @@ function update(dt){
       ? t
       : a + (t - a) * Math.min(1, (dt * 1000) / AMBIENT.fadeMs);
   }
-
-  updateDonutFog(dt);
-
 }
 
 
@@ -2135,8 +2002,6 @@ zlist.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
   ctx.clip();
   fogDraw();
-  drawDonutFog();
-
   ctx.restore();
 
   // Retratos / modo cine
@@ -2168,9 +2033,6 @@ async function init(){
   buildPropsAndObstacles();
     buildNPCs();                  // << NUEVO
 
-  const superProp = PROPS.find(p => p.type === 'super');
-if (superProp) initDonutFog(superProp);
-  
   centerCameraOnPlayer();
 
   // Arranque del ambiente base desde 0 con fade
