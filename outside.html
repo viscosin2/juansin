@@ -285,7 +285,7 @@ let NPC_IMAGES = {}, NPCS = [];
 const NPC_CATALOG = {
   abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.35 }},
+  voldemort_perfil: {variants: {base: 'assets/npcs/voldemort_perfil.png', alt: 'assets/npcs/voldemort.png'}, defaultVariant: 'base', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.35 }},
   soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },fireFxMs: 140},
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }}
 };
@@ -436,6 +436,17 @@ function showToast(msg, ms=1800){
   
 /* ====== NPCS ====== */
 
+  function setNPCVariant(npc, variant){
+  if (!npc || !npc.images) return false;
+  const img = npc.images[variant];
+  if (!img) return false;
+  npc.variant = variant;
+  npc.img = img;
+  npc.iw = img.naturalWidth;
+  npc.ih = img.naturalHeight;
+  return true;
+}
+
   
   async function preloadNPCs(){
   const entries = Object.entries(NPC_CATALOG);
@@ -447,15 +458,27 @@ function buildNPCs(){
   NPCS = [];
   for (const [type, list] of Object.entries(NPC_PLACED)){
     const spec = NPC_CATALOG[type];
-    const img  = NPC_IMAGES[type];
+    const imgLoaded  = NPC_IMAGES[type];
     if(!spec || !list?.length) continue;
 
     for (const p of list){
       const pos = (p.type === 'percent') ? percentToWorld(p) : { x:p.x, y:p.y };
       const s   = spec.scale || 1;
+
+
+    let images = null, variant = null, img = null;
+     if (imgLoaded && typeof imgLoaded === 'object' && !(imgLoaded instanceof Image)){
+       images  = imgLoaded;                                  // {base:Image, alt:Image,...}
+       variant = spec.defaultVariant || 'base';
+       img     = images[variant] || Object.values(images)[0];
+     } else {
+       img     = imgLoaded || null;                          // Image simple
+     }
+      
       const npc = {
         id: p.id || `${type}_${Math.random().toString(36).slice(2,7)}`,
         type, img,
+        images, variant,
         x: pos.x, y: pos.y,
         iw: img ? img.naturalWidth  : 32,
         ih: img ? img.naturalHeight : 32,
@@ -471,7 +494,9 @@ function buildNPCs(){
         fireFxMs: spec.fireFxMs || 120,
         _fxActive: false,
         _fxUntil: 0,
-        shadow: { ...DEFAULT_SHADOW, ...(spec.shadow||{}), ...(p.shadow||{}) }
+        shadow: { ...DEFAULT_SHADOW, ...(spec.shadow||{}), ...(p.shadow||{}) },
+        variantOnTalk: p.variantOnTalk || null,
+        revertOnDialogClose: !!p.revertOnDialogClose
       };
 
       // collider opcional (bloquea como obstáculo)
@@ -628,9 +653,26 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
         }
         return;
       }
+
       if (npc.dialog && npc.dialog.length){
+
+  let _reverted = false;
+  let _prevVariant = npc.variant;
+  if (npc.variantOnTalk && setNPCVariant(npc, npc.variantOnTalk) && npc.revertOnDialogClose){
+    const prevOnClosed = onDialogClosed;
+    onDialogClosed = ()=>{
+      if (!_reverted){
+        setNPCVariant(npc, _prevVariant || 'base');
+        _reverted = true;
+      }
+      if (typeof prevOnClosed === 'function') prevOnClosed();
+    };
+  }
         openDialog(npc.dialog, true);
       }
+
+
+   }
       if (npc.onFire){
         setTimeout(() => { triggerNPCShot(npc); }, 1500);
         GAME_FLAGS.talked_gunner = true;
