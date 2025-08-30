@@ -2015,21 +2015,18 @@ player.frame = 0;      // idle total
 player.frameTime = 0;
 
 
-    setTimeout(() => {
-      openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'Grr' }], true);
+  setTimeout(() => {
+  openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'Grr' }], true);
 
-      CUT.hijackAction = () => {
-        if (dialogOpen){
-          closeDialog();
-          CUT.hijackAction = null;
-          cine3_beginPortraits();
-        }
-      };
-      onDialogClosed = () => {
-        CUT.hijackAction = null;
-        cine3_beginPortraits();
-      };
-    }, 2000);
+  CUT.hijackAction = () => {
+    if (dialogOpen){
+      closeDialog();
+      CUT.hijackAction = null;
+      cine3_beginPortraits();
+    }
+  };
+}, 2000);
+
   }, { followCam:true });
 }, { followCam:true });
 
@@ -2044,6 +2041,7 @@ player.frameTime = 0;
 function cine3_beginPortraits(){
   // Activa layout en bandas negras
   PORTRAITS.layout = 'letterbox';
+  PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
 
   PORTRAITS.active = true;
   PORTRAITS.blurK = 0;
