@@ -1391,13 +1391,13 @@ function openSoloGandalfEpic(script){
 
 function spawnGandalfWhiteAtPlayer(){
   // ===== knobs =====
-  const DROP_PX     = 30;    // distancia de bajada (px mundo)
-  const DURATION_MS = 3000;   // duración del slide
+  const DROP_PX     = 40;    // distancia de bajada (px mundo)
+  const DURATION_MS = 4000;   // duración del slide
   const AFTER_MS    = 1000;  // espera al llegar antes de mover a Juan
   const WALK_MS     = 650;   // tiempo del autowalk de Juan hasta la X de Gandalf
   // =================
 
-  const x     = player.x + 55;
+  const x     = player.x + 45;
   const yEnd  = player.y - 25;
   const yStart= yEnd - DROP_PX;
 
