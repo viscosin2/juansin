@@ -1022,63 +1022,42 @@ function drawBlurFallback(srcCanvas, dstCtx, clipRect){
 }
 
   
-function portraitsDrawOverlay() {
-  const pad = 8;
-  const w = PORTRAIT_W, h = PORTRAIT_H;
-  const dw = w * PORTRAIT_SCALE;
-  const dh = h * PORTRAIT_SCALE;
-  const y = canvas.height - dh - pad;
+function portraitsDrawOverlay(){
+  if (!PORTRAITS.active) return;
 
-  // --- Left (SSJ) ---
-  if (PORTRAITS.left && PORTRAITS.left.img) {
-    const L = PORTRAITS.left;
-    const ox = pad, oy = y;
+  // --- blur del fondo dentro del rectángulo de juego ---
+  BACKCTX.clearRect(0, 0, BACKBUF.width, BACKBUF.height);
+  BACKCTX.drawImage(canvas, 0, 0);
+  const blurPx = Math.round((PORTRAITS.blurPx || 100) * (PORTRAITS.blurK || 0));
 
+  if (supportsCanvasFilter()){
     ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(1, L.alpha ?? 1));
-    if (L.flipX) {
-      ctx.translate(ox + dw / 2, oy);
-      ctx.scale(-1, 1);
-      ctx.drawImage(
-        L.img,
-        0, 0, L.img.naturalWidth, L.img.naturalHeight,
-        -dw / 2, 0, dw, dh
-      );
-    } else {
-      ctx.drawImage(
-        L.img,
-        0, 0, L.img.naturalWidth, L.img.naturalHeight,
-        ox, oy, dw, dh
-      );
-    }
+    ctx.beginPath();
+    ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+    ctx.clip();
+    ctx.filter = `blur(${blurPx}px)`;
+    ctx.drawImage(BACKBUF, 0, 0);
+    ctx.filter = 'none';
     ctx.restore();
+  } else {
+    drawBlurFallback(BACKBUF, ctx, screenRect);
   }
 
-  // --- Right (Juan) ---
-  if (PORTRAITS.right && PORTRAITS.right.img) {
-    const R = PORTRAITS.right;
-    const ox = canvas.width - dw - pad, oy = y;
+  const drawSide = (N)=>{
+    if (!N?.img) return;
+    const s = N.scaleTemp ?? 1;
+    const w = Math.round(N.w * s);
+    const h = Math.round(N.h * s);
+    const x = Math.round(N.x);
+    const y = Math.round(N.yBottom - h);
 
     ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(1, R.alpha ?? 1));
-    if (R.flipX) {
-      ctx.translate(ox + dw / 2, oy);
+    ctx.globalAlpha = Math.max(0, Math.min(1, N.alpha ?? 1));
+    if (N.flipX){
+      ctx.translate(x + w/2, y);
       ctx.scale(-1, 1);
-      ctx.drawImage(
-        R.img,
-        0, 0, R.img.naturalWidth, R.img.naturalHeight,
-        -dw / 2, 0, dw, dh
-      );
+      ctx.drawImage(N.img, 0, 0, N.img.naturalWidth, N.img.naturalHeight, -w/2, 0, w, h);
     } else {
-      ctx.drawImage(
-        R.img,
-        0, 0, R.img.naturalWidth, R.img.naturalHeight,
-        ox, oy, dw, dh
-      );
-    }
-    ctx.restore();
-  }
-}
 
 
 // ************************** FUNCIONES SMOKE
