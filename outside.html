@@ -1058,6 +1058,15 @@ function portraitsDrawOverlay(){
       ctx.scale(-1, 1);
       ctx.drawImage(N.img, 0, 0, N.img.naturalWidth, N.img.naturalHeight, -w/2, 0, w, h);
     } else {
+      ctx.drawImage(N.img, 0, 0, N.img.naturalWidth, N.img.naturalHeight, x, y, w, h);
+    }
+    ctx.restore();
+  };
+
+  drawSide(PORTRAITS.left);
+  drawSide(PORTRAITS.right);
+}
+
 
 
 // ************************** FUNCIONES SMOKE
