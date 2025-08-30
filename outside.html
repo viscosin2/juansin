@@ -801,29 +801,52 @@ function isNPCFxActive(npc){
 
 // --------------------- FUNCIONES PORTRAITS
 
-function _makeSide(img, side, name){
+function _makeSide(img, side, name, slotOverride){
   if (!img) {
-    // Seguridad: crea un dummy para no romper si falta la imagen
     img = { naturalWidth: 64, naturalHeight: 64 };
   }
 
-  // Escala base: que quepa en ~52% del ancho útil
+  // área horizontal base (seguimos respetando el ancho del área de juego para insets)
   const maxW = Math.floor(screenRect.dw * 0.52);
-  const baseScale = Math.min(1, maxW / img.naturalWidth);
-
-  // Escala por personaje (Gandalf más grande, etc.)
   const charScale = (PORTRAIT_SCALES && PORTRAIT_SCALES[name]) ? PORTRAIT_SCALES[name] : 1;
 
-  // Altura disponible: pantalla útil menos aire arriba y padding abajo
-  const yBottom = screenRect.dy + screenRect.dh - PORTRAIT_BOTTOM_PAD;
-  const availH  = screenRect.dh - (PORTRAIT_TOP_AIR + PORTRAIT_BOTTOM_PAD);
+  // ---- cálculo de altura disponible:
+  // modo normal -> dentro del área de juego
+  // modo letterbox -> dentro de la banda negra superior/inferior
+  const useLetterbox = (PORTRAITS.layout === 'letterbox');
+  const topBarH    = Math.max(0, Math.round(screenRect.dy));
+  const bottomBarH = Math.max(0, Math.round(canvas.height - (screenRect.dy + screenRect.dh)));
+  const padTop = 6, padBottom = 8; // acolchados discretos
 
-  // Escala combinada y clamp por altura disponible
-  let s = baseScale * charScale;
+  let availH, yBottom;
+
+  if (useLetterbox){
+    const slot = slotOverride || (side === 'left' ? 'top' : 'bottom');
+    if (slot === 'top'){
+      // ocupa la banda negra superior
+      availH  = Math.max(0, topBarH - padTop - padBottom);
+      yBottom = screenRect.dy - padBottom; // borde inferior de la banda superior
+    } else {
+      // ocupa la banda negra inferior
+      availH  = Math.max(0, bottomBarH - padTop - padBottom);
+      yBottom = canvas.height - padBottom; // borde inferior del canvas
+    }
+  } else {
+    // diseño clásico (dentro del área del juego)
+    const PORTRAIT_TOP_AIR = 15;
+    const PORTRAIT_BOTTOM_PAD = -40;
+    const yBaseBottom = screenRect.dy + screenRect.dh - PORTRAIT_BOTTOM_PAD;
+    const availInGame = screenRect.dh - (PORTRAIT_TOP_AIR + PORTRAIT_BOTTOM_PAD);
+    availH  = Math.max(0, availInGame);
+    yBottom = yBaseBottom;
+  }
+
+  // escala base (por ancho) y clamp por alto disponible
+  let s = Math.min(1, (maxW / img.naturalWidth)) * charScale;
   let w = Math.round(img.naturalWidth  * s);
   let h = Math.round(img.naturalHeight * s);
-  if (h > availH) {
-    s = s * (availH / h);
+  if (availH > 0 && h > availH){
+    s *= (availH / h);
     w = Math.round(img.naturalWidth  * s);
     h = Math.round(img.naturalHeight * s);
   }
@@ -831,30 +854,32 @@ function _makeSide(img, side, name){
   const common = {
     img, name, side,
     w, h,
-    yBottom,            // <- tope inferior común
+    yBottom,            // límite inferior donde “apoya” el retrato
     t:0, from:0, to:0, anim:false, onDone:null,
     alpha:0, aFrom:0, aTo:1
   };
 
-const inset = Math.round(screenRect.dw * PORTRAIT_EDGE_INSET);
+  // inset horizontal relativo al área de juego (queda elegante)
+  const PORTRAIT_EDGE_INSET = -0.12;
+  const inset = Math.round(screenRect.dw * PORTRAIT_EDGE_INSET);
 
-if (side === 'left'){
-  return {
-    ...common,
-    x:   screenRect.dx - w - 80,           // fuera, a la izq
-    inX: screenRect.dx + inset,            // dentro, pegado al borde con inset
-    outX: screenRect.dx - w - 80
-  };
-} else {
-  return {
-    ...common,
-    x:   screenRect.dx + screenRect.dw + 80,       // fuera, a la dcha
-    inX: screenRect.dx + screenRect.dw - inset - w, // dentro, pegado al borde con inset
-    outX: screenRect.dx + screenRect.dw + 80
-  };
+  if (side === 'left'){
+    return {
+      ...common,
+      x:   screenRect.dx - w - 80,
+      inX: screenRect.dx + inset,
+      outX: screenRect.dx - w - 80
+    };
+  } else {
+    return {
+      ...common,
+      x:   screenRect.dx + screenRect.dw + 80,
+      inX: screenRect.dx + screenRect.dw - inset - w,
+      outX: screenRect.dx + screenRect.dw + 80
+    };
+  }
 }
 
-}
 
 
 function _startSlide(node, toX, cb){
@@ -2017,47 +2042,52 @@ player.frameTime = 0;
 
 
 function cine3_beginPortraits(){
-  // Misma lógica que la cine1: mismo sizing/posiciones/transiciones
+  // Activa layout en bandas negras
+  PORTRAITS.layout = 'letterbox';
+
   PORTRAITS.active = true;
   PORTRAITS.blurK = 0;
-  PORTRAITS.forceBlurFallback = false;     // <- igual que cine1
+  PORTRAITS.forceBlurFallback = false;
   PORTRAITS.stage = 'entering';
 
-  // Construidos con _makeSide (como en cine1)
-  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan');
+  // Construidos en letterbox: SSJ arriba, Juan abajo
+  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ',  'top');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan', 'bottom');
 
-  // Mantener flip del SSJ
   PORTRAITS.left.flipX = true;
 
-  // Parten fuera de pantalla (como cine1)
+  // Parten fuera
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Barras de vida (valores iniciales de esta escena)
-  HPBARS.show(10, 100); // Juan 10%, SSJ 100%
+  // Barras de vida
+  HPBARS.show(10, 100);
 
-  // Entra primero SSJ por la izquierda con la misma transición
+  // Entra primero SSJ por la izquierda
   _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
-    // dash in + back (animación rápida de ataque)
-    cine3_attackSequence(()=>{
-      // sale SSJ y entra Juan
-      _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
-        _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
-          // feedback de golpe a Juan y bajar vida a 1%
-          cine3_hitReaction(PORTRAITS.right);
-          HPBARS.setTargets(1, 100);
-
-          // Narrador y flujo de cierres como ya tenías
-          cine3_openNarrator();
+    // >>> Espera 1 segundo antes del ataque <<<
+    setTimeout(()=>{
+      // dash in + back (ataque)
+      cine3_attackSequence(()=>{
+        // sale SSJ y entra Juan
+        _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
+          _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
+            // >>> Espera 1 segundo antes de "recibir el golpe" <<<
+            setTimeout(()=>{
+              cine3_hitReaction(PORTRAITS.right);
+              HPBARS.setTargets(1, 100);
+              cine3_openNarrator();
+            }, 1000);
+          });
         });
       });
-    });
+    }, 1000);
   });
 
-  // Durante la coreografía no hay acción hasta que aparezca el narrador
+  // Durante esta coreografía el botón acción no hace nada
   CUT.hijackAction = null;
 }
+
 
 
 function cine3_attackSequence(done){
