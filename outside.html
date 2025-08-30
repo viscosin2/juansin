@@ -1314,39 +1314,70 @@ function startBushHideSequence(){
   setTimeout(()=>{ spawnGandalfWhiteAtPlayer(); }, 1000);
 }
 
-  function openSoloGandalfEpic(script){
+// ——— reemplazo completo ———
+function openSoloGandalfEpic(script){
+  // setup
   PORTRAITS.active = true;
   PORTRAITS.script = script.slice();
   PORTRAITS.idx = 0;
   PORTRAITS.blurK = 0;
-  PORTRAITS.stage = 'entering';
+  PORTRAITS.stage = 'speaking';
   PORTRAITS.soloEpic = true;
   PORTRAITS.soloEpicGlow = { r: 220, g: 240, b: 255, strength: 0.9 };
 
   const imgGW = (typeof IMG_GANDALF_WHITE_P !== 'undefined' && IMG_GANDALF_WHITE_P) ? IMG_GANDALF_WHITE_P : (IMG_GANDALF || IMG_GANDALF_WHITE);
+
+  // crear nodo centrado sin slide-in
   const N = _makeSide(imgGW, 'left', 'Gandalf');
-  // centramos
   const centerX = () => Math.round(screenRect.dx + (screenRect.dw - N.w)/2);
-  N.x = screenRect.dx - N.w - 60;   // offscreen izq
-  N.inX = centerX();
-  N.outX = screenRect.dx + screenRect.dw + 80; // salida por derecha
+  N.x = centerX();
+  N.inX = N.x; N.outX = N.x; // sin movimiento horizontal
+  N.alpha = 0; N.aFrom = 0; N.aTo = 1;   // fade in
+  N.sFrom = 0.98; N.sTo = 1.00;          // ligero asentamiento inicial
   PORTRAITS.left = N;
-  PORTRAITS.right = { alpha:0 };    // vacío
+  PORTRAITS.right = { alpha:0 };
 
+  // animación rápida de entrada (solo alpha/scale)
+  (function fadeTick(t0 = performance.now(), dur = 220){
+    const k = Math.min(1, (performance.now()-t0)/dur);
+    const ease = _ease(k);
+    N.alpha = N.aFrom + (N.aTo - N.aFrom) * ease;
+    N.scaleTemp = N.sFrom + (N.sTo - N.sFrom) * ease;
+    if (k < 1) requestAnimationFrame(()=>fadeTick(t0,dur));
+  })();
+
+  // abrir la única línea del solo
   const line0 = PORTRAITS.script[0];
-  _startSlide(N, N.inX, ()=>{
-    PORTRAITS.stage = 'speaking';
-    openDialog([line0], true);
+  openDialog([line0], true);
 
-    CUT.active = true; CUT.id = 'bush_epic';
-    CUT.hijackAction = ()=>{
-      if (dialogOpen){ closeDialog(); return; }
+  // zoom épico progresivo mientras habla (hasta tope)
+  const maxScaleBoost = 1.10; // ~+10%
+  const growMs = 1800;
+  (function epicZoom(t0 = performance.now()){
+    if (!PORTRAITS.active || !PORTRAITS.soloEpic) return;
+    const k = Math.min(1, (performance.now()-t0)/growMs);
+    const s = 1.00 + (maxScaleBoost - 1.00) * _ease(k);
+    N.scaleTemp = Math.min(s, maxScaleBoost);
+    if (k < 1) requestAnimationFrame(()=>epicZoom(t0));
+  })();
+
+  // control del botón Acción
+  CUT.active = true; CUT.id = 'bush_epic';
+  CUT.hijackAction = ()=>{
+    if (dialogOpen){
+      if (isTyping){ // primero autocompletar
+        advanceDialog();
+        return;
+      }
+      // si ya estaba completa, cerrar y continuar
+      closeDialog();
       CUT.hijackAction = null;
       _endPortraits();
-      CUT.onEnd = ()=> startGandalfWhitePortraitChain();
-    };
-  });
+      CUT.onEnd = ()=> startGandalfWhitePortraitChain(); // tu cadena de retratos subsiguiente
+    }
+  };
 }
+
 
 function spawnGandalfWhiteAtPlayer(){
   // ===== knobs =====
@@ -1391,40 +1422,38 @@ function spawnGandalfWhiteAtPlayer(){
   FOG.areaH = 70;
   fogBeginFill({ dur:600, density:0.9, areaW:FOG.areaW, areaH:FOG.areaH });
 
-  // cuando termine de bajar, espera y mueve a Juan a la X de Gandalf
-  BUSH_SCENE._onLanded = () => {
-    setTimeout(() => {
-      // sigue bloqueado desde startBushHideSequence()
-      cineAutoWalkTo(npc.x, player.y, WALK_MS, () => {
-        player.dir = 'up';
-        player.moving = false;
-        player.frame = 0; player.frameTime = 0;
+ BUSH_SCENE._onLanded = () => {
+  setTimeout(() => {
+    cineAutoWalkTo(npc.x, player.y, WALK_MS, () => {
+      player.dir = 'up';
+      player.moving = false;
+      player.frame = 0; player.frameTime = 0;
 
-        // Diálogo inicial
-        openDialog([{ speaker:'Gandalf', text:'maricona.. quiero decir...' }], true);
+      openDialog([{ speaker:'Gandalf', text:'Maricona... Quiero decir...' }], true);
 
-        // Encadenamos resto con hijack
-        CUT.active = true;
-        CUT.id = 'bush_seq';
+      CUT.active = true; CUT.id = 'bush_seq';
+      CUT.hijackAction = () => {
+        if (!dialogOpen){ return; }
+        // MISMO TAP: cerrar “maricona…” y abrir las dos de Juan
+        closeDialog();
+        openDialog([
+          { speaker:'Juan', text:'??!!' },
+          { speaker:'Juan', text:'¿Se puede saber dónde estabas? Llegas tarde.' }
+        ], true);
+
+        // Siguiente tap: cerrar y abrir el SOLO épico (retrato blanco)
         CUT.hijackAction = () => {
-          if (dialogOpen){ advanceDialog(); return; }
-          openDialog([
-            { speaker:'Juan', text:'??!!' },
-            { speaker:'Juan', text:'¿Se puede saber dónde estabas? Llegas tarde.' }
-          ], true);
-
-          CUT.hijackAction = () => {
-            if (dialogOpen){ advanceDialog(); return; }
-            closeDialog();
-            CUT.hijackAction = null;
-            openSoloGandalfEpic([
-              {speaker:'Gandalf', text:'Un mago nunca llega tarde, Johnny Barrett, ni pronto. Llega justamente cuando se lo propone.' }
-            ]);
-          };
+          if (dialogOpen){ closeDialog(); }
+          CUT.hijackAction = null;
+          openSoloGandalfEpic([
+            {speaker:'Gandalf', text:'Un mago nunca llega tarde, Johnny Barrett, ni pronto. Llega justamente cuando se lo propone.' }
+          ]);
         };
-      }, { followCam:true });
-    }, AFTER_MS);
-  };
+      };
+    }, { followCam:true });
+  }, AFTER_MS);
+};
+
 }
 
 
@@ -2274,7 +2303,8 @@ async function applyOtherJuanSSJ({boostHalo=true} = {}){
   return other;
 }
 
-function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false } = {}){
+// ——— reemplazo completo ———
+function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepPeriodMs = 120 } = {}){
   CUT.phase = 'autowalk';
   const sx = player.x, sy = player.y;
   const t0 = performance.now();
@@ -2291,33 +2321,30 @@ function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false } = {}
     player.y = sy + (targetY - sy) * k;
     face();
 
-    // animación de caminar
+    // — cadencia de pies desacoplada —
     player.moving = true;
     player.frameTime += 1/60;
-    if (player.frameTime >= 0.12){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
+    if (player.frameTime >= (stepPeriodMs/1000)){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
 
-    // 👇 hace que la cámara siga a Juan durante este autowalk
     if (followCam) centerCameraOnPlayer();
 
     if (k < 1){
       requestAnimationFrame(step);
     } else {
       player.moving = false;
-      player.frame = 0;          // frame base de idle
-      player.frameTime = 0;      // reset del tiempo de animación
+      player.frame = 0; player.frameTime = 0;
       if (typeof onDone === 'function') onDone();
     }
   })();
 }
 
 
-
+// ——— reemplazo completo ———
 async function startCinematic3(){
   CUT.active = true; CUT.id='cine3'; CUT.phase='start';
   ambientLock = true; player.moving = false;
 
   setTimeout(() => {
-    // 1) Diálogo doble: "...?" -> "¿Ese soy yo?"
     openDialog([
       { speaker:'Juan', text:'...?' },
       { speaker:'Juan', text:'¿Ese soy yo?' }
@@ -2325,72 +2352,63 @@ async function startCinematic3(){
 
     CUT.hijackAction = () => {
       if (!dialogOpen) return;
-
-      // Si aún está escribiendo, completa
       if (isTyping){ advanceDialog(); return; }
 
-      // Si estamos en la primera línea, avanzamos a la segunda
       if (dialogIndex < dialogScript.length - 1){
         advanceDialog();
         return;
       }
 
-      // 2) Aquí estamos en la segunda línea y se pulsa Acción para cerrar:
-      //    cerrar, cambiar a SSJ (PNG + destello) y NO caminar todavía
+      // cerramos segunda línea → SSJ (con halo) → “Ah, pues no.”
       closeDialog();
       CUT.hijackAction = null;
 
       (async () => {
         const other = await applyOtherJuanSSJ({ boostHalo: true });
 
-        // 3) Espera 1s y muestra "Ah, pues no."
         setTimeout(() => {
           openDialog([{ speaker:'Juan', text:'Ah, pues no.' }], true);
 
           CUT.hijackAction = () => {
             if (!dialogOpen) return;
-            // cerrar "Ah, pues no." y entonces caminar
             closeDialog();
             CUT.hijackAction = null;
 
-            // 4) Autowalk hasta delante del SSJ, quedarse en idle up
-            const offset  = 22;
-            // 4) Caminata en dos tramos: primero a la X del SSJ, luego subir hasta y = SSJ.y - 20
-const targetX1 = other.x;        // alinearse a la X del SSJ
-const targetY1 = player.y;       // misma Y actual
+            // tramo 1: alinear X
+            const targetX1 = other.x;
+            const targetY1 = player.y;
 
-cineAutoWalkTo(targetX1, targetY1, 500, () => {
-  const targetX2 = other.x;      // mantiene X del SSJ
-  const targetY2 = other.y + 30; // parar 20px por encima del SSJ
-  cineAutoWalkTo(targetX2, targetY2, 700, () => {
-    CUT.phase = 'idle'; 
-    player.dir = 'up';
-player.moving = false;
-player.frame = 0;      // idle total
-player.frameTime = 0;
+            cineAutoWalkTo(targetX1, targetY1, 500, () => {
+              // tramo 2: subir hasta quedar frente al SSJ (idle up y pies parados al final)
+              const targetX2 = other.x;
+              const targetY2 = other.y + 30;
 
+              cineAutoWalkTo(targetX2, targetY2, 700, () => {
+                CUT.phase = 'idle';
+                player.dir = 'up';
+                player.moving = false;
+                player.frame = 0; player.frameTime = 0;
 
-  setTimeout(() => {
-  openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'Grr' }], true);
-
-  CUT.hijackAction = () => {
-    if (dialogOpen){
-      closeDialog();
-      CUT.hijackAction = null;
-      cine3_beginPortraits();
-    }
-  };
-}, 2000);
-
-  }, { followCam:true });
-}, { followCam:true });
-
+                // un mini beat y seguimos con “Grr” → retratos
+                setTimeout(() => {
+                  openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'Grr' }], true);
+                  CUT.hijackAction = () => {
+                    if (dialogOpen){
+                      closeDialog();
+                      CUT.hijackAction = null;
+                      cine3_beginPortraits();
+                    }
+                  };
+                }, 200);
+              }, { followCam:true, stepPeriodMs: 200 }); // 👈 pies más lentos SOLO aquí
+            }, { followCam:true });
           };
         }, 1000);
       })();
     };
   }, 1000);
 }
+
 
 
 function cine3_beginPortraits(){
@@ -2478,38 +2496,32 @@ function cine3_hitReaction(node){
 function cine3_openNarrator(){
   // Ya está mostrada la 1ª línea del narrador ("…te ataca con una bola de energía.")
   // Reconfiguramos Acción para avanzar a las siguientes y cerrar la cine.
+// ——— reemplazo del hijack que dispara “¡Rápido!” ———
+CUT.hijackAction = ()=>{
+  if (!dialogOpen) return;
+
+  // cerrar la 1ª línea y abrir las dos últimas en la MISMA pulsación
+  closeDialog();
+  openDialog([
+    { speaker:'', text:'Estás muy debilitado.' },
+    { speaker:'', text:'¡Rápido! Escóndete en algún sitio.' }
+  ], true);
+
+  // la SIGUIENTE pulsación cierra y arranca el arbusto + fin cine3
   CUT.hijackAction = ()=>{
     if (!dialogOpen) return;
-
-    // 1) Cierra la 1ª línea del narrador…
     closeDialog();
+    CUT.hijackAction = null;
+    HPBARS.hide();
 
-    // 2) …y muestra las dos últimas
-    openDialog([
-      { speaker:'', text:'Estás muy debilitado.' },
-      { speaker:'', text:'¡Rápido! Escóndete en algún sitio.' }
-    ], true);
-
-    // 3) Acción ahora cierra estas líneas y dispara el cierre de la cine
-    CUT.hijackAction = ()=>{
-      if (!dialogOpen) return;
-
-      closeDialog();
-      CUT.hijackAction = null;
-
-      // Apaga barras y prepara el callback de fin de retratos
-      HPBARS.hide();
-
-      // OJO: el latido empieza SOLO al terminar el fade-out de retratos
-      CUT.onEnd = ()=>{
-        startBushPulse('bush_hideout'); // 👈 empieza a latir cuando termina “¡Rápido!…”
-        endCine3();                     // 👈 y aquí cerramos de verdad la cinematica 3
-      };
-
-      // Fade-out de retratos + blur (al terminar llamará CUT.onEnd)
-      _endPortraits();
+    CUT.onEnd = ()=>{
+      startBushPulse('bush_hideout');
+      endCine3();
     };
+    _endPortraits();
   };
+};
+
 }
 
 
