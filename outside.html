@@ -102,7 +102,7 @@ const ZOOM = 2.1;
 const START = { mode:'percent', x:7, y:81 };
 const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
 const DEBUG_OBS = false;
-const DEBUG_INTER = false;
+const DEBUG_INTER = true;
 const DEBUG_AMBIENT = false;
 const DEBUG_CINE = true; 
 const DEPTH_BAND = 12;
@@ -2808,7 +2808,87 @@ zlist.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
   // Debug (si lo usas)
   if (DEBUG_AMBIENT && AMBIENT_BUILT.length){ /* ... igual que antes ... */ }
   if (DEBUG_OBS){ /* ... igual que antes ... */ }
-  if (DEBUG_INTER){ /* ... igual que antes ... */ }
+if (DEBUG_INTER){
+  ctx.save();
+  // delimita al área jugable
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
+
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5,3]);
+
+  // --- Zonas de interacción de PROPS ---
+  for (const p of PROPS){
+    if (!p.interacts) continue;
+    const s = p.scale || 1;
+    for (const z of p.interacts){
+      const sx = Math.round(screenRect.dx + (z.x - cam.x) * mapScaleX);
+      const sy = Math.round(screenRect.dy + (z.y - cam.y) * mapScaleY);
+      const sw = Math.round(z.w * mapScaleX);
+      const sh = Math.round(z.h * mapScaleY);
+
+      ctx.fillStyle   = 'rgba(0,200,255,0.12)';
+      ctx.strokeStyle = '#00C8FF';
+      ctx.fillRect(sx, sy, sw, sh);
+      ctx.strokeRect(sx+0.5, sy+0.5, sw-1, sh-1);
+
+      // etiqueta
+      const label = `prop:${p.type}`;
+      ctx.setLineDash([]);
+      ctx.font = '600 12px system-ui, sans-serif';
+      const tw = ctx.measureText(label).width;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(sx+4, sy-18, tw+8, 16);
+      ctx.fillStyle = '#00C8FF';
+      ctx.fillText(label, sx+8, sy-6);
+      ctx.setLineDash([5,3]);
+    }
+  }
+
+  // --- Zonas de interacción de NPCS ---
+  for (const n of NPCS){
+    if (!n.interacts) continue;
+    for (const z of n.interacts){
+      const sx = Math.round(screenRect.dx + (z.x - cam.x) * mapScaleX);
+      const sy = Math.round(screenRect.dy + (z.y - cam.y) * mapScaleY);
+      const sw = Math.round(z.w * mapScaleX);
+      const sh = Math.round(z.h * mapScaleY);
+
+      ctx.fillStyle   = 'rgba(160,255,120,0.12)';
+      ctx.strokeStyle = '#A0FF78';
+      ctx.fillRect(sx, sy, sw, sh);
+      ctx.strokeRect(sx+0.5, sy+0.5, sw-1, sh-1);
+
+      // etiqueta
+      const label = `npc:${n.id || n.type}`;
+      ctx.setLineDash([]);
+      ctx.font = '600 12px system-ui, sans-serif';
+      const tw = ctx.measureText(label).width;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(sx+4, sy-18, tw+8, 16);
+      ctx.fillStyle = '#A0FF78';
+      ctx.fillText(label, sx+8, sy-6);
+      ctx.setLineDash([5,3]);
+    }
+  }
+
+  // --- Pies de Juan (elipse de colisión) ---
+  {
+    const cx = screenRect.dx + (player.x - cam.x) * mapScaleX;
+    const cy = screenRect.dy + (player.y + FEET_OFFSET_Y - cam.y) * mapScaleY;
+    const rx = FEET_RADIUS_X * mapScaleX;
+    const ry = FEET_RADIUS_Y * mapScaleY;
+    ctx.strokeStyle = '#FF66AA';
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 if (DEBUG_CINE && CINE_BUILT.length){
   ctx.save();
   ctx.beginPath();
