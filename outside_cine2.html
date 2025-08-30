@@ -336,6 +336,7 @@ const LIGHT = {
   tint: '255,230,180'
 };
 
+let IMG_VOLDEMORT_P=null, IMG_VOLDEMORT_NPC=null;
 async function preloadCinematicImages(){
   IMG_GANDALF_SMALL = await loadImage('assets/npcs/gandalf.png');
   IMG_GANDALF       = await loadImage('assets/portraits/gandalf_portrait.png');
@@ -345,7 +346,10 @@ async function preloadCinematicImages(){
   IMG_GANDALF_WHITE_P = await loadImage('assets/portraits/gandalfblanco_portrait.png')
   .then(i=>i)
   .catch(()=>null);
+  if(!IMG_VOLDEMORT_P){ IMG_VOLDEMORT_P = await loadImage('assets/portraits/gandalf_portrait.png').catch(()=>null); }
+  if(!IMG_VOLDEMORT_NPC){ IMG_VOLDEMORT_NPC = await loadImage('assets/npcs/voldemort.png').catch(()=>null); }
 }
+
 
   // ------------------------ ZONAS CINE
 const CINE_ZONES = [
@@ -677,11 +681,11 @@ function buildNPCs(){
         fireFxMs: spec.fireFxMs || 120,
         _fxActive: false,
         _fxUntil: 0,
-        shadow: { ...DEFAULT_SHADOW, ...(spec.shadow||{}), ...(p.shadow||{}) }
+        shadow: { .....DEFAULT_SHADOW, .....(spec.shadow||{}), .....(p.shadow||{}) }
       };
       // heredar halo del catálogo y permitir override desde placement
 if ((NPC_CATALOG[type] && NPC_CATALOG[type].halo) || p.halo){
-  npc.halo = { ...(NPC_CATALOG[type].halo || {}), ...(p.halo || {}) };
+  npc.halo = { .....(NPC_CATALOG[type].halo || {}), .....(p.halo || {}) };
 }
 
 
@@ -2577,21 +2581,21 @@ function startCinematic2(){
   CUT.active = true; CUT.id='cine2'; CUT.phase='lock';
   ambientLock = true; player.moving=false;
 
-  // 1-4) Entrar zona, bloqueo, 1s, "Acércate chico"
   setTimeout(()=> {
     openDialog([{speaker:'???', text:'Acércate, chico.'}], true);
 
-    // 5-7) Acción → cerrar y autowalk hasta x = voldemort.x - 5, y = voldemort.y
     CUT.hijackAction = ()=>{
+      if (isTyping){ advanceDialog(); return; }
       if (!dialogOpen) return;
-      closeDialog(); CUT.hijackAction = null;
+      closeDialog(); 
+      CUT.hijackAction = null;
 
-      const vold = NPCS.find(n => n.type==='voldemort_perfil') || null;
+      const vold = NPCS.find(n => n.type==='voldemort_perfil' || n.type==='voldemort') || null;
       const tx = vold ? (vold.x - 5) : player.x;
       const ty = vold ?  vold.y      : player.y;
+
       cineAutoWalkTo(tx, ty, 800, ()=>{
 
-        // 8) Diálogo cadena (Juan / ??? / Juan)
         openDialog([
           {speaker:'Juan', text:'¿Quién eres?'},
           {speaker:'???',  text:'Adivina.'},
@@ -2599,26 +2603,53 @@ function startCinematic2(){
         ], true);
 
         CUT.hijackAction = ()=>{
-          if (!dialogOpen) return;
           if (isTyping){ advanceDialog(); return; }
           if (dialogIndex < dialogScript.length - 1){ advanceDialog(); return; }
-          closeDialog(); CUT.hijackAction=null;
 
-          // 9-12) 1s → cambia sprite a voldemort.png → "Lord Voldemort" → Acción → "Buena va" → Acción → retratos
+          closeDialog(); 
+          CUT.hijackAction=null;
+
           setTimeout(async ()=>{
             const v = NPCS.find(n => n.type==='voldemort_perfil' || n.type==='voldemort');
             if (v){
-              const img = IMG_VOLDEMORT_NPC || await loadImage('assets/npcs/voldemort.png').catch(()=>null);
-              if (img){ v.img=img; v.iw=img.naturalWidth; v.ih=img.naturalHeight; v.type='voldemort'; }
+              let img = IMG_VOLDEMORT_NPC || await loadImage('assets/npcs/voldemort.png').catch(()=>null);
+              if (img){ v.img=img; v.iw=img.naturalWidth||v.iw; v.ih=img.naturalHeight||v.ih; v.type='voldemort'; }
             }
+
             openDialog([{speaker:'Voldemort', text:'Lord Voldemort.'}], true);
-            CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog(); CUT.hijackAction=null;
+
+            CUT.hijackAction = ()=>{ 
+              if (isTyping){ advanceDialog(); return; }
+              if (dialogOpen){ closeDialog(); }
+
               openDialog([{speaker:'Juan', text:'Buena va.'}], true);
-              CUT.hijackAction = ()=>{ if (dialogOpen){ closeDialog(); CUT.hijackAction=null; cine2_beginPortraits(); } };
-            }};
+
+              CUT.hijackAction = ()=>{
+                if (isTyping){ advanceDialog(); return; }
+                if (dialogOpen){ closeDialog(); }
+
+                portraitsOpenVS({
+                  leftImg:  IMG_VOLDEMORT_P || IMG_GANDALF, 
+                  leftName: 'Voldemort',
+                  rightImg: IMG_JUAN_BIG,
+                  rightName:'Juan'
+                });
+
+                _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
+                  openDialog([{speaker:'Voldemort', text:'Sorpresa.'}], true);
+                  CUT.hijackAction = ()=>{
+                    if (isTyping){ advanceDialog(); return; }
+                    if (dialogOpen){ closeDialog(); }
+                    CUT.hijackAction = null;
+                    _endPortraits();
+                    endCine();
+                  };
+                });
+              };
+            };
           }, 1000);
         };
-      }, { followCam:true });
+      });
     };
   }, 1000);
 }
