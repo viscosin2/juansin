@@ -2518,7 +2518,7 @@ CUT.hijackAction = ()=>{
   if(dialogOpen) closeDialog();
 
   // (12) se abre cinemática con overlays y portraits
-  portraitsOpenVS({
+  portraitsOpen({
     leftImg: IMG_VOLDEMORT_P,
     leftName: 'Voldemort',
     rightImg: IMG_JUAN_BIG,
@@ -2587,7 +2587,7 @@ CUT.hijackAction = ()=>{
 
                                                         // 26: 1s → vuelve overlay + barras, Juan recibe 90%
                                                         setTimeout(()=>{
-                                                          portraitsOpenVS({
+                                                          portraitsOpen({
                                                             leftImg: IMG_VOLDEMORT_P, leftName:'Voldemort',
                                                             rightImg: IMG_JUAN_FIGHT||IMG_JUAN_BIG, rightName:'Juan'
                                                           });
