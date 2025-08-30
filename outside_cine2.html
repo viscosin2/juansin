@@ -354,18 +354,28 @@ async function preloadCinematicImages(){
   { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
 
 ];
-  function buildCineZones(){
+function buildCineZones(){
   return CINE_ZONES.map(z=>{
-    const r=z.rect;
-    if (r.type==='percent'){
-      return { ...z,
-        x: Math.round(world.w*(r.x/100)), y: Math.round(world.h*(r.y/100)),
-        w: Math.round(world.w*(r.w/100)), h: Math.round(world.h*(r.h/100))
+    const r = z.rect;
+    if (r.type === 'percent'){
+      return {
+        ...z,
+        x: Math.round(world.w * (r.x/100)),
+        y: Math.round(world.h * (r.y/100)),
+        w: Math.round(world.w * (r.w/100)),
+        h: Math.round(world.h * (r.h/100))
       };
     }
-    return {...z, x:r.x,y:r.y,w:r.w,h:r.h};
+    return { 
+      ...z,
+      x: r.x,
+      y: r.y,
+      w: r.w,
+      h: r.h
+    };
   });
 }
+
 let CINE_BUILT = [];
 
   
