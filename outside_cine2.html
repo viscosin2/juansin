@@ -2311,6 +2311,69 @@ function startCinematic1(){
   }, 1000);
 };
   }
+
+// ==== Added by hotfix: cinematic 2 & 3 minimal flows ====
+function startCinematic2(){
+  // Lock gameplay & mark cutscene
+  CUT.active = true; CUT.id = 'cine2'; CUT.phase = 'F1';
+  ambientLock = true; player.moving = false;
+
+  // Simple intro line (puedes cambiarlo)
+  if (typeof openDialog === 'function'){
+    openDialog([{speaker:'Juan', text:'Vale… vamos a ello.'}], true);
+  }
+
+  // Avanza con el botón de acción
+  CUT.hijackAction = ()=>{
+    // Cerrar diálogo si estaba abierto
+    if (typeof closeCurrentDialogNow === 'function') closeCurrentDialogNow();
+    CUT.hijackAction = null;
+
+    // Opcional: mostrar barras de vida (si existen)
+    try { if (HPBARS && typeof HPBARS.show === 'function') HPBARS.show(100,100); } catch(e){}
+
+    // Opcional: pequeña animación de cámara (si tienes helper)
+    try {
+      if (!CAM_TWEEN.on && typeof cam !== 'undefined'){
+        CAM_TWEEN.on=true; CAM_TWEEN.t=0; CAM_TWEEN.dur=800;
+        CAM_TWEEN.sx=cam.x; CAM_TWEEN.sy=cam.y;
+        CAM_TWEEN.ex=cam.x; CAM_TWEEN.ey=Math.max(0, cam.y-20);
+      }
+    } catch(e){}
+
+    // Terminar la cinemática y devolver control
+    setTimeout(()=>{
+      if (CUT.active && CUT.id === 'cine2'){
+        if (typeof endCine === 'function') endCine(); else { CUT.active=false; ambientLock=false; }
+      }
+    }, 600);
+  };
+}
+
+function startCinematic3(){
+  // Lock básico para evitar ReferenceError al entrar en cine3
+  CUT.active = true; CUT.id = 'cine3'; CUT.phase = 'F1';
+  ambientLock = true; player.moving = false;
+
+  if (typeof openDialog === 'function'){
+    openDialog([{speaker:'Juan', text:'…¿Qué es eso?'}], true);
+  }
+
+  CUT.hijackAction = ()=>{
+    if (typeof closeCurrentDialogNow === 'function') closeCurrentDialogNow();
+    CUT.hijackAction = null;
+    setTimeout(()=>{
+      if (CUT.active && CUT.id === 'cine3'){
+        if (typeof endCine3 === 'function') endCine3();
+        else if (typeof endCine === 'function') endCine();
+        else { CUT.active=false; ambientLock=false; }
+      }
+    }, 400);
+  };
+}
+// ==== end hotfix ====
+
+
 function phaseQuestionThenWalk(){
   CUT.phase = 'question';
   openDialog([{ speaker:'Juan', text:'...?' }], true);
