@@ -939,18 +939,7 @@ function portraitsDrawOverlay(){
   // —— BLUR fuerte + oscurecido ——
   const k = PORTRAITS.blurK ?? 1;        // 0→1
   const wantAlpha = Math.min(1, 0.95*k); // casi tapa del todo
-  const canFilter = supportsCanvasFilter();
-
-  if (canFilter){
-    // usa filtro nativo (muy marcado)
-    ctx.globalAlpha = wantAlpha;
-    ctx.filter = `blur(28px) contrast(0.95) saturate(0.9)`; // blur gordo
-    ctx.drawImage(BACKBUF,0,0);
-    ctx.filter = 'none';
-  } else {
-    // fallback: downscale/upscale para garantizar “borrosidad”
-    drawBlurFallback(BACKBUF, ctx, screenRect);
-  }
+drawBlurFallback(BACKBUF, ctx, screenRect);
 
   // capa de oscurecido para separar bien los retratos
   ctx.globalAlpha = 0.38 * k;            // sombra suave escalada por k
