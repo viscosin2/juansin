@@ -1138,6 +1138,32 @@ function portraitsDrawOverlay(){
     // Fallback robusto (downsample/upsample)
     drawBlurFallback(BACKBUF, ctx, screenRect);
   }
+// === Oscurecido solo en SOLO ÉPICO ===
+if (PORTRAITS.soloEpic){
+  const k = Math.min(1, (PORTRAITS.blurK || 0));   // mismo progreso que el blur
+  const DARK_MAX = 0.55;                            // sube/baja a tu gusto
+
+  // capa base
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.clip();
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = `rgba(0,0,0, ${DARK_MAX * k * 0.85})`;
+  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+
+  // viñeta suave
+  const cx = screenRect.dx + screenRect.dw/2;
+  const cy = screenRect.dy + screenRect.dh/2;
+  const R  = Math.hypot(screenRect.dw, screenRect.dh) * 0.6;
+  const g = ctx.createRadialGradient(cx, cy, R*0.15, cx, cy, R);
+  g.addColorStop(0.00, `rgba(0,0,0, ${DARK_MAX * k * 0.10})`);
+  g.addColorStop(0.70, `rgba(0,0,0, ${DARK_MAX * k * 0.35})`);
+  g.addColorStop(1.00, `rgba(0,0,0, ${DARK_MAX * k * 0.55})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(screenRect.dx, screenRect.dy, screenRect.dw, screenRect.dh);
+  ctx.restore();
+}
 
   // —— CLIP DE SEGURIDAD: nunca dibujar retratos fuera del área de juego ——
   ctx.save();
