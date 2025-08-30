@@ -2072,7 +2072,7 @@ function cine3_openNarrator(){
     if (dialogOpen){
       // mostrar segunda línea
       closeDialog();
-      openDialog([{ speaker:'', text:'Estás muy debilitado.' },{ speaker:'', text:'¡Rápido! Escóndete en algún sitio.' ], true);
+      openDialog([{ speaker:'', text:'Estás muy debilitado.' },{ speaker:'', text:'¡Rápido! Escóndete en algún sitio.' }], true);
       // siguiente Acción cierra y hace fade out total
       CUT.hijackAction = ()=>{
         if (dialogOpen){ closeDialog(); }
