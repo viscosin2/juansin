@@ -1912,66 +1912,75 @@ function cineAutoWalkTo(targetX, targetY, ms, onDone){
 
 async function startCinematic3(){
   CUT.active = true; CUT.id='cine3'; CUT.phase='start';
-  ambientLock = true; player.moving=false;
+  ambientLock = true; player.moving = false;
 
-  // 1) Espera 1s antes de mostrar el primer diálogo
-  setTimeout(()=>{
-    // Diálogo en dos pasos: "...?" → "¿Ese soy yo?"
+  setTimeout(() => {
+    // 1) Diálogo doble: "...?" -> "¿Ese soy yo?"
     openDialog([
       { speaker:'Juan', text:'...?' },
       { speaker:'Juan', text:'¿Ese soy yo?' }
     ], true);
 
-    // Acción solo avanza/cierra este diálogo
-    CUT.hijackAction = ()=>{
-      if (dialogOpen){ advanceDialog(); return; }
-    };
+    CUT.hijackAction = () => {
+      if (!dialogOpen) return;
 
-    // 2) Al cerrar este diálogo, esperamos 1s y cambiamos el sprite del otro Juan (flash)
-    onDialogClosed = ()=>{
+      // Si aún está escribiendo, completa
+      if (isTyping){ advanceDialog(); return; }
+
+      // Si estamos en la primera línea, avanzamos a la segunda
+      if (dialogIndex < dialogScript.length - 1){
+        advanceDialog();
+        return;
+      }
+
+      // 2) Aquí estamos en la segunda línea y se pulsa Acción para cerrar:
+      //    cerrar, cambiar a SSJ (PNG + destello) y NO caminar todavía
+      closeDialog();
       CUT.hijackAction = null;
-      setTimeout(async ()=>{
-        const other = await applyOtherJuanSSJ({ boostHalo:true }); // cambia PNG + destello
-        if (!other){ endCine3(); return; }
 
-        // 3) Autowalk a posición frente al SSJ y continuamos la coreografía original
-        const offset  = 22;
-        const targetX = other.x + offset;
-        const targetY = player.y;
+      (async () => {
+        const other = await applyOtherJuanSSJ({ boostHalo: true });
 
-        cineAutoWalkTo(targetX, targetY, 700, ()=>{
-          player.dir = 'up';
+        // 3) Espera 1s y muestra "Ah, pues no."
+        setTimeout(() => {
+          openDialog([{ speaker:'Juan', text:'Ah, pues no.' }], true);
 
-          // Intensificar halo 1s
-          if (other && other.halo){
-            const startA = other.halo.alpha || 0.6;
-            const startR = other.halo.radius || 30;
-            const t0 = performance.now(), dur = 1000;
-            (function tick(){
-              const k = Math.min(1,(performance.now()-t0)/dur);
-              other.halo.alpha  = startA + (0.9 - startA)*k;
-              other.halo.radius = startR + (46  - startR)*k;
-              if (k<1) requestAnimationFrame(tick);
-            })();
-          }
-
-          // 4) Diálogos cortos “Grr” → “Omaigos” y salto a retratos como ya tenías
-          openDialog([{speaker:'SSJ', text:'Grr'}], true);
-
-          CUT.hijackAction = ()=>{
-            if (dialogOpen){
-              closeDialog();
-              openDialog([{speaker:'Juan', text:'Omaigos'}], true);
-              return;
-            }
-          };
-
-          onDialogClosed = ()=>{
+          CUT.hijackAction = () => {
+            if (!dialogOpen) return;
+            // cerrar "Ah, pues no." y entonces caminar
+            closeDialog();
             CUT.hijackAction = null;
-            cine3_beginPortraits();
+
+            // 4) Autowalk hasta delante del SSJ, quedarse en idle up
+            const offset  = 22;
+            const targetX = other ? (other.x + offset) : player.x;
+            const targetY = player.y;
+
+            cineAutoWalkTo(targetX, targetY, 700, () => {
+              player.dir = 'up';     // idle up
+              player.moving = false;
+
+              // 5) Espera 1s y muestra "Grr"
+              setTimeout(() => {
+                openDialog([{ speaker:'SSJ', text:'Grr' }], true);
+
+                // Al cerrar "Grr" seguimos con tu secuencia de retratos
+                CUT.hijackAction = () => {
+                  if (dialogOpen){
+                    closeDialog();
+                    CUT.hijackAction = null;
+                    cine3_beginPortraits();
+                  }
+                };
+                onDialogClosed = () => {
+                  CUT.hijackAction = null;
+                  cine3_beginPortraits();
+                };
+              }, 1000);
+            });
           };
-        });
-      }, 1000);
+        }, 1000);
+      })();
     };
   }, 1000);
 }
