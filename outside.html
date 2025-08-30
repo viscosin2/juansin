@@ -1888,8 +1888,7 @@ function draw(){
   if (DEBUG_INTER){ /* ... igual que antes ... */ }
   if (DEBUG_CINE && CINE_BUILT.length){ /* ... igual que antes ... */ }
 
-  // Retratos / modo cine
-  portraitsDrawOverlay();
+  
 
   // >>>> NIEBLA AL FINAL DEL TODO (encima de todo lo anterior) <<<<
   ctx.save();
@@ -1898,6 +1897,9 @@ function draw(){
   ctx.clip();
   fogDraw();
   ctx.restore();
+
+  // Retratos / modo cine
+  portraitsDrawOverlay();
 }
 
 
