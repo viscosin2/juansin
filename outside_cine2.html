@@ -348,7 +348,7 @@ async function preloadCinematicImages(){
 
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
-  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
+  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
     { id:'cine2', rect:{type:'percent', x:79, y:13, w:10, h:40}, _done:false },
 
   { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
@@ -2492,51 +2492,27 @@ function startCinematic2(){
               if(isTyping){ advanceDialog(); return; }
               if(dialogOpen) closeDialog();
 
-              // 11: Juan “Buena va.”
-              openDialog([{speaker:'Juan', text:'Buena va.'}], true);
+openDialog([{speaker:'Juan', text:'Buena va.'}], true);
 
-              CUT.hijackAction = ()=>{
-                if(isTyping){ advanceDialog(); return; }
-                if(dialogOpen) closeDialog();
+CUT.hijackAction = ()=>{
+  if(isTyping){ advanceDialog(); return; }
+  if(dialogOpen) closeDialog();
 
-                // 12: overlay VS, entra Voldemort izq, “Sorpresa”
-                portraitsOpenVS({
-                  leftImg: IMG_VOLDEMORT_P, leftName:'Voldemort',
-                  rightImg: IMG_JUAN_BIG,  rightName:'Juan'
-                });
-                _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
-                  openDialog([{speaker:'Voldemort', text:'Sorpresa.'}], true);
+  // (12) se abre cinemática con overlays y portraits
+  portraitsOpenVS({
+    leftImg: IMG_VOLDEMORT_P,
+    leftName: 'Voldemort',
+    rightImg: IMG_JUAN_BIG,
+    rightName: 'Juan'
+  });
 
-                  CUT.hijackAction = ()=>{
-                    if(isTyping){ advanceDialog(); return; }
-                    if(dialogOpen) closeDialog();
+  // Voldemort entra desde la izquierda
+  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
+    openDialog([{speaker:'Voldemort', text:'Sorpresa.'}], true);
 
-                    // 13: Voldemort sale izq, Juan entra dcha, “Yias”
-                    _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
-                      _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
-                        openDialog([{speaker:'Juan', text:'Yias'}], true);
-
-                        CUT.hijackAction = ()=>{
-                          if(isTyping){ advanceDialog(); return; }
-                          if(dialogOpen) closeDialog();
-
-                          // 14: Juan sale dcha, entra Vold izq, “¿Luchamos?”
-                          _startSlide(PORTRAITS.right, PORTRAITS.right.outX, ()=>{
-                            _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
-                              openDialog([{speaker:'Voldemort', text:'¿Luchamos?'}], true);
-
-                              CUT.hijackAction = ()=>{
-                                if(isTyping){ advanceDialog(); return; }
-                                if(dialogOpen) closeDialog();
-
-                                // 15: sale Vold izq, “Ok”
-                                _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
-                                  _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
-                                    openDialog([{speaker:'Juan', text:'Ok'}], true);
-
-                                    CUT.hijackAction = ()=>{
-                                      if(isTyping){ advanceDialog(); return; }
-                                      if(dialogOpen) closeDialog();
+    CUT.hijackAction = ()=>{
+      if(isTyping){ advanceDialog(); return; }
+      if(dialogOpen) closeDialog();
 
                                       // 16: barras vida in (100/100)
                                       HPBARS.show(100,100);
