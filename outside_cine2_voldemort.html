@@ -2547,20 +2547,14 @@ function step2() {
   
 }
 
+  function _cine2_startFightUI(){
 
-/* === Cinemática: arranque UI de pelea (menú + ataque + rayo + portraits) === */
-function _cine2_startFightUI(){
-  console.log('[cine2] startFightUI');
+    PORTRAITS.right.img = IMG_JUAN_FIGHT;
+    HPBARS.leftName  = 'Voldemort';
+    HPBARS.rightName  = 'Juan';
+    HPBARS.alpha  = 0; 
+    HPBARS.show(100, 100);
 
-  // 1) Preparar UI de barras y retrato de Juan en modo pelea
-  PORTRAITS.right.img = IMG_JUAN_FIGHT;
-  HPBARS.leftName  = 'Voldemort';
-  HPBARS.rightName = 'Juan';
-  HPBARS.alpha = 0;
-  HPBARS.show(100, 100);
-
-  // Fade-in de barras
-  {
     const t0 = performance.now();
     const dur = 400;
     function step(t){
@@ -2569,188 +2563,88 @@ function _cine2_startFightUI(){
       if (k < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
-  }
 
-  // 2) Preguntar ataque
-  openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
+openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
+
+CUT.hijackAction = () => {
+  if (isTyping) return advanceDialog();
+
+  _cine2_openMenu();
 
   CUT.hijackAction = () => {
-    if (isTyping) return advanceDialog();
+    const choice = _cine2_menuConfirm();
+    if (choice < 0) return;
+    closeDialog();
+    _cine2_closeMenu();
 
-    console.log('[cine2] abrir menú de ataque');
-    _cine2_openMenu();
+    const R = PORTRAITS.right;
+    const L = PORTRAITS.left;
+    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+    const back = R.inX;
 
-    // A partir de aquí, este hijack SOLO atiende a confirmar el menú
-    CUT.hijackAction = () => {
-      const choice = _cine2_menuConfirm();
-      if (choice < 0) return; // aún no eligió
-      console.log('[cine2] opción elegida:', choice);
-
-      closeDialog();
-      _cine2_closeMenu();
-      CUT.hijackAction = null; // limpiamos para no encadenar más capas
-
-      // 3) Anim: Juan “amaga” y Voldemort recibe
-      const R = PORTRAITS.right;
-      const L = PORTRAITS.left;
-      const mid  = R.inX - Math.round(screenRect.dw * 0.04);
-      const back = R.inX;
-
-      // Seguridad por si aún no están inicializados esos nodos:
-      if (!R || !L){
-        console.warn('[cine2] WARN: retratos L/R no están listos; continúo con secuencia');
-      }
-
-      // Mini “dash” de Juan
-      if (R){
-        R.sFrom = 1.00; R.sTo = 1.06;
-        _startSlide(R, mid, () => {
-          R.sFrom = 1.06; R.sTo = 1.00;
-          _startSlide(R, back, () => {
-            // Sale Juan a la derecha para dejar foco al golpe de Voldemort
-            _startSlide(R, R.outX, () => {
-              // Entra Voldemort, recibe “golpe”: baja vida de Voldemort a 50
-              if (L){
-                L.x = L.outX;
-                _startSlide(L, L.inX, () => {
-                  const orig = L.inX;
-                  const kick = orig + Math.round(screenRect.dw * 0.02);
-
-                  L.sFrom = 1.00; L.sTo = 0.96;
-                  _startSlide(L, kick, () => {
-                    HPBARS.setTargets(100, 50);
-                    L.sFrom = 0.96; L.sTo = 1.00;
-                    _startSlide(L, orig, () => {
-                      // 4) “Me las pagarás.” y rayo
-                      _cine2_voldemortThreatThenRay();
-                    });
-                  });
-                });
-              } else {
-                // Si no hay L, seguimos igualmente
-                HPBARS.setTargets(100, 50);
-                _cine2_voldemortThreatThenRay();
-              }
-            });
-          });
-        });
-      } else {
-        // Fallback si R no existe
+    R.sFrom = 1.00; R.sTo = 1.06;
+    _startSlide(R, mid, () => {
+      R.sFrom = 1.06; R.sTo = 1.00;
+      _startSlide(R, back, () => {
+_startSlide(R, R.outX, () => {
+        
+      L.x = L.outX; 
+    _startSlide(L, L.inX, () => {
+      const orig = L.inX;
+      const kick = orig + Math.round(screenRect.dw * 0.02);
+    
+      L.sFrom = 1.00; L.sTo = 0.96;
+      _startSlide(L, kick, () => {
         HPBARS.setTargets(100, 50);
-        _cine2_voldemortThreatThenRay();
-      }
-    };
-  };
-}
-
-/* === Voldemort amenaza -> cerrar overlay/portraits -> rayo -> portraits post-rayo === */
-function _cine2_voldemortThreatThenRay(){
-  console.log('[cine2] voldemort amenaza y rayo');
-
+        L.sFrom = 0.96; L.sTo = 1.00;
+_startSlide(L, orig, () => {
   openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
 
   CUT.hijackAction = () => {
     if (isTyping) return advanceDialog();
 
-    // Cambiar sprite del NPC a perfil
-    const v = NPCS.find(n => n?.id === 'voldemort_perfil');
-    if (v){ v.img = IMG_VOLD_PERFIL; }
-
-    closeDialog();
-
-    // Cerrar overlay y portraits antes del rayo
+    let v = NPCS.find(n => n?.id === 'voldemort_perfil');
+    v.img = IMG_VOLD_PERFIL;
+    closeDialog();     
     _cine2_closePortraitsAndOverlay(() => {
       setTimeout(() => {
-        const vold = _cine2_getVold();
         openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
-
-        // Lanzar FX si tenemos el NPC
-        if (vold){ playVoldemortRayFx(vold); }
-
-        // Al pulsar acción tras el “Avada Kedavra!” → cerrar diálogo y abrir portraits post-rayo
-        CUT.hijackAction = () => {
-          if (isTyping) return advanceDialog();
-          closeDialog();
-          CUT.hijackAction = null;
-
-          // Aquí abrimos los portraits que quieres que salgan TRAS el rayo
-          const scriptPostRay = [
-            { speaker:'Juan',      text:'¿Eso era todo?' },
-            { speaker:'Voldemort', text:'No subestimes mi poder.' }
-          ];
-          _cine2_continueFight(scriptPostRay);
-        };
+          const vold = _cine2_getVold(); if(vold){ 
+          playVoldemortRayFx(vold);
+        }
+        _cine2_continueFight();  
       }, 1000);
     });
   };
-}
-
-/* === Continuar pelea: reabrir portraits con un guion dado y avanzar con acción === */
-function _cine2_continueFight(script){
-  console.log('[cine2] continueFight con script de', script?.length || 0, 'líneas');
-
-  // Sanidad
-  if (!Array.isArray(script) || script.length === 0){
-    console.warn('[cine2] Script vacío; no se abren portraits.');
-    return;
-  }
-
-  PORTRAITS.active = true;
-  PORTRAITS.script = script.slice();
-  PORTRAITS.idx    = 0;
-  PORTRAITS.blurK  = 0;
-  PORTRAITS.stage  = 'entering';
-
-  // Construir lados
-  PORTRAITS.left  = _makeSide(IMG_VOLD_P, 'left',  'Voldemort');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
-
-  // Colocaciones iniciales (fuera) + ajuste que pedías (+60)
-  PORTRAITS.left.x  = PORTRAITS.left.outX;
-  PORTRAITS.right.x = PORTRAITS.right.outX;
-  PORTRAITS.left.inX += 60;
-  PORTRAITS.left.x   += 60;
-
-  const line0 = PORTRAITS.script[PORTRAITS.idx];
-  const node0 = _nodeForSpeaker(line0.speaker);
-
-  // Entrar el que habla primero y abrir diálogo
-  _startSlide(node0, node0.inX, ()=>{
-    PORTRAITS.stage = 'speaking';
-    openDialog([line0], true);
-  });
-
-  // Un único hijack para avanzar TODO el script
-  CUT.hijackAction = ()=>{
-    if (!PORTRAITS.active || !dialogOpen) return;
-    if (isTyping) { advanceDialog(); return; }
-
-    // Pasar a la siguiente línea o cerrar si no hay más
-    PORTRAITS.idx++;
-    if (PORTRAITS.idx >= PORTRAITS.script.length){
-      closeDialog();
-      // Aquí decides si cierras portraits o arrancas otra fase
-      _cine2_closePortraits(()=>{
-        console.log('[cine2] portraits post-rayo cerrados.'); 
-        // …siguiente fase si la hubiese
-      });
-      CUT.hijackAction = null;
-      return;
-    }
-
-    const line = PORTRAITS.script[PORTRAITS.idx];
-    const node = _nodeForSpeaker(line.speaker);
-
-    // Cambiar foco: sale el otro, entra el que habla (si quieres alternar)
-    const other = (node === PORTRAITS.left) ? PORTRAITS.right : PORTRAITS.left;
-    _startSlide(other, other.outX, ()=>{
-      _startSlide(node, node.inX, ()=>{
-        openDialog([line], true);
+});
       });
     });
+        });
+      }); 
+    });
   };
+};
+
+
 }
 
+  function _cine2_continueFight(){
+    
+PORTRAITS.active = true; 
+PORTRAITS.script = script.slice(); 
+PORTRAITS.idx = 0; PORTRAITS.blurK = 0; 
+PORTRAITS.stage = 'entering'; 
+PORTRAITS.left = _makeSide(IMG_VOLD_P, 'left', 'Voldemort'); 
+PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan'); 
+PORTRAITS.left.x = PORTRAITS.left.outX;
+PORTRAITS.right.x = PORTRAITS.right.outX; 
+PORTRAITS.left.inX += 60;
+PORTRAITS.left.x   += 60;
+
+const line0 = PORTRAITS.script[PORTRAITS.idx]; 
+const node0 = _nodeForSpeaker(line0.speaker); 
+                            
+  }
 
   function _cine2_closePortraitsAndOverlay(done){
 
