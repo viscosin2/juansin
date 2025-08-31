@@ -2502,18 +2502,9 @@ function step2() {
 
 
   function _cine2_startFightUI(){
-  // Cambiar el retrato de Juan por el de pelea
-  if (PORTRAITS && PORTRAITS.right){
-    PORTRAITS.right.img = IMG_JUAN_FIGHT;   // usa tu asset de combate
-    // Si tu draw usa dimensiones del img, recalcula si lo necesitas:
-    if (PORTRAITS.right.img && PORTRAITS.right.img.width){
-      const n = PORTRAITS.right;
-      // Mantén su 'inX/outX' y baseline; no tocamos geometría salvo que tu _makeSide lo requiera
-      n.w = PORTRAITS.right.img.width;
-      n.h = PORTRAITS.right.img.height;
-    }
-  }
 
+    PORTRAITS.right = _makeSide(IMG_JUAN_FIGHT, 'right', 'Juan');
+    
   if (typeof HPBARS === 'object'){
     fightSetBars({
     leftName: enemigoNombre || 'Voldemort',
