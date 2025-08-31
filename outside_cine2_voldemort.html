@@ -2596,10 +2596,26 @@ _startSlide(R, R.outX, () => {
       _startSlide(L, kick, () => {
         HPBARS.setTargets(100, 50);
         L.sFrom = 0.96; L.sTo = 1.00;
-        _startSlide(L, orig, () => {
-          // aquí puedes continuar el flujo (otro diálogo, siguiente fase, etc.)
-          // p.ej.: CUT.hijackAction = ()=>{ ... };
-        });
+_startSlide(L, orig, () => {
+  // 1) Voldemort habla
+  openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
+
+  // 2) Acción: cerrar diálogo + portraits + overlay, cambiar sprite y, tras 1s, rayo + diálogo
+  CUT.hijackAction = () => {
+    if (isTyping) return advanceDialog();
+
+    closeDialog();
+    _cine2_closePortraitsAndOverlay(() => {
+      _cine2_setVoldNpcPerfil(); // cambia a voldemort_perfil.png
+
+      setTimeout(() => {
+        openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
+        _cine2_castGreenRay(); // rayo hacia la izquierda
+      }, 1000);
+    });
+  };
+});
+
       });
     });
         });
@@ -2614,6 +2630,90 @@ _startSlide(R, R.outX, () => {
 
 
 }
+
+  function _cine2_closePortraitsAndOverlay(done){
+  // Cierra portraits con slide-out y baja overlay si la hay
+  const L = PORTRAITS.left, R = PORTRAITS.right;
+  let pending = 0;
+  const next = ()=>{ if (--pending<=0){ PORTRAITS.active=false; if (typeof done==='function') done(); } };
+
+  if (L){ pending++; _startSlide(L, L.outX, next); }
+  if (R){ pending++; _startSlide(R, R.outX, next); }
+
+  // si no había portraits activos, seguimos
+  if (pending===0) { if (typeof done==='function') done(); }
+
+  // overlay (si existe un nodo/flag)
+  try{
+    const ov = document.getElementById('portrait-overlay') || document.querySelector('.portrait-overlay');
+    if (ov){ ov.style.opacity = '0'; setTimeout(()=>{ ov.style.display='none'; }, 220); }
+    if (PORTRAITS.overlayAlpha !== undefined) PORTRAITS.overlayAlpha = 0;
+  }catch(e){}
+}
+
+function _cine2_setVoldNpcPerfil(){
+  // cambia el PNG del NPC Voldemort a voldemort_perfil.png
+  const v = (typeof _cine2_getVold === 'function') ? _cine2_getVold() : null;
+  if (!v) return;
+
+  // Usa tu asset pipeline (ajusta la constante si ya la tienes)
+  if (typeof IMG_VOLDEMORT_PERFIL !== 'undefined'){
+    v.img = IMG_VOLDEMORT_PERFIL;
+  } else {
+    // fallback si manejas sprites por DOM <img>
+    if (v.el && v.el.tagName === 'IMG'){ v.el.src = 'assets/voldemort_perfil.png'; }
+    v.imgPath = 'assets/voldemort_perfil.png';
+  }
+}
+
+function _cine2_castGreenRay(){
+  // Lanza un rayo verde desde la posición del NPC Voldemort hacia la izquierda
+  const v = (typeof _cine2_getVold === 'function') ? _cine2_getVold() : null;
+  if (!v) return;
+
+  // Contenedor de la escena (ajusta si tu root es otro)
+  const root = document.getElementById('game') || document.body;
+
+  const ray = document.createElement('div');
+  ray.className = 'spell-ray';
+  root.appendChild(ray);
+
+  // Coordenadas aproximadas (ajusta si tienes conversión world->screen)
+  const startX = (v.screenX || v.x || 0) + (v.w ? v.w*0.6 : 24); // un poco a la derecha del sprite
+  const startY = (v.screenY || v.y || 0) + (v.h ? v.h*0.35 : 16); // altura media
+
+  // Tamaño base
+  const h = 4;
+  ray.style.position = 'absolute';
+  ray.style.left = startX + 'px';
+  ray.style.top  = startY + 'px';
+  ray.style.width  = '18px';
+  ray.style.height = h + 'px';
+  ray.style.background = 'linear-gradient(90deg, rgba(0,255,120,0.0) 0%, rgba(0,255,120,0.9) 60%, rgba(0,255,120,1) 100%)';
+  ray.style.boxShadow = '0 0 6px rgba(0,255,120,0.9), 0 0 12px rgba(0,255,120,0.6)';
+  ray.style.pointerEvents = 'none';
+  ray.style.zIndex = 999;
+
+  // Animación a la izquierda
+  const dur = 450; // ms
+  const travel = (window.innerWidth || 800) + 120; // lo suficiente para salir de pantalla
+  const t0 = performance.now();
+
+  function step(t){
+    const k = Math.min(1, (t - t0) / dur);
+    const x = startX - k * travel;
+    ray.style.transform = `translateX(${x - startX}px)`;
+    // estira un poco con el tiempo para que parezca "haz"
+    ray.style.width = (18 + k*40) + 'px';
+
+    if (k < 1) requestAnimationFrame(step);
+    else {
+      ray.remove();
+    }
+  }
+  requestAnimationFrame(step);
+}
+
 
   function step9(){
   const R = PORTRAITS.right; // Juan
@@ -2698,8 +2798,8 @@ PORTRAITS.left = _makeSide(IMG_VOLD_P, 'left', 'Voldemort');
 PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan'); 
 PORTRAITS.left.x = PORTRAITS.left.outX;
 PORTRAITS.right.x = PORTRAITS.right.outX; 
-PORTRAITS.left.inX += 20;
-PORTRAITS.left.x   += 20;
+PORTRAITS.left.inX += 40;
+PORTRAITS.left.x   += 40;
 
 const line0 = PORTRAITS.script[PORTRAITS.idx]; 
 const node0 = _nodeForSpeaker(line0.speaker); 
