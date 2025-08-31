@@ -2550,72 +2550,46 @@ function step2() {
   HPBARS.juan = rightHP;
 }
   
-function _cine2_openPortraits(){
-  const script = [
-    { speaker:'Voldemort', text:'Sorpresa.' },
-    { speaker:'Juan',      text:'Omaigos.' },
-    { speaker:'Voldemort', text:'¿Luchamos?' },
-    { speaker:'Juan',      text:'Ok.' }
-  ];
+function _cine2_openPortraits(){ 
+const script = [ 
+{ speaker:'Voldemort', text:'Sorpresa.' }, 
+{ speaker:'Juan', text:'Omaigos.' }, 
+{ speaker:'Voldemort', text:'¿Luchamos?' }, 
+{ speaker:'Juan', text:'Ok.' } ]; 
 
-  // Asegura el layout de retratos (franjas) para cine
-  PORTRAITS.forceBlurFallback = !(typeof supportsCanvasFilter === 'function' && supportsCanvasFilter());
-  PORTRAITS.layout = 'letterbox';
+PORTRAITS.active = true; 
+PORTRAITS.script = script.slice(); 
+PORTRAITS.idx = 0; PORTRAITS.blurK = 0; 
+PORTRAITS.stage = 'entering'; 
+PORTRAITS.left = _makeSide(IMG_GANDALF, 'left', 'Voldemort'); 
+PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan'); 
+PORTRAITS.left.x = PORTRAITS.left.outX;
+PORTRAITS.right.x = PORTRAITS.right.outX; 
 
-  PORTRAITS.active = true;
-  PORTRAITS.script = script.slice();
-  PORTRAITS.idx    = 0;
-  PORTRAITS.blurK  = 0;
-  PORTRAITS.stage  = 'entering';
+const line0 = PORTRAITS.script[PORTRAITS.idx]; 
+const node0 = _nodeForSpeaker(line0.speaker); 
 
-  // Nodos (usa tus imágenes actuales)
-  PORTRAITS.left  = _makeSide(IMG_GANDALF,  'left',  'Voldemort');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
+_startSlide(node0, node0.inX, ()=>{ PORTRAITS.stage = 'speaking'; 
 
-  PORTRAITS.left.x  = PORTRAITS.left.outX;
-  PORTRAITS.right.x = PORTRAITS.right.outX;
+openDialog([line0], true); }); 
 
-  const line0 = PORTRAITS.script[PORTRAITS.idx];
-  const node0 = _nodeForSpeaker(line0.speaker);
+CUT.hijackAction = () => { if (!PORTRAITS.active) return; 
 
-  _startSlide(node0, node0.inX, ()=>{
-    PORTRAITS.stage = 'speaking';
-    openDialog([line0], true);
-  });
+if (!dialogOpen) return; 
+if (isTyping){ advanceDialog(); return; } 
 
-  CUT.hijackAction = () => {
-    if (!PORTRAITS.active) return;
-    if (!dialogOpen) return;
+const next = PORTRAITS.script[PORTRAITS.idx+1]; 
+const cur = dialogScript[dialogIndex]; 
 
-    if (isTyping){ advanceDialog(); return; }
+if (next && cur && next.speaker === cur.speaker){ 
 
-    const next = PORTRAITS.script[PORTRAITS.idx+1];
-    const cur  = dialogScript[dialogIndex];
+PORTRAITS.idx++; dialogEl.classList.remove('ready'); 
 
-    // Misma persona sigue hablando: avanzamos sin mover retratos
-    if (next && cur && next.speaker === cur.speaker){
-      PORTRAITS.idx++;
-      dialogEl.classList.remove('ready'); 
-      dialogHintEl.style.opacity = 0;
-      dialogScript = [ next ]; 
-      dialogIndex = 0;
-      renderCurrentLine(true);
-      return;
-    }
-
-    // Quedan líneas -> cerramos y pasamos a la siguiente (con slide si toca)
-    if (next){
-      closeDialog();
-      _nextPortraitLine();
-      return;
-    }
-
-    // NO quedan líneas -> cerramos, cambiamos retrato de Juan y mostramos barras
-    closeDialog();
-    _cine2_startFightUI();   // <<--- aquí ocurre la magia
-  };
-}
-
+dialogHintEl.style.opacity = 0; dialogScript = [ next ]; 
+dialogIndex = 0; renderCurrentLine(true); return; } 
+closeDialog(); 
+_nextPortraitLine(); }; }
+  
 
 function _cine2_swapVoldProfileToFront(){
   const npc = NPCS.find(n => n?.id === 'voldemort_perfil');
