@@ -2446,10 +2446,12 @@ function step2() {
       const ty = v ? v.y : player.y;
 
       cine2AutoWalkTo(tx, ty, 700, () => {
-        player.moving=false;
-        player.frame = 0;
-        player.frameTime = 0;
-        player.dir = 'right';
+  CUT.phase = 'idle';
+  player.dir = 'right';
+  player.moving = false;
+  player.vx = 0; player.vy = 0;
+  player.frame = 0;
+  player.frameTime = 0;
         step3();
       });
     }
