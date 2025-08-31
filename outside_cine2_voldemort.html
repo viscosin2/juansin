@@ -953,7 +953,7 @@ function _startSlide(node, toX, cb){
 
 
 function _nodeForSpeaker(name){
-  if (name === 'Gandalf' || name === 'SSJ') return PORTRAITS.left;
+  if (name === 'Gandalf' || name === 'SSJ' || name === 'Voldemort') return PORTRAITS.left;
   return PORTRAITS.right;
 }
 
@@ -1018,7 +1018,6 @@ function _nextPortraitLine(){
   const prevNode = _nodeForSpeaker(prev.speaker);
   const nextNode = _nodeForSpeaker(next.speaker);
 
-  // ✨ Si el speaker NO cambia, no deslizamos nada: solo mostramos el texto
   if (prev.speaker === next.speaker){
     PORTRAITS.stage = 'speaking';
     openDialog([next], true);
@@ -2493,26 +2492,6 @@ function step2() {
   
 }
 
-function _nodeForSpeaker2(name){
-  const key = (name||'').toLowerCase();
-  if (key === 'voldemort'){
-    if (!PORTRAITS.left){
-      // usa portrait de Voldemort si lo tienes; si no, tu placeholder (Gandalf)
-      const img = (typeof IMG_VOLD_P !== 'undefined' && IMG_VOLD_P) ? IMG_VOLD_P : IMG_GANDALF;
-      PORTRAITS.left = _makeSide(img, 'left', 'Voldemort', 'top');
-      PORTRAITS.left.flipX = true;
-      PORTRAITS.left.x = PORTRAITS.left.outX;
-    }
-    return PORTRAITS.left;
-  }
-
-  if (!PORTRAITS.right){
-    PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan', 'bottom');
-    PORTRAITS.right.x = PORTRAITS.right.outX;
-  }
-  return PORTRAITS.right;
-}
-
 function _cine2_openPortraits(){
   const script = [
     { speaker:'Voldemort', text:'Sorpresa.' },
@@ -2527,69 +2506,39 @@ function _cine2_openPortraits(){
   PORTRAITS.blurK  = 0;
   PORTRAITS.stage  = 'entering';
 
-  PORTRAITS.left  = _nodeForSpeaker2('Voldemort');
-  PORTRAITS.right = _nodeForSpeaker2('Juan');
+  PORTRAITS.left  = _makeSide(IMG_GANDALF,  'left',  'Voldemort');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
+
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
 
   const line0 = PORTRAITS.script[PORTRAITS.idx];
-  const node0 = _nodeForSpeaker2(line0.speaker);
-
-  _startSlide(node0, node0.inX, ()=>{
+  const node0 = _nodeForSpeaker(line0.speaker);
+    _startSlide(node0, node0.inX, ()=>{
     PORTRAITS.stage = 'speaking';
     openDialog([line0], true);
   });
 
   CUT.hijackAction = () => {
-    if (!PORTRAITS.active || !dialogOpen) return;
+  if (!PORTRAITS.active) return;
+  if (!dialogOpen) return;
 
-    if (isTyping){ advanceDialog(); return; }
+  if (isTyping){ advanceDialog(); return; }
+  const next = PORTRAITS.script[PORTRAITS.idx+1];
+  const cur  = dialogScript[dialogIndex];
 
-    const next = PORTRAITS.script[PORTRAITS.idx+1];
-    const cur  = dialogScript[dialogIndex];
-
-    if (next && cur && next.speaker === cur.speaker){
-      PORTRAITS.idx++;
-      dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
-      dialogScript = [ next ]; dialogIndex = 0;
-      renderCurrentLine(true);
-      return;
-    }
-
-    closeDialog();
-    _nextPortraitLine2();
+  if (next && cur && next.speaker === cur.speaker){
+    PORTRAITS.idx++;
+    dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
+    dialogScript = [ next ]; dialogIndex = 0;
+    renderCurrentLine(true);
+    return;
+  }
+        closeDialog();
+    _nextPortraitLine();
   };
+  
 }
-
-function _nextPortraitLine2(){
-  PORTRAITS.idx++;
-  if (PORTRAITS.idx >= PORTRAITS.script.length){
-    _endPortraits();
-    return;
-  }
-
-  const prev = PORTRAITS.script[PORTRAITS.idx-1];
-  const next = PORTRAITS.script[PORTRAITS.idx];
-
-  const prevNode = _nodeForSpeaker2(prev.speaker);
-  const nextNode = _nodeForSpeaker2(next.speaker);
-
-  if (prev.speaker === next.speaker){
-    PORTRAITS.stage = 'speaking';
-    openDialog([next], true);
-    return;
-  }
-
-  PORTRAITS.stage = 'exiting';
-  _startSlide(prevNode, prevNode.outX, ()=>{
-    PORTRAITS.stage = 'entering';
-    _startSlide(nextNode, nextNode.inX, ()=>{
-      PORTRAITS.stage = 'speaking';
-      openDialog([next], true);
-    });
-  });
-}
-
-
-
 
 function _cine2_swapVoldProfileToFront(){
   const npc = NPCS.find(n => n?.id === 'voldemort_perfil');
