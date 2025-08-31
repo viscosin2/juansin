@@ -203,6 +203,7 @@ const PORTRAITS = {
 
 const PORTRAIT_SCALES = {
   Gandalf: 2,
+  GandalfW: 2.4,
   Juan:    1.7,
   Voldemort: 2,
   SSJ:     1.7
@@ -358,7 +359,7 @@ async function preloadCinematicImages(){
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
   { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
-      { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:false },
+  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:false },
   { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
 
 ];
@@ -2088,7 +2089,7 @@ function unfreezeIdle(){
   ];
 
   PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
-  const gPortrait = IMG_GANDALF_WHITE_P || IMG_GANDALF; // fallback
+  const gPortrait = IMG_GANDALF_WHITE_P; // fallback
   PORTRAITS.active = true;
   PORTRAITS.script = script.slice();
   PORTRAITS.idx = 0;
@@ -2097,7 +2098,7 @@ function unfreezeIdle(){
   PORTRAITS.soloEpic = false;
 
   // Lados
-  PORTRAITS.left  = _makeSide(gPortrait,    'left',  'Gandalf');
+  PORTRAITS.left  = _makeSide(gPortrait,    'left',  'GandalfW');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
