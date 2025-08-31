@@ -2731,19 +2731,22 @@ CUT.hijackAction = () => {
   if (isTyping){ advanceDialog(); return; }
   closeDialog();
 
-  // Caída del portrait de Voldemort
-  const L = PORTRAITS.left;
-  const startY = (L.y ?? 0);
-  const endY   = startY + Math.round(screenRect.dh * 0.8); // resbala ~80% de alto
+const L = PORTRAITS.left;
+const startY = (L.y ?? 0);
+const endY   = startY + Math.round(screenRect.dh * 0.8); // resbala ~80% de alto
+const t0 = performance.now();
+const dur = 550;
 
-  const t0 = performance.now();
-  const dur = 550;
-  function fallStep(t){
-    const k = Math.min(1, (t - t0) / dur);
-    L.y = startY + (endY - startY) * k;
+function fallStep(t){
+  const k = Math.min(1, (t - t0) / dur);
+  L.y = startY + (endY - startY) * k;
+  if (k < 1){
+    requestAnimationFrame(fallStep);
+  }else{
+    endCine2(); // ← cuando termina la caída, cerramos cine2
   }
-  requestAnimationFrame(fallStep);
-  endCine2();
+}
+requestAnimationFrame(fallStep);
 };
                       });
                     });
@@ -2760,35 +2763,63 @@ CUT.hijackAction = () => {
 }
 
 
-  function endCine2(){
-  CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
-  ambientLock=false;
-    
-  openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true);
-    CUT.hijackAction = () => {
-      if (isTyping){ advanceDialog(); return; }
-      closeDialog();
-    };
-}
-  
-  function _cine2_closePortraitsAndOverlay(done){
+function endCine2(){
+  // 1) Cerrar UI de pelea (barras)
+  if (typeof HPBARS.hide === 'function'){
+    HPBARS.hide();
+  }else{
+    HPBARS.alpha = 0;
+  }
 
-  const L = PORTRAITS.left, R = PORTRAITS.right;
-  let pending = 0;
-  const next = ()=>{ if (--pending<=0){ PORTRAITS.active=false; if (typeof done==='function') done(); } };
-
-  if (L){ pending++; _startSlide(L, L.outX, next); }
-  if (R){ pending++; _startSlide(R, R.outX, next); }
-
-  if (pending===0) { if (typeof done==='function') done(); }
-  HPBARS.hide(); 
+  // 2) Cerrar portraits con salida limpia y quitar blur
   try{
-    const ov = document.getElementById('portrait-overlay') || document.querySelector('.portrait-overlay');
-    if (ov){ ov.style.opacity = '0'; setTimeout(()=>{ ov.style.display='none'; }, 220); }
-    if (PORTRAITS.overlayAlpha !== undefined) PORTRAITS.overlayAlpha = 0;
-  }catch(e){}
+    PORTRAITS.blurK = 0;
+    if (PORTRAITS.left){
+      _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{});
+    }
+    if (PORTRAITS.right){
+      _startSlide(PORTRAITS.right, PORTRAITS.right.outX, ()=>{});
+    }
+    PORTRAITS.active = false;
+  }catch(e){
+    console.warn('[cine2] cerrar portraits:', e);
+    PORTRAITS.active = false;
+  }
+
+  // 3) Cerrar overlay/negro si lo abrimos para la cine
+  // Usa tu API real (closeOverlay / OVERLAY.hide / setOverlay(false), etc.)
+  if (typeof closeOverlay === 'function'){
+    closeOverlay();
+  }else if (typeof OVERLAY !== 'undefined' && OVERLAY && typeof OVERLAY.hide === 'function'){
+    OVERLAY.hide();
+  }else if (typeof setOverlay === 'function'){
+    setOverlay(false);
+  }
+
+  // 4) Diálogo final de Juan
+  openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true);
+  CUT.hijackAction = () => {
+    if (isTyping){ advanceDialog(); return; }
+    closeDialog();
+
+    // 5) Marcar cine2 como hecha (zona + flag global) y limpiar locks
+    try{
+      const zone = (typeof CINE_ZONES !== 'undefined') ? CINE_ZONES.find(z => z.id === 'cine2') : null;
+      if (zone) zone._done = true;
+      if (typeof setFlag === 'function') setFlag('cine2Done', true);
+      else if (typeof GAME !== 'undefined' && GAME && GAME.flags) GAME.flags.cine2Done = true;
+    }catch(e){ console.warn('[cine2] flag done:', e); }
+
+    // 6) Liberar estado de la cinemática (SIN resetear cosas globales de tu juego)
+    CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
+    ambientLock=false;
+    if (typeof freezeIdle === 'function') freezeIdle(null);
+
+    console.log('[cine2] done');
+  };
 }
 
+  
 
 // ========== FX rayo verde desde Voldemort hacia la izquierda ==========
 function playVoldemortRayFx(fromNpc){
