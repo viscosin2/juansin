@@ -2585,22 +2585,29 @@ CUT.hijackAction = () => {
     _startSlide(R, mid, () => {
       R.sFrom = 1.06; R.sTo = 1.00;
       _startSlide(R, back, () => {
-
-        // Voldemort: reacción de recibir (kick)
-        const orig = L.inX;
-        const kick = orig + Math.round(screenRect.dw * 0.02);
-        L.sFrom = 1.00; L.sTo = 0.96;
-        _startSlide(L, kick, () => {
-          L.sFrom = 0.96; L.sTo = 1.00;
-          _startSlide(L, orig, () => {
-            HPBARS.setTargets(1, 50);
-
-            // Después del golpe, Juan sale y re-entra Voldemort “recibiendo”
-            setTimeout(step9, 800);
-          });
+_startSlide(R, R.outX, () => {
+        
+       L.x = L.outX; // por si acaso
+    _startSlide(L, L.inX, () => {
+      const orig = L.inX;
+      const kick = orig + Math.round(screenRect.dw * 0.02);
+    
+      L.sFrom = 1.00; L.sTo = 0.96;
+      _startSlide(L, kick, () => {
+        HPBARS.setTargets(100, 50);
+        L.sFrom = 0.96; L.sTo = 1.00;
+        _startSlide(L, orig, () => {
+          // aquí puedes continuar el flujo (otro diálogo, siguiente fase, etc.)
+          // p.ej.: CUT.hijackAction = ()=>{ ... };
         });
-
       });
+    });
+        });
+      });
+
+
+
+      
     });
   };
 };
@@ -2621,8 +2628,10 @@ CUT.hijackAction = () => {
       // 3) Mini “hit” al entrar (recibir)
       const orig = L.inX;
       const kick = orig + Math.round(screenRect.dw * 0.02);
+    
       L.sFrom = 1.00; L.sTo = 0.96;
       _startSlide(L, kick, () => {
+        HPBARS.setTargets(100, 50);
         L.sFrom = 0.96; L.sTo = 1.00;
         _startSlide(L, orig, () => {
           // aquí puedes continuar el flujo (otro diálogo, siguiente fase, etc.)
