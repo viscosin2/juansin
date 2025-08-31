@@ -2441,8 +2441,21 @@ function step2() {
       closeDialog();
       CUT.hijackAction = null;
 
+      const v = _cine2_getVold();
+      const tx = v ? (v.x - 5) : player.x;
+      const ty = v ? v.y : player.y;
+
+      cineAutoWalkTo(tx, ty, 700, () => {
+        player.dir = v && player.x < v.x ? 'right' : 'left';
+        step3();
+      });
+
     }
-  }
+}
+
+function _cine2_getVold(){ return NPCS.find(n => n.type === 'voldemort_perfil') || NPCS.find(n=>/voldemort/i.test(n.id||'')) || null; }
+
+  
 // **************************** CINEMATICA 3
 
 // === Helpers globales para la cine 3 ===
