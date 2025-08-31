@@ -2449,11 +2449,52 @@ function step2() {
 
   cine2AutoWalkTo(tx, ty, 700, () => {
     if (v) player.dir = (player.x < v.x) ? 'right' : 'left';
-    if (typeof step3 === 'function') step3();
+    step3();
   });
 }
 
+   function step3() {
+      openDialog([{ speaker: 'Juan', text: '¿Quién eres?' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
 
+        openDialog([{ speaker: '???', text: 'Adivina.' }], true);
+        CUT.hijackAction = () => {
+          if (isTyping) return advanceDialog();
+          closeDialog();
+
+          openDialog([{ speaker: 'Juan', text: 'No tengo tiempo.' }], true);
+          CUT.hijackAction = () => {
+            if (isTyping) return advanceDialog();
+            closeDialog();
+            CUT.hijackAction = null;
+            setTimeout(step4, 1000);
+          };
+        };
+      };
+    }
+  
+async function step4() {
+      await _cine2_swapVoldProfileToFront();
+      openDialog([{ speaker: 'Voldemort', text: 'Soy Lord Voldemort.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+      };
+    }
+  
+}
+
+  async function _cine2_swapVoldProfileToFront(){
+  const npc = NPCS.find(n => n.type === 'voldemort_perfil') || NPCS.find(n=>/voldemort/i.test(n.id||''));
+  if (!npc) return;
+  if (IMG_VOLD_FRONT){ 
+    npc.img = IMG_VOLD_FRONT;
+    npc.iw  = IMG_VOLD_FRONT.naturalWidth;
+    npc.ih  = IMG_VOLD_FRONT.naturalHeight;
+    npc._fxActive = true; npc._fxUntil = performance.now() + 300;
+  }
 }
 
 function _cine2_getVold(){
