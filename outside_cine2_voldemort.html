@@ -2446,7 +2446,10 @@ function step2() {
       const ty = v ? v.y : player.y;
 
       cine2AutoWalkTo(tx, ty, 700, () => {
-        player.dir = v && player.x < v.x ? 'right' : 'left';
+        player.moving=false;
+        player.frame = 0;
+        player.frameTime = 0;
+        player.dir = 'right';
         step3();
       });
     }
