@@ -2503,30 +2503,9 @@ function step2() {
 
   function _cine2_startFightUI(){
 
-    PORTRAITS.right = _makeSide(IMG_JUAN_FIGHT, 'right', 'Juan');
+  PORTRAITS.right.img = IMG_JUAN_FIGHT;
     
-  if (typeof HPBARS === 'object'){
-    fightSetBars({
-    leftName: enemigoNombre || 'Voldemort',
-    rightName: jugadorNombre || 'Juan',
-    leftHP: 100,
-    rightHP: 100,
-  });
-    
-    HPBARS.active = true;
-    HPBARS.alpha  = 0;       
-    HPBARS.ssj    = 100;     
-    HPBARS.voldemort   = 100;
 
-    const t0 = performance.now();
-    const dur = 400; // ms
-    function step(t){
-      const k = Math.min(1, (t - t0) / dur);
-      HPBARS.alpha = k;
-      if (k < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }
 
   // Si quieres, aquí puedes desactivar el hijack o cambiar de fase:
   // CUT.hijackAction = null; 
