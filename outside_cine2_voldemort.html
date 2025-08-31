@@ -408,7 +408,7 @@ const NPC_PLACED = {
   gato1: [{type:'percent', x: 21, y: 61, interact: { x:-14, y: 12, w:28, h:16 }, 
      dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
     }],
-  voldemort_perfil: [{type:'percent', x: 82, y: 15.5, interact: { x:-35, y: 12, w:50, h:16 }, 
+  voldemort_perfil: [{id:'voldemort_perfil',type:'percent', x: 82, y: 15.5, interact: { x:-35, y: 12, w:50, h:16 }, 
      dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
     }],
   soldado1: [{id:'gunner1', type:'percent', x: 94, y: 66, interact: { x:-14, y: 12, w:28, h:16 },onFire:true, 
@@ -2453,7 +2453,7 @@ function step2() {
     }
 }
 
-function _cine2_getVold(){ return NPCS.find(n => n.type === 'voldemort_perfil') || NPCS.find(n=>/voldemort/i.test(n.id||'')) || null; }
+function _cine2_getVold(){ return NPC_PLACED.find(n => n.id === 'voldemort_perfil') || NPC_PLACED.find(n=>/voldemort/i.test(n.id||'')) || null; }
 
   
 // **************************** CINEMATICA 3
