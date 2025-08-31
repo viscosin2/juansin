@@ -2481,8 +2481,45 @@ function step2() {
         closeDialog();
       };
     }
+
+               function step5() {
+      openDialog([{ speaker: 'Juan', text: 'Buena, va.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        step6();
+      };
+    }
+
+      function step6() {
+      _cine2_openPortraits();
+      openDialog([{ speaker: 'Voldemort', text: 'Sorpresa.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        _startSlide(PORTRAITS.left, PORTRAITS.left.outX, () => {
+          openDialog([{ speaker: 'Juan', text: 'Wow.' }], true);
+          CUT.hijackAction = () => {
+            if (isTyping) return advanceDialog();
+            closeDialog();
+            _startSlide(PORTRAITS.right, PORTRAITS.right.outX, step7);
+          };
+        });
+      };
+    }
   
 }
+
+  function _cine2_openPortraits(){
+  PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
+  PORTRAITS.active = true; PORTRAITS.stage = 'entering'; PORTRAITS.blurK = 0;
+  PORTRAITS.left  = _makeSide(IMG_VOLD_P || IMG_GANDALF, 'left', 'Voldemort');
+  PORTRAITS.right = _makeSide(IMG_JUAN_FIGHT || IMG_JUAN_BIG, 'right', 'Juan', 'bottom');
+  PORTRAITS.left.x  = PORTRAITS.left.outX;  PORTRAITS.right.x = PORTRAITS.right.outX;
+  HPBARS.show(10, 100);
+  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{ _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{ PORTRAITS.stage='speaking'; }); });
+}
+
 
 function _cine2_swapVoldProfileToFront(){
   const npc = NPCS.find(n => n?.id === 'voldemort_perfil');
