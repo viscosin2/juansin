@@ -2638,7 +2638,7 @@ venganzaVoldemort();
   }
   
   function _cine2_continueFight(){
-    PORTRAITS.active = true; 
+PORTRAITS.active = true; 
 PORTRAITS.script = script.slice(); 
 PORTRAITS.idx = 0; PORTRAITS.blurK = 0; 
 PORTRAITS.stage = 'entering'; 
@@ -2649,9 +2649,82 @@ PORTRAITS.right.x = PORTRAITS.right.outX;
 PORTRAITS.left.inX += 60;
 PORTRAITS.left.x   += 60;
 
+    HPBARS.leftName  = 'Voldemort';
+    HPBARS.rightName  = 'Juan';
+    HPBARS.alpha  = 0; 
+    HPBARS.show(100, 100);
+
+    const t0 = performance.now();
+    const dur = 400;
+    function step(t){
+      const k = Math.min(1, (t - t0) / dur);
+      HPBARS.alpha = k;
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+
 const line0 = PORTRAITS.script[PORTRAITS.idx]; 
 const node0 = _nodeForSpeaker(line0.speaker); 
-                            
+
+
+
+    
+R.x = R.outX; 
+    _startSlide(R, R.inX, () => {
+      const orig = R.inX;
+      const kick = orig + Math.round(screenRect.dw * 0.02);
+    
+      R.sFrom = 1.00; R.sTo = 0.96;
+      _startSlide(R, kick, () => {
+        HPBARS.setTargets(10, 50);
+        R.sFrom = 0.96; R.sTo = 1.00;
+_startSlide(R, orig, () => {
+  openDialog([{ speaker: '', text: 'Ha sido un golpe duro.' },{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
+CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        _cine2_openMenu();
+  
+    CUT.hijackAction = () => {
+    const choice = _cine2_menuConfirm();
+    if (choice < 0) return;
+    closeDialog();
+    _cine2_closeMenu();
+
+    const R = PORTRAITS.right;
+    const L = PORTRAITS.left;
+    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+    const back = R.inX;
+
+    R.sFrom = 1.00; R.sTo = 1.06;
+    _startSlide(R, mid, () => {
+      R.sFrom = 1.06; R.sTo = 1.00;
+      _startSlide(R, back, () => {
+_startSlide(R, R.outX, () => {
+        
+      L.x = L.outX; 
+    _startSlide(L, L.inX, () => {
+      const orig = L.inX;
+      const kick = orig + Math.round(screenRect.dw * 0.02);
+    
+      L.sFrom = 1.00; L.sTo = 0.96;
+      _startSlide(L, kick, () => {
+        HPBARS.setTargets(0, 10);
+        L.sFrom = 0.96; L.sTo = 1.00;
+_startSlide(L, orig, () => {
+  openDialog([{ speaker:'Voldemort', text:'No puede ser.' }], true);
+CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+};
+    });
+
+      });
+    });
+        });
+      }); 
+    });
+  };
+                           
   }
 
   function _cine2_closePortraitsAndOverlay(done){
