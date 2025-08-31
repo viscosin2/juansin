@@ -104,7 +104,7 @@ const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
 const DEBUG_OBS = false;
 const DEBUG_INTER = false;
 const DEBUG_AMBIENT = false;
-const DEBUG_CINE = true; 
+const DEBUG_CINE = false; 
 const DEPTH_BAND = 12;
 let interactBlocked = true;     
 let initialDialogLock = false;  
@@ -2669,6 +2669,8 @@ function _cine2_getVold(){
   return v || null;
 }
 
+  
+
 function cine2AutoWalkTo(targetX, targetY, ms, onDone, { followCam = true, stepPeriodMs = 120 } = {}){
   CUT.phase = 'autowalk';
   const sx = player.x, sy = player.y;
@@ -2734,7 +2736,7 @@ async function applyOtherJuanSSJ({boostHalo=true} = {}){
   return other;
 }
 
-// ——— reemplazo completo ———
+    
 function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepPeriodMs = 120 } = {}){
   CUT.phase = 'autowalk';
   const sx = player.x, sy = player.y;
@@ -2809,19 +2811,15 @@ async function startCinematic3(){
             const targetX1 = other.x;
             const targetY1 = player.y;
 
-            cineAutoWalkTo(targetX1, targetY1, 500, () => {
-              // tramo 2: subir hasta quedar frente al SSJ (idle up y pies parados al final)
-              const targetX2 = other.x;
-              const targetY2 = other.y + 30;
 
-              cineAutoWalkTo(targetX2, targetY2, 700, () => {
-                CUT.phase = 'idle';
-                player.dir = 'up';
-                player.moving = false;
-                player.frame = 0; player.frameTime = 0;
 
-                // un mini beat y seguimos con “Grr” → retratos
-                setTimeout(() => {
+            const v  = _cine3_getSSJ();
+            const tx = v ? (v.x - 25) : player.x;
+            const ty = v ?  v.y  - 14    : player.y;
+
+  cine2AutoWalkTo(tx, ty, 700, () => {
+    player.dir = 'up';
+                    setTimeout(() => {
                   openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'Grr' }], true);
                   CUT.hijackAction = () => {
                     if (dialogOpen){
@@ -2831,8 +2829,7 @@ async function startCinematic3(){
                     }
                   };
                 }, 200);
-              }, { followCam:true, stepPeriodMs: 500 });
-            }, { followCam:true });
+  });       
           };
         }, 1000);
       })();
@@ -2840,7 +2837,10 @@ async function startCinematic3(){
   }, 1000);
 }
 
-
+function _cine3_getSSJ(){
+  let v = NPCS.find(n => n?.id === 'juansin_other');
+  return v || null;
+}
 
 function cine3_beginPortraits(){
   // Activa layout/estado
