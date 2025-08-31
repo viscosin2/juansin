@@ -2741,40 +2741,10 @@ CUT.hijackAction = () => {
   function fallStep(t){
     const k = Math.min(1, (t - t0) / dur);
     L.y = startY + (endY - startY) * k;
-    if (k < 1) requestAnimationFrame(fallStep);
-    else afterFall();
   }
   requestAnimationFrame(fallStep);
-
-  function afterFall(){
-    // 1) Quitar NPC del mapa
-    try{
-      const vold = (typeof _cine2_getVold === 'function') ? _cine2_getVold() : null;
-      if (vold){
-        if (typeof removeNPC === 'function') removeNPC(vold);
-        else if (vold.parent && typeof vold.parent.remove === 'function') vold.parent.remove(vold);
-        else if ('dead' in vold) vold.dead = true;
-        else vold.hidden = true;
-      }
-    }catch(e){ console.warn('[cine2] no pude eliminar NPC Voldemort:', e); }
-
-    // 2) Cerrar UI: barras, portraits y overlay
-    if (typeof HPBARS.hide === 'function') HPBARS.hide(); else HPBARS.alpha = 0;
-    PORTRAITS.active = false;
-    if (typeof closeOverlay === 'function') closeOverlay();
-    else if (typeof OVERLAY !== 'undefined' && OVERLAY && typeof OVERLAY.hide === 'function') OVERLAY.hide();
-
-    // 3) Frase final de Juan
-    openDialog([{ speaker:'Juan', text:'Pues ya está.' }], true);
-    CUT.hijackAction = () => {
-      if (isTyping){ advanceDialog(); return; }
-      closeDialog();
-      _cine2_markDone();
-    };
-  }
+  endCine2();
 };
-// -- HASTA aquí --
-
                       });
                     });
                   });
@@ -2789,19 +2759,18 @@ CUT.hijackAction = () => {
   });
 }
 
-  function _cine2_markDone(){
-  const zone = CINE_ZONES.find(z => z.id === 'cine2');
-if (zone) zone._done = true;
-  CUT.active = false; CUT.id = ''; CUT.phase = '';
-  ambientLock = false;
-  if (typeof freezeIdle === 'function') freezeIdle(null);
-  if (typeof setFlag === 'function') setFlag('cine2Done', true);
-  else if (typeof GAME !== 'undefined' && GAME && GAME.flags) GAME.flags.cine2Done = true;
 
-  console.log('[cine2] done');
+  function endCine2(){
+  CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
+  ambientLock=false;
+    
+  openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true);
+    CUT.hijackAction = () => {
+      if (isTyping){ advanceDialog(); return; }
+      closeDialog();
+    };
 }
-
-
+  
   function _cine2_closePortraitsAndOverlay(done){
 
   const L = PORTRAITS.left, R = PORTRAITS.right;
