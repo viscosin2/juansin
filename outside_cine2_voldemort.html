@@ -2484,12 +2484,15 @@ function step2() {
   
 }
 
-  function _cine2_swapVoldProfileToFront(){
-  let npc = NPCS.find(n => n?.id === 'voldemort_perfil');
-  if (IMG_VOLD_FRONT){ 
-    npc.src = IMG_VOLD_FRONT;
+function _cine2_swapVoldProfileToFront(){
+  const npc = NPCS.find(n => n?.id === 'voldemort_perfil');
+  if (npc && IMG_VOLD_FRONT){
+    npc.img = IMG_VOLD_FRONT;                  // usar el nuevo Image
+    npc.iw  = IMG_VOLD_FRONT.naturalWidth;     // ancho real
+    npc.ih  = IMG_VOLD_FRONT.naturalHeight;    // alto real
   }
 }
+
 
 function _cine2_getVold(){
   let v = NPCS.find(n => n?.id === 'voldemort_perfil');
