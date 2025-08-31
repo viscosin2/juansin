@@ -2595,14 +2595,11 @@ _startSlide(R, R.outX, () => {
         L.sFrom = 0.96; L.sTo = 1.00;
 _startSlide(L, orig, () => {
   openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
-  CUT.hijackAction = () => {
-        if (isTyping) return advanceDialog();
+
         closeDialog();
 venganzaVoldemort();
     });
 
-
-});
       });
     });
         });
@@ -2610,8 +2607,6 @@ venganzaVoldemort();
     });
   };
 };
-
-
 }
 
   
