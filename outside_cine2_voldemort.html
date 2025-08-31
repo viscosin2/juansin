@@ -65,6 +65,7 @@
   .dialog-text{ font-family:'VT323',monospace; font-size:18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
   .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
   .dialog.ready .dialog-hint{ opacity:.9; }
+  
 </style>
 </head>
 <body>
@@ -74,19 +75,22 @@
       <div id="blackfade"></div>
       <div id="toast" class="toast"></div>
 
-      <div id="dialog" class="dialog">
-        <div id="dialogName" class="dialog-name"></div>
-        <div id="dialogText" class="dialog-text"></div>
-        <div id="dialogHint" class="dialog-hint">→</div>
-      </div>
-<div id="attackMenu" style="position:absolute; left:10px; top:60px; transform:translateY(-8px);
-  background:rgba(0,0,0,0.7); color:#fff; padding:8px 10px; border:1px solid #fff; border-radius:6px;
-  font-family: 'Press Start 2P', monospace; font-size:10px; line-height:1.6; display:none; z-index:40;">
-  <div style="opacity:0.75; margin-bottom:6px;">Elige ataque</div>
-  <div id="atkOpt0">▶ Bola de energía</div>
-  <div id="atkOpt1">▶ Puñetazo</div>
-  <div style="margin-top:6px; opacity:0.7;">Usa ◄ ► y Acción</div>
+<div id="dialog" class="dialog">
+  <div id="attackMenu" style="
+    position:absolute; left:12px; bottom:100%; margin-bottom:6px;
+    background:rgba(0,0,0,0.7); color:#fff; padding:8px 10px; border:1px solid #fff; border-radius:6px;
+    font-family:'Press Start 2P', monospace; font-size:10px; line-height:1.6; display:none; z-index:1;">
+    <div style="opacity:0.75; margin-bottom:6px;">Elige ataque</div>
+    <div id="atkOpt0">Bola</div>
+    <div id="atkOpt1">Puñetazo</div>
+    <div style="margin-top:6px; opacity:0.7;">Usa ▲ ▼ y Acción</div>
+  </div>
+
+  <div id="dialogName" class="dialog-name"></div>
+  <div id="dialogText" class="dialog-text"></div>
+  <div id="dialogHint" class="dialog-hint">→</div>
 </div>
+
 
       <canvas id="game"></canvas>
     </div>
@@ -541,10 +545,40 @@ function bindHold(btn,on,off){
   btn.addEventListener('touchend',end,{passive:false});
   btn.addEventListener('touchcancel',end,{passive:false});
 }
-bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
-bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
+
+bindHold(document.getElementById('btn-up'), 
+  ()=>{ 
+    if (CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on){ 
+      _cine2_menuUp(); 
+    } else { 
+      keys.up=true; 
+    }
+  }, 
+  ()=>{ 
+    if (!(CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on)){ 
+      keys.up=false; 
+    }
+  }
+);
+
+bindHold(document.getElementById('btn-down'), 
+  ()=>{ 
+    if (CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on){ 
+      _cine2_menuDown(); 
+    } else { 
+      keys.down=true; 
+    }
+  }, 
+  ()=>{ 
+    if (!(CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on)){ 
+      keys.down=false; 
+    }
+  }
+);
+
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
+  
 function bindPressVisual(el){
   const on=()=>el.classList.add('pressed'), off=()=>el.classList.remove('pressed');
   el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});
@@ -2582,8 +2616,8 @@ function _cine2_closeMenu(){
   if (CUT.c2 && CUT.c2.menu){ CUT.c2.menu.on = false; }
 }
 
-function _cine2_menuLeft(){ if (CUT.c2?.menu?.on){ CUT.c2.menu.idx = (CUT.c2.menu.idx + 1) % 2; _cine2_menuRender(); } }
-function _cine2_menuRight(){ if (CUT.c2?.menu?.on){ CUT.c2.menu.idx = (CUT.c2.menu.idx + 1) % 2; _cine2_menuRender(); } }
+function _cine2_menuUp(){ if (CUT.c2?.menu?.on){ CUT.c2.menu.idx = (CUT.c2.menu.idx + 1) % 2; _cine2_menuRender(); } }
+function _cine2_menuDown(){ if (CUT.c2?.menu?.on){ CUT.c2.menu.idx = (CUT.c2.menu.idx + 1) % 2; _cine2_menuRender(); } }
 function _cine2_menuConfirm(){ return CUT.c2?.menu?.on ? CUT.c2.menu.idx : -1; }
 
 function _cine2_menuRender(){
