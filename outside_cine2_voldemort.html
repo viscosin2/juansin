@@ -2443,7 +2443,7 @@ function step2() {
 
   const v  = _cine2_getVold();
   const tx = v ? (v.x - 25) : player.x;
-  const ty = v ?  v.y  - 5    : player.y;
+  const ty = v ?  v.y  - 10    : player.y;
 
   cine2AutoWalkTo(tx, ty, 700, () => {
     if (v) player.dir = (player.x < v.x) ? 'right' : 'left';
@@ -2479,19 +2479,17 @@ function step2() {
       CUT.hijackAction = () => {
         if (isTyping) return advanceDialog();
         closeDialog();
-      };
-    }
 
-               function step5() {
-      openDialog([{ speaker: 'Juan', text: 'Buena, va.' }], true);
+        openDialog([{ speaker: 'Juan', text: 'Buena, va.' }], true);
       CUT.hijackAction = () => {
         if (isTyping) return advanceDialog();
         closeDialog();
-        step6();
+        step5();
+      };
       };
     }
 
-      function step6() {
+      function step5() {
       _cine2_openPortraits();
       openDialog([{ speaker: 'Voldemort', text: 'Sorpresa.' }], true);
       CUT.hijackAction = () => {
