@@ -2613,15 +2613,27 @@ venganzaVoldemort();
 
   
   function venganzaVoldemort(){
-    let v = NPCS.find(n => n?.id === 'voldemort_perfil');
+    const v = NPCS.find(n => n?.id === 'voldemort_perfil');
     v.img = IMG_VOLD_PERFIL; 
     _cine2_closePortraitsAndOverlay(() => {
+      const vold = _cine2_getVold();
+      playVoldemortRayFx(vold);      
       setTimeout(() => {
-        openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
-          const vold = _cine2_getVold();
           playVoldemortRayFx(vold);
-          _cine2_continueFight();  
+          openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
       }, 1000);
+
+      
+          let handled = false;
+    CUT.hijackAction = () => {
+      if (isTyping) return advanceDialog();
+      if (handled) return;
+      handled = true;
+
+      closeDialog();
+      CUT.hijackAction = null;
+      _cine2_continueFight(); 
+    };
     });   
   }
   
