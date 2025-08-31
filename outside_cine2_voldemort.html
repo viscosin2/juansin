@@ -2428,19 +2428,270 @@ function endCine3(){
 
   // **************************** CINEMATICA 2
 function startCinematic2(){
-  CUT.active = true; CUT.id='cine2'; CUT.phase='lock';
-  ambientLock = true; player.moving=false;
 
-  setTimeout(() => {
-    openDialog([{speaker:'???', text:'Acércate, chico.'}], true);
-  }, 1000);
-  
+    CUT.active = true;
+    CUT.id = 'cine2';
+    CUT.phase = 'start';
+    ambientLock = true;
+    freezeIdle('right');
 
-  CUT.hijackAction = ()=>{
-    closeCurrentDialogNow();
-    CUT.hijackAction = null;
-};
-  }
+    setTimeout(() => {
+      openDialog([{ speaker: '???', text: 'Acércate, muchacho.' }], true);
+      CUT.hijackAction = step2;
+    }, 1000);
+
+    // Paso 2: Juan camina hacia Voldemort
+    function step2() {
+      if (!dialogOpen || isTyping) return advanceDialog();
+      closeDialog();
+      CUT.hijackAction = null;
+
+      const v = _cine2_getVold();
+      const tx = v ? (v.x - 5) : player.x;
+      const ty = v ? v.y : player.y;
+
+      cineAutoWalkTo(tx, ty, 700, () => {
+        player.dir = v && player.x < v.x ? 'right' : 'left';
+        step3();
+      });
+    }
+
+    // Paso 3: Diálogo encadenado (Quién eres > Adivina > No tengo tiempo)
+    function step3() {
+      openDialog([{ speaker: 'Juan', text: '¿Quién eres?' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+
+        openDialog([{ speaker: '???', text: 'Adivina.' }], true);
+        CUT.hijackAction = () => {
+          if (isTyping) return advanceDialog();
+          closeDialog();
+
+          openDialog([{ speaker: 'Juan', text: 'No tengo tiempo.' }], true);
+          CUT.hijackAction = () => {
+            if (isTyping) return advanceDialog();
+            closeDialog();
+            CUT.hijackAction = null;
+            setTimeout(step4, 1000);
+          };
+        };
+      };
+    }
+
+    // Paso 4: Voldemort cambia sprite y se presenta
+    async function step4() {
+      console.log('[CINE2] Paso 4: Cambio sprite Voldemort');
+      await _cine2_swapVoldProfileToFront();
+      openDialog([{ speaker: 'Voldemort', text: 'Soy Lord Voldemort.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        step5();
+      };
+    }
+
+    // Paso 5: Juan dice "Buena, va"
+    function step5() {
+      openDialog([{ speaker: 'Juan', text: 'Buena, va.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        step6();
+      };
+    }
+
+    // Paso 6: Overlay retratos - Voldemort "Sorpresa" -> sale Voldemort, entra Juan "Wow"
+    function step6() {
+      _cine2_openPortraits();
+      openDialog([{ speaker: 'Voldemort', text: 'Sorpresa.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        _startSlide(PORTRAITS.left, PORTRAITS.left.outX, () => {
+          openDialog([{ speaker: 'Juan', text: 'Wow.' }], true);
+          CUT.hijackAction = () => {
+            if (isTyping) return advanceDialog();
+            closeDialog();
+            _startSlide(PORTRAITS.right, PORTRAITS.right.outX, step7);
+          };
+        });
+      };
+    }
+
+    // Paso 7: Voldemort "Luchamos" > Juan "Ok"
+    function step7() {
+      openDialog([{ speaker: 'Voldemort', text: 'Luchamos.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        _startSlide(PORTRAITS.left, PORTRAITS.left.inX, () => {
+          openDialog([{ speaker: 'Juan', text: 'Ok.' }], true);
+          CUT.hijackAction = () => {
+            if (isTyping) return advanceDialog();
+            closeDialog();
+            PORTRAITS.right.img = IMG_JUAN_FIGHT || PORTRAITS.right.img;
+            setTimeout(step8, 700);
+          };
+        });
+      };
+    }
+
+    // Paso 8: Abrir menú ataque
+    function step8() {
+      openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        _cine2_openMenu();
+
+        CUT.hijackAction = () => {
+          const choice = _cine2_menuConfirm();
+          if (choice < 0) return;
+
+          _cine2_closeMenu();
+          const R = PORTRAITS.right;
+          const mid = R.inX - Math.round(screenRect.dw * 0.04);
+          const back = R.inX;
+
+          R.sFrom = 1.00;
+          R.sTo = 1.06;
+          _startSlide(R, mid, () => {
+            R.sFrom = 1.06;
+            R.sTo = 1.00;
+            _startSlide(R, back, () => {
+              const L = PORTRAITS.left;
+              const orig = L.inX;
+              const kick = orig + Math.round(screenRect.dw * 0.02);
+              L.sFrom = 1.00;
+              L.sTo = 0.96;
+              _startSlide(L, kick, () => {
+                L.sFrom = 0.96;
+                L.sTo = 1.00;
+                _startSlide(L, orig, () => {
+                  HPBARS.setTargets(1, 50);
+                  setTimeout(step9, 800);
+                });
+              });
+            });
+          });
+        };
+      };
+    }
+
+    // Paso 9: Voldemort "Me las pagarás" y vuelve sprite a perfil
+    function step9() {
+      openDialog([{ speaker: 'Voldemort', text: 'Me las pagarás.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        const vold = _cine2_getVold();
+        if (vold && NPC_IMAGES?.voldemort_perfil) {
+          const img = NPC_IMAGES.voldemort_perfil;
+          vold.img = img;
+          vold.iw = img.naturalWidth;
+          vold.ih = img.naturalHeight;
+        }
+        _cine2_endPortraitsAndUI();
+        setTimeout(step10, 600);
+      };
+    }
+
+    // Paso 10: Avada Kedavra + segunda secuencia rápida
+    function step10() {
+      openDialog([{ speaker: 'Voldemort', text: 'Avada Kedavra.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        _cine2_openPortraits();
+
+        openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
+        CUT.hijackAction = () => {
+          if (isTyping) return advanceDialog();
+          closeDialog();
+
+          const R2 = PORTRAITS.right;
+          const L2 = PORTRAITS.left;
+          const mid2 = R2.inX - Math.round(screenRect.dw * 0.04);
+
+          R2.sFrom = 1.00;
+          R2.sTo = 1.06;
+          _startSlide(R2, mid2, () => {
+            R2.sFrom = 1.06;
+            R2.sTo = 1.00;
+            _startSlide(R2, R2.inX, () => {
+              const orig2 = L2.inX;
+              const kick2 = orig2 + Math.round(screenRect.dw * 0.02);
+
+              L2.sFrom = 1.00;
+              L2.sTo = 0.94;
+              _startSlide(L2, kick2, () => {
+                L2.sFrom = 0.94;
+                L2.sTo = 1.00;
+                _startSlide(L2, orig2, () => {
+                  setTimeout(() => {
+                    openDialog([{ speaker: 'Voldemort', text: 'Es imposible...' }], true);
+                    CUT.hijackAction = () => {
+                      if (isTyping) return advanceDialog();
+                      closeDialog();
+                      HPBARS.setTargets(1, 0);
+                      stepFinal();
+                    };
+                  }, 600);
+                });
+              });
+            });
+          });
+        };
+      };
+    }
+
+    // Paso final: Voldemort muere y Juan dice "Ños."
+    function stepFinal() {
+      const vold = _cine2_getVold();
+      if (vold) {
+        const y0 = vold.y;
+        const y1 = y0 + 120;
+        const t0 = performance.now();
+        const dur = 800;
+
+        (function slideOut() {
+          const k = Math.min(1, (performance.now() - t0) / dur);
+          vold.y = y0 + (y1 - y0) * k;
+          vold._fadeAlpha = 1 - k;
+          if (k < 1) {
+            requestAnimationFrame(slideOut);
+          } else {
+            const i = NPCS.indexOf(vold);
+            if (i >= 0) NPCS.splice(i, 1);
+            _cine2_endPortraitsAndUI();
+            openDialog([{ speaker: 'Juan', text: 'Ños.' }], true);
+            CUT.hijackAction = () => {
+              if (isTyping) return advanceDialog();
+              closeDialog();
+              endCinematic();
+            };
+          }
+        })();
+      } else {
+        _cine2_endPortraitsAndUI();
+        endCinematic();
+      }
+    }
+
+    // Final: limpieza
+    function endCinematic() {
+      CUT.active = false;
+      CUT.id = null;
+      CUT.phase = null;
+      CUT.hijackAction = null;
+      CUT.onEnd = null;
+      ambientLock = false;
+      unfreezeIdle();
+      console.log('[CINE2] Finalizada correctamente');
+    }
+
+}
 // **************************** CINEMATICA 3
 
 // === Helpers globales para la cine 3 ===
