@@ -2587,10 +2587,24 @@ PORTRAITS.idx++; dialogEl.classList.remove('ready');
 
 dialogHintEl.style.opacity = 0; dialogScript = [ next ]; 
 dialogIndex = 0; renderCurrentLine(true); return; } 
-closeDialog(); 
-_nextPortraitLine(); }; }
-  
 
+                          
+  if (next){
+    closeDialog();
+    _nextPortraitLine();
+  }else{
+    // Fin del guion: pasar a la lucha
+    if (dialogOpen) closeDialog();
+    PORTRAITS.active = false;     // soltamos el modo portraits
+    CUT.hijackAction = null;      // ya no secuestramos el botón
+    _cine2_startFightUI();        // <-- tu función de inicio de combate
+  }
+                         
+}; 
+
+
+}
+  
 function _cine2_swapVoldProfileToFront(){
   const npc = NPCS.find(n => n?.id === 'voldemort_perfil');
   if (npc && IMG_VOLD_FRONT){
