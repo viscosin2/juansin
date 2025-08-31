@@ -797,7 +797,7 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
 
       if (npc.id === 'juansin_other' && GAME_FLAGS.has_potion){
   if (typeof closeDialog === 'function' && dialogOpen) closeDialog();
-  if (CUT?.active) return;        // evita doble disparo si ya está en una cinemática
+  if (CUT?.active) return;
   startCinematic4();
   return;
 }
@@ -3395,12 +3395,7 @@ function _cine4_removeSSJFromMap(){
 }
 
 /* ---------- Entrada principal ---------- */
-async function startCinematic4(){
-  // Guardas y bloqueo
-  if (!GAME_FLAGS.juan_potion){
-    console.warn('[cine4] Abort: falta pócima.');
-    return;
-  }
+function startCinematic4(){
 
   CUT.active = true; CUT.id='cine4'; CUT.phase='start';
   ambientLock = true; player.moving=false; player.vx=player.vy=0;
