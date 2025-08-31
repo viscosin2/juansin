@@ -2491,6 +2491,9 @@ function step2() {
 
       function step5() {
       _cine2_openPortraits();
+      
+        _startSlide(PORTRAITS.left, PORTRAITS.left.outX, () => {
+
       openDialog([{ speaker: 'Voldemort', text: 'Sorpresa.' }], true);
       CUT.hijackAction = () => {
         if (isTyping) return advanceDialog();
@@ -2500,23 +2503,30 @@ function step2() {
           CUT.hijackAction = () => {
             if (isTyping) return advanceDialog();
             closeDialog();
-            _startSlide(PORTRAITS.right, PORTRAITS.right.outX, step7);
           };
         });
       };
+     });   
     }
   
 }
 
   function _cine2_openPortraits(){
   PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
-  PORTRAITS.active = true; PORTRAITS.stage = 'entering'; PORTRAITS.blurK = 0;
-  PORTRAITS.left  = _makeSide(IMG_VOLD_P || IMG_GANDALF, 'left', 'Voldemort');
-  PORTRAITS.right = _makeSide(IMG_JUAN_FIGHT || IMG_JUAN_BIG, 'right', 'Juan', 'bottom');
-  PORTRAITS.left.x  = PORTRAITS.left.outX;  PORTRAITS.right.x = PORTRAITS.right.outX;
-  HPBARS.show(10, 100);
-  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{ _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{ PORTRAITS.stage='speaking'; }); });
+  PORTRAITS.active = true;
+  PORTRAITS.blurK = 0;
+  PORTRAITS.forceBlurFallback = false;
+  PORTRAITS.stage = 'entering';
+
+  PORTRAITS.left  = _makeSide(IMG_GANDALF, 'left',  'Voldemort',  'top');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan', 'bottom');
+  PORTRAITS.left.flipX = true;
+
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
+
 }
+
 
 
 function _cine2_swapVoldProfileToFront(){
@@ -2534,7 +2544,7 @@ function _cine2_getVold(){
   return v || null;
 }
 
-function cine2AutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepPeriodMs = 120 } = {}){
+function cine2AutoWalkTo(targetX, targetY, ms, onDone, { followCam = true, stepPeriodMs = 120 } = {}){
   CUT.phase = 'autowalk';
   const sx = player.x, sy = player.y;
   const t0 = performance.now();
