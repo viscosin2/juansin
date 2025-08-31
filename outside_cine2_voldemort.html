@@ -796,8 +796,6 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
     }
 
       if (npc.id === 'juansin_other' && GAME_FLAGS.has_potion){
-  if (typeof closeDialog === 'function' && dialogOpen) closeDialog();
-  if (CUT?.active) return;
   startCinematic4();
   return;
 }
@@ -3120,8 +3118,8 @@ function cine3_beginPortraits(){
   PORTRAITS.stage = 'entering';
 
   // Construcción de retratos (letterbox interno)
-  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ',  'top');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan', 'bottom');
+  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan');
   PORTRAITS.left.flipX = true;
 
   // Parten fuera
@@ -3284,7 +3282,7 @@ function endCine3(){
 }
 
 
-  /*************************** CINEMATICA 4
+  /*************************** CINEMATICA 4*/
 
  function _cine4_openOverlay(){
   try{
@@ -3308,37 +3306,35 @@ function _cine4_closeOverlay(){
 
 /* ---------- Helpers retratos y barras ---------- */
 function _cine4_beginPortraitsAndBars(){
-  PORTRAITS.forceBlurFallback = !supportsCanvasFilter?.() || false;
+
+   PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
   PORTRAITS.active = true;
-  PORTRAITS.stage  = 'entering';
-  PORTRAITS.blurK  = 0;
+  PORTRAITS.blurK = 0;
+  PORTRAITS.forceBlurFallback = false;
+  PORTRAITS.stage = 'entering';
 
-  // Izquierda: SSJ (enemigo)
-  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ',  'top');
+  // Construcción de retratos (letterbox interno)
+  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan');
   PORTRAITS.left.flipX = true;
-
-  // Derecha: Juan (con halo azul estilo npc)
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG || IMG_JUAN_FIGHT, 'right', 'Juan', 'bottom');
-  // Halo azul “tipo npc”
-  PORTRAITS.right.halo = { color:'120,180,255', radius:38, alpha:0.85, pulse:0.06, offsetY:0.60 };
 
   // Parten fuera
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Barras: nombres y valores (Juan a 130 → se sale de la barra si tu UI lo permite)
-  HPBARS.leftName  = 'Juan SSJ';
-  HPBARS.rightName = 'Juan';
-  HPBARS.alpha     = 0;
-  HPBARS.show(100, 130); // SSJ 100, Juan 130
+    HPBARS.leftName  = 'Juan SSJ';
+    HPBARS.rightName  = 'Juan';
+    HPBARS.alpha  = 0; 
+    HPBARS.show(100, 140);
 
-  // Fade-in de barras
-  const t0 = performance.now(), dur = 400;
-  (function step(t){
-    const k = Math.min(1, (t - t0)/dur);
-    HPBARS.alpha = k;
-    if (k < 1) requestAnimationFrame(step);
-  })(t0);
+    const t0 = performance.now();
+    const dur = 400;
+    function step(t){
+      const k = Math.min(1, (t - t0) / dur);
+      HPBARS.alpha = k;
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
 }
 
 /* ---------- Animaciones cortas de ataque/daño ---------- */
@@ -3403,7 +3399,6 @@ function startCinematic4(){
   _cine4_openOverlay();
   _cine4_beginPortraitsAndBars();
 
-  // 1) Entra primero SSJ por la izquierda
   _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
     // 2) Entra Juan por la derecha
     _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
