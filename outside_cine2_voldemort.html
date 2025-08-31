@@ -3074,11 +3074,9 @@ async function startCinematic3(){
             const targetX1 = other.x;
             const targetY1 = player.y;
 
-
-
             const v  = _cine3_getSSJ();
-            const tx = v ? (v.x - 25) : player.x;
-            const ty = v ?  v.y  - 14    : player.y;
+            const tx = v ? (v.x ) : player.x;
+            const ty = v ?  v.y  + 50    : player.y;
 
   cine2AutoWalkTo(tx, ty, 700, () => {
     player.dir = 'up';
