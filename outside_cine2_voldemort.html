@@ -2437,24 +2437,23 @@ function startCinematic2(){
   }, 1000);
   
 function step2() {
-      if (!dialogOpen || isTyping) return advanceDialog();
-      closeDialog();
-      CUT.hijackAction = null;
+  if (!dialogOpen) return;             
+  if (isTyping) { advanceDialog(); return; }
 
-      const v = _cine2_getVold();
-      const tx = v ? (v.x - 5) : player.x;
-      const ty = v ? v.y : player.y;
+  closeDialog();
+  CUT.hijackAction = null;
 
-      cine2AutoWalkTo(tx, ty, 700, () => {
-  CUT.phase = 'idle';
-  player.dir = 'right';
-  player.moving = false;
-  player.vx = 0; player.vy = 0;
-  player.frame = 0;
-  player.frameTime = 0;
-        step3();
-      });
-    }
+  const v  = _cine2_getVold();
+  const tx = v ? (v.x - 5) : player.x;
+  const ty = v ?  v.y      : player.y;
+
+  cine2AutoWalkTo(tx, ty, 700, () => {
+    if (v) player.dir = (player.x < v.x) ? 'right' : 'left';
+    if (typeof step3 === 'function') step3();
+  });
+}
+
+
 }
 
 function _cine2_getVold(){
@@ -2466,12 +2465,11 @@ function _cine2_getVold(){
   return v || null;
 }
 
-  function cine2AutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepPeriodMs = 120 } = {}){
+function cine2AutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepPeriodMs = 120 } = {}){
   CUT.phase = 'autowalk';
   const sx = player.x, sy = player.y;
   const t0 = performance.now();
   const dur = Math.max(200, ms|0);
-  player.externalControl = true; 
 
   if (!Number.isFinite(player.frameTime)) player.frameTime = 0;
   if (!Number.isFinite(player.frame)) player.frame = 0;
@@ -2481,32 +2479,36 @@ function _cine2_getVold(){
     player.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
   };
 
-  console.log('[AUTOWALK] from', {x:sx,y:sy}, 'to', {x:targetX,y:targetY}, 'dur', dur);
-
   (function step(){
     const k = Math.min(1, (performance.now() - t0) / dur);
     player.x = sx + (targetX - sx) * k;
     player.y = sy + (targetY - sy) * k;
     face();
 
+    // anim mientras camina
     player.moving = true;
     player.frameTime += 1/60;
-    if (player.frameTime >= (stepPeriodMs/1000)){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
+    if (player.frameTime >= (stepPeriodMs/1000)){
+      player.frame = (player.frame + 1) % 2;
+      player.frameTime = 0;
+    }
 
     if (followCam) centerCameraOnPlayer?.();
 
     if (k < 1){
       requestAnimationFrame(step);
     } else {
+      // <<< PARAR AQUÍ >>> 
+      CUT.phase = 'postwalk';       // <- deja de ser 'autowalk'
       player.moving = false;
-      player.frame = 0; player.frameTime = 0;
-      ambientLock = prevLock;           // restaurar
-      player.externalControl = false;
-      console.log('[AUTOWALK] done at', {x:player.x,y:player.y});
+      player.frame = 0;
+      player.frameTime = 0;
+
       onDone && onDone();
     }
   })();
 }
+
 // **************************** CINEMATICA 3
 
 // === Helpers globales para la cine 3 ===
