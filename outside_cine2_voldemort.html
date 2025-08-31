@@ -329,9 +329,9 @@ async function preloadCinematicImages(){
   IMG_JUAN_BIG      = await loadImage('assets/portraits/juansin_portrait.png');
   IMG_JUAN_SSJ      = await loadImage('assets/portraits/juansin_ssj_portrait.png');
   IMG_GANDALF_WHITE = await loadImage('assets/npcs/gandalfblanco.png');
-  IMG_GANDALF_WHITE_P = await loadImage('assets/portraits/gandalfblanco_portrait.png')
-  .then(i=>i)
-  .catch(()=>null);
+  IMG_GANDALF_WHITE_P = await loadImage('assets/portraits/gandalfblanco_portrait.png');
+  IMG_VOLD_FRONT = await loadImage('assets/npcs/voldemort.png').catch(()=>null);
+  IMG_VOLD_P     = await loadImage('assets/portraits/gandalf_portrait.png').catch(()=>null);
 }
 
   // ------------------------ ZONAS CINE
@@ -408,9 +408,7 @@ const NPC_PLACED = {
   gato1: [{type:'percent', x: 21, y: 61, interact: { x:-14, y: 12, w:28, h:16 }, 
      dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
     }],
-  voldemort_perfil: [{id:'voldemort_perfil',type:'percent', x: 82, y: 15.5, interact: { x:-35, y: 12, w:50, h:16 }, 
-     dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
-    }],
+  voldemort_perfil: [{id:'voldemort_perfil',type:'percent', x: 82, y: 15.5}],
   soldado1: [{id:'gunner1', type:'percent', x: 94, y: 66, interact: { x:-14, y: 12, w:28, h:16 },onFire:true, 
      dialog: [{ speaker:'Armiche', text:'Ahí te va un pequeño perdigón.'}],sound: "assets/sounds/shot.mp3"
     }],
@@ -2444,8 +2442,8 @@ function step2() {
   CUT.hijackAction = null;
 
   const v  = _cine2_getVold();
-  const tx = v ? (v.x - 5) : player.x;
-  const ty = v ?  v.y      : player.y;
+  const tx = v ? (v.x - 25) : player.x;
+  const ty = v ?  v.y  - 5    : player.y;
 
   cine2AutoWalkTo(tx, ty, 700, () => {
     if (v) player.dir = (player.x < v.x) ? 'right' : 'left';
@@ -2475,8 +2473,8 @@ function step2() {
       };
     }
   
-async function step4() {
-      await _cine2_swapVoldProfileToFront();
+  function step4() {
+      _cine2_swapVoldProfileToFront();
       openDialog([{ speaker: 'Voldemort', text: 'Soy Lord Voldemort.' }], true);
       CUT.hijackAction = () => {
         if (isTyping) return advanceDialog();
@@ -2486,23 +2484,15 @@ async function step4() {
   
 }
 
-  async function _cine2_swapVoldProfileToFront(){
-  const npc = NPCS.find(n => n.type === 'voldemort_perfil') || NPCS.find(n=>/voldemort/i.test(n.id||''));
-  if (!npc) return;
+  function _cine2_swapVoldProfileToFront(){
+  let npc = NPCS.find(n => n?.id === 'voldemort_perfil');
   if (IMG_VOLD_FRONT){ 
-    npc.img = IMG_VOLD_FRONT;
-    npc.iw  = IMG_VOLD_FRONT.naturalWidth;
-    npc.ih  = IMG_VOLD_FRONT.naturalHeight;
-    npc._fxActive = true; npc._fxUntil = performance.now() + 300;
+    npc.src = IMG_VOLD_FRONT;
   }
 }
 
 function _cine2_getVold(){
-  if (!Array.isArray(NPCS)) { console.warn('[CINE2] NPCS no es array'); return null; }
-  let v = NPCS.find(n => n?.type === 'voldemort_perfil');
-  if (!v) v = NPCS.find(n => /voldemort/i.test(n?.catalogKey || ''));
-  if (!v) v = NPCS.find(n => /voldemort/i.test(n?.id || ''));
-  if (!v) console.warn('[CINE2] Voldemort no encontrado en NPCS');
+  let v = NPCS.find(n => n?.id === 'voldemort_perfil');
   return v || null;
 }
 
