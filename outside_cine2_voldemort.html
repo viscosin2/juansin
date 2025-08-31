@@ -2684,14 +2684,15 @@ venganzaVoldemort();
       R.sFrom = 0.96; R.sTo = 1.00;
 
       _startSlide(R, orig, () => {
-        openDialog([
-          { speaker:'', text:'Ha sido un golpe duro.' },
-          { speaker:'', text:'¿Cómo quieres atacar?' }
-        ], true);
+        openDialog([{ speaker:'', text:'Ha sido un golpe duro. Remata esto.' }], true);
 
         CUT.hijackAction = () => {
           if (isTyping){ advanceDialog(); return; }
-
+          closeDialog();
+          openDialog([{ speaker:'', text:'Cómo quieres atacar' }], true);
+  CUT.hijackAction = () => {
+    if (isTyping){ advanceDialog(); return; }
+    
           _cine2_openMenu();
 
           CUT.hijackAction = () => {
@@ -2730,7 +2731,6 @@ venganzaVoldemort();
                           if (isTyping){ advanceDialog(); return; }
                           closeDialog();
                           CUT.hijackAction = null;
-                          console.log('[cine2] turno completado');
                         };
                       });
                     });
@@ -2739,6 +2739,7 @@ venganzaVoldemort();
               });
             });
           };
+  };
         };
       });
     });
