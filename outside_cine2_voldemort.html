@@ -2595,25 +2595,8 @@ _startSlide(R, R.outX, () => {
         L.sFrom = 0.96; L.sTo = 1.00;
 _startSlide(L, orig, () => {
   openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
+venganzaVoldemort();
 
-  CUT.hijackAction = () => {
-    if (isTyping) return advanceDialog();
-
-    let v = NPCS.find(n => n?.id === 'voldemort_perfil');
-    v.img = IMG_VOLD_PERFIL;
-    closeDialog();     
-    _cine2_closePortraitsAndOverlay(() => {
-      setTimeout(() => {
-        openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
-          const vold = _cine2_getVold(); if(vold){ 
-          playVoldemortRayFx(vold);
-         
-         
-        }
-                  _cine2_continueFight();  
-      }, 1000);
-    });
-  };
 });
       });
     });
@@ -2626,6 +2609,25 @@ _startSlide(L, orig, () => {
 
 }
 
+  
+  function venganzaVoldemort(){
+  CUT.hijackAction = () => {
+    if (isTyping) return advanceDialog();
+
+    let v = NPCS.find(n => n?.id === 'voldemort_perfil');
+    v.img = IMG_VOLD_PERFIL;
+    closeDialog();     
+    _cine2_closePortraitsAndOverlay(() => {
+      setTimeout(() => {
+        openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
+          const vold = _cine2_getVold();
+          playVoldemortRayFx(vold);
+          _cine2_continueFight();  
+      }, 1000);
+    });
+  };
+    
+  }
   function _cine2_continueFight(){
     PORTRAITS.active = true; 
 PORTRAITS.script = script.slice(); 
