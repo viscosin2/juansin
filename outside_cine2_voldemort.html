@@ -2613,12 +2613,8 @@ venganzaVoldemort();
 
   
   function venganzaVoldemort(){
-  CUT.hijackAction = () => {
-    if (isTyping) return advanceDialog();
-
     let v = NPCS.find(n => n?.id === 'voldemort_perfil');
-    v.img = IMG_VOLD_PERFIL;
-    closeDialog();     
+    v.img = IMG_VOLD_PERFIL; 
     _cine2_closePortraitsAndOverlay(() => {
       setTimeout(() => {
         openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
@@ -2626,10 +2622,9 @@ venganzaVoldemort();
           playVoldemortRayFx(vold);
           _cine2_continueFight();  
       }, 1000);
-    });
-  };
-    
+    });   
   }
+  
   function _cine2_continueFight(){
     PORTRAITS.active = true; 
 PORTRAITS.script = script.slice(); 
