@@ -2490,36 +2490,46 @@ function step2() {
     }
 
       function step5() {
-      _cine2_openPortraits();
-      
-        _startSlide(PORTRAITS.left, PORTRAITS.left.outX, () => {
+  _cine2_openPortraits();
 
-      openDialog([{ speaker: 'Voldemort', text: 'Sorpresa.' }], true);
-      CUT.hijackAction = () => {
-        if (isTyping) return advanceDialog();
-        closeDialog();
-        _startSlide(PORTRAITS.left, PORTRAITS.left.outX, () => {
+  // ENTRADA: primero entra el de la izquierda (Voldemort) hasta inX
+  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, () => {
+    openDialog([{ speaker: 'Voldemort', text: 'Sorpresa.' }], true);
+
+    CUT.hijackAction = () => {
+      if (isTyping) return advanceDialog();
+      closeDialog();
+
+      // SALE Voldemort por la izq
+      _startSlide(PORTRAITS.left, PORTRAITS.left.outX, () => {
+        // ENTRA Juan por la dcha
+        _startSlide(PORTRAITS.right, PORTRAITS.right.inX, () => {
           openDialog([{ speaker: 'Juan', text: 'Wow.' }], true);
           CUT.hijackAction = () => {
             if (isTyping) return advanceDialog();
             closeDialog();
+            // aquí seguirías con step6/step7, etc.
           };
         });
-      };
-     });   
-    }
+      });
+    };
+  });
+}
   
 }
 
-  function _cine2_openPortraits(){
-  PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
-  PORTRAITS.active = true;
-  PORTRAITS.blurK = 0;
-  PORTRAITS.forceBlurFallback = false;
-  PORTRAITS.stage = 'entering';
+function _cine2_openPortraits(){
+  // no pises el flag dos veces
+  const canFilter = (typeof supportsCanvasFilter === 'function') && supportsCanvasFilter();
+  PORTRAITS.forceBlurFallback = !canFilter;
 
-  PORTRAITS.left  = _makeSide(IMG_GANDALF, 'left',  'Voldemort',  'top');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan', 'bottom');
+  PORTRAITS.active = true;
+  PORTRAITS.stage  = 'entering';
+  PORTRAITS.blurK  = 0;
+  PORTRAITS.slideMs = PORTRAITS.slideMs ?? 350; // por si no está
+
+  PORTRAITS.left  = _makeSide(IMG_GANDALF,   'left',  'Voldemort', 'top');     // tu asset temporal
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,  'right', 'Juan',       'bottom');
   PORTRAITS.left.flipX = true;
 
   PORTRAITS.left.x  = PORTRAITS.left.outX;
