@@ -2518,8 +2518,78 @@ function step2() {
     }
     requestAnimationFrame(step);
 
+    openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
+          CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        _cine2_openMenu();
+
+        CUT.hijackAction = () => {
+          const choice = _cine2_menuConfirm();
+          if (choice < 0) return;
+
+          _cine2_closeMenu();
+          const R = PORTRAITS.right;
+          const mid = R.inX - Math.round(screenRect.dw * 0.04);
+          const back = R.inX;
+
+          R.sFrom = 1.00;
+          R.sTo = 1.06;
+          _startSlide(R, mid, () => {
+            R.sFrom = 1.06;
+            R.sTo = 1.00;
+            _startSlide(R, back, () => {
+              const L = PORTRAITS.left;
+              const orig = L.inX;
+              const kick = orig + Math.round(screenRect.dw * 0.02);
+              L.sFrom = 1.00;
+              L.sTo = 0.96;
+              _startSlide(L, kick, () => {
+                L.sFrom = 0.96;
+                L.sTo = 1.00;
+                _startSlide(L, orig, () => {
+                  HPBARS.setTargets(1, 50);
+                  setTimeout(step9, 800);
+                });
+              });
+            });
+          });
+        };
+      };
+
 }
 
+  function _cine2_openMenu(){
+  const el = document.getElementById('attackMenu');
+  if (!el) return;
+  el.style.display = 'block';
+  CUT.c2 = CUT.c2 || {};
+  CUT.c2.menu = { idx: 0, on: true };
+  _cine2_menuRender();
+}
+
+function _cine2_closeMenu(){
+  const el = document.getElementById('attackMenu');
+  if (el) el.style.display = 'none';
+  if (CUT.c2 && CUT.c2.menu){ CUT.c2.menu.on = false; }
+}
+
+function _cine2_menuLeft(){ if (CUT.c2?.menu?.on){ CUT.c2.menu.idx = (CUT.c2.menu.idx + 1) % 2; _cine2_menuRender(); } }
+function _cine2_menuRight(){ if (CUT.c2?.menu?.on){ CUT.c2.menu.idx = (CUT.c2.menu.idx + 1) % 2; _cine2_menuRender(); } }
+function _cine2_menuConfirm(){ return CUT.c2?.menu?.on ? CUT.c2.menu.idx : -1; }
+
+function _cine2_menuRender(){
+  const idx = CUT.c2.menu.idx|0;
+  const o0 = document.getElementById('atkOpt0'), o1 = document.getElementById('atkOpt1');
+  const mark = (el, sel)=> { if(!el) return; el.textContent = (sel?'► ':'  ') + el.textContent.replace(/^. /,''); };
+  if (o0 && o1){
+    o0.textContent = '  Bola de energía';
+    o1.textContent = '  Puñetazo';
+    mark(o0, idx===0); mark(o1, idx===1);
+  }
+}
+
+  
   function fightSetBars({leftName, rightName, leftHP=100, rightHP=100, leftColor, rightColor}={}){
   if(leftName  != null) HPBARS.leftName  = leftName;
   if(rightName != null) HPBARS.rightName = rightName;
