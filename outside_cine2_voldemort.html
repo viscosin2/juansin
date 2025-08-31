@@ -2454,20 +2454,26 @@ function step2() {
 }
 
 function _cine2_getVold(){
-
-  const byKey = NPC_PLACED?.voldemort_perfil?.[0];
-  if (byKey) return byKey;
-
-  // por cualquier id o clave que contenga "voldemort"
-  for (const [key, list] of Object.entries(NPC_PLACED || {})) {
-    const hit = (list || []).find(p =>
-      /voldemort/i.test(p.id || '') || /voldemort/i.test(key)
-    );
-    if (hit) return hit;
+  let v = NPC_PLACED?.voldemort_perfil?.[0];
+  if (!v){
+    for (const [key, list] of Object.entries(NPC_PLACED || {})) {
+      const hit = (list || []).find(p =>
+        /voldemort/i.test(p.id || '') || /voldemort/i.test(key)
+      );
+      if (hit) { v = hit; break; }
+    }
   }
-  return null;
-}
+  if (!v) return null;
 
+  const coordType = v.coordType || v.type;
+  const wx = coordType === 'percent' ? percentToWorldX(v.x) : v.x;
+  const wy = coordType === 'percent' ? percentToWorldY(v.y) : v.y;
+
+  return { npc:v, x: wx, y: wy };
+}
+  
+function percentToWorldX(pct){ return Math.round((pct/100) * MAP_WIDTH_PX); }
+function percentToWorldY(pct){ return Math.round((pct/100) * MAP_HEIGHT_PX); }
   
 // **************************** CINEMATICA 3
 
