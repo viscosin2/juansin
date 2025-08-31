@@ -2445,34 +2445,63 @@ function step2() {
       const tx = v ? (v.x - 5) : player.x;
       const ty = v ? v.y : player.y;
 
-      cineAutoWalkTo(tx, ty, 700, () => {
+      cine2AutoWalkTo(tx, ty, 700, () => {
         player.dir = v && player.x < v.x ? 'right' : 'left';
+        step3();
       });
     }
 }
 
 function _cine2_getVold(){
-  let v = NPC_PLACED?.voldemort_perfil?.[0];
-  if (!v){
-    for (const [key, list] of Object.entries(NPC_PLACED || {})) {
-      const hit = (list || []).find(p =>
-        /voldemort/i.test(p.id || '') || /voldemort/i.test(key)
-      );
-      if (hit) { v = hit; break; }
-    }
-  }
-  if (!v) return null;
-
-  const coordType = v.coordType || v.type;
-  const wx = coordType === 'percent' ? percentToWorldX(v.x) : v.x;
-  const wy = coordType === 'percent' ? percentToWorldY(v.y) : v.y;
-
-  return { npc:v, x: wx, y: wy };
+  if (!Array.isArray(NPCS)) { console.warn('[CINE2] NPCS no es array'); return null; }
+  let v = NPCS.find(n => n?.type === 'voldemort_perfil');
+  if (!v) v = NPCS.find(n => /voldemort/i.test(n?.catalogKey || ''));
+  if (!v) v = NPCS.find(n => /voldemort/i.test(n?.id || ''));
+  if (!v) console.warn('[CINE2] Voldemort no encontrado en NPCS');
+  return v || null;
 }
-  
-function percentToWorldX(pct){ return Math.round((pct/100) * MAP_WIDTH_PX); }
-function percentToWorldY(pct){ return Math.round((pct/100) * MAP_HEIGHT_PX); }
-  
+
+  function cine2AutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepPeriodMs = 120 } = {}){
+  CUT.phase = 'autowalk';
+  const sx = player.x, sy = player.y;
+  const t0 = performance.now();
+  const dur = Math.max(200, ms|0);
+  player.externalControl = true; 
+
+  if (!Number.isFinite(player.frameTime)) player.frameTime = 0;
+  if (!Number.isFinite(player.frame)) player.frame = 0;
+
+  const face = ()=>{
+    const dx = targetX - player.x, dy = targetY - player.y;
+    player.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+  };
+
+  console.log('[AUTOWALK] from', {x:sx,y:sy}, 'to', {x:targetX,y:targetY}, 'dur', dur);
+
+  (function step(){
+    const k = Math.min(1, (performance.now() - t0) / dur);
+    player.x = sx + (targetX - sx) * k;
+    player.y = sy + (targetY - sy) * k;
+    face();
+
+    player.moving = true;
+    player.frameTime += 1/60;
+    if (player.frameTime >= (stepPeriodMs/1000)){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
+
+    if (followCam) centerCameraOnPlayer?.();
+
+    if (k < 1){
+      requestAnimationFrame(step);
+    } else {
+      player.moving = false;
+      player.frame = 0; player.frameTime = 0;
+      ambientLock = prevLock;           // restaurar
+      player.externalControl = false;
+      console.log('[AUTOWALK] done at', {x:player.x,y:player.y});
+      onDone && onDone();
+    }
+  })();
+}
 // **************************** CINEMATICA 3
 
 // === Helpers globales para la cine 3 ===
