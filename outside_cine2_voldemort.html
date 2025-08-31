@@ -2453,7 +2453,20 @@ function step2() {
     }
 }
 
-function _cine2_getVold(){ return NPC_PLACED.find(n => n.id === 'voldemort_perfil') || NPC_PLACED.find(n=>/voldemort/i.test(n.id||'')) || null; }
+function _cine2_getVold(){
+
+  const byKey = NPC_PLACED?.voldemort_perfil?.[0];
+  if (byKey) return byKey;
+
+  // por cualquier id o clave que contenga "voldemort"
+  for (const [key, list] of Object.entries(NPC_PLACED || {})) {
+    const hit = (list || []).find(p =>
+      /voldemort/i.test(p.id || '') || /voldemort/i.test(key)
+    );
+    if (hit) return hit;
+  }
+  return null;
+}
 
   
 // **************************** CINEMATICA 3
