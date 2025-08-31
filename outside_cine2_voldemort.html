@@ -128,11 +128,11 @@ let BACKCTX = BACKBUF.getContext('2d');
 
 /* ====== ESTADO CINEMÁTICA ====== */
 const CUT = {
-  active: false,        // hay cinemática en curso (bloquea input libre)
-  id: null,             // 'cine1'...
-  phase: null,          // subfase
-  hijackAction: null,   // handler para el botón de acción durante la cine
-  onEnd: null           // callback al terminar
+  active: false,       
+  id: null,          
+  phase: null,         
+  hijackAction: null, 
+  onEnd: null        
 };
 
 
@@ -765,7 +765,7 @@ function advanceDialog(){
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
 
-  // si hay cinemática con hijack, primero eso
+
   if (CUT.active && typeof CUT.hijackAction === 'function'){
     CUT.hijackAction();
     return;
@@ -2302,11 +2302,10 @@ function phaseQuestionThenWalk(){
   CUT.phase = 'question';
   openDialog([{ speaker:'Juan', text:'...?' }], true);
 
-  // Acción: cerrar "?" y arrancar caminata YA
   CUT.hijackAction = ()=>{
     if (dialogOpen) closeDialog();
     CUT.hijackAction = null;
-    phaseJuanAutoWalk();   // ← empieza a caminar al instante
+    phaseJuanAutoWalk();
   };
 }
 
@@ -2317,9 +2316,9 @@ function phaseFogFill(){
   const g = NPCS.find(n => n.id === 'gandalf_temp');
   const anchorWorld = g
     ? { x: g.x, y: g.y - 45 }
-    : { x: player.x, y: cam.y + cam.h*0.25 };  // coords de mundo
+    : { x: player.x, y: cam.y + cam.h*0.25 };
 
-  fogUseWorld(anchorWorld);   // <<<<< NIEBLA EN MUNDO (no se mueve con cámara)
+  fogUseWorld(anchorWorld); 
 
   fogBeginFill({
     dur: 3000,
@@ -2332,10 +2331,9 @@ function phaseFogFill(){
   if (FOG.filling){
     requestAnimationFrame(check);
   } else {
-    // Espera 1s antes del paneo
     CUT.phase = 'prePanDelay';
     setTimeout(()=>{
-      if (CUT.active && CUT.id==='cine1'){  // por si se canceló la cine
+      if (CUT.active && CUT.id==='cine1'){ 
         phaseCameraPan();
       }
     }, 3700);
@@ -2367,22 +2365,20 @@ function phaseCameraPan(){
 
 function spawnTempGandalfAhead(targetCamY){
   const gx = player.x;
-  const gy = targetCamY + cam.h/2 - 35; // más cerca del centro → seguro en pantalla
+  const gy = targetCamY + cam.h/2 - 35; 
   const iw = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalWidth  : 32;
   const ih = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalHeight : 32;
 
   const npc = {
     id:'gandalf_temp', type:'gandalf_temp', img: IMG_GANDALF_SMALL,
     x: gx, y: gy, iw, ih,
-    scale: 0.5,                   // más visible
+    scale: 0.5,           
     depthBand: DEPTH_BAND, depthAnchorY: 1,
-    _debug: true                // flag para overlay de depuración
+    _debug: true             
   };
 
   NPCS.push(npc);
 }
-
-
 
   function phaseJuanAutoWalk(){
   CUT.phase='autowalk';
@@ -2401,8 +2397,7 @@ function spawnTempGandalfAhead(targetCamY){
     else phaseWorldDialogue();
   })();
 }
-
-
+  
   function phaseWorldDialogue(){
   CUT.phase='worldTalk';
   const script = [
@@ -2410,15 +2405,13 @@ function spawnTempGandalfAhead(targetCamY){
     {speaker:'Juan', text:'¡Yias! Pero si tu eres...'},
     {speaker:'???', text:'En efecto.'}
   ];
-  // Abre TODAS las líneas
-  openDialog(script, true);
 
+  openDialog(script, true);
   onDialogClosed = ()=>{
     CUT.hijackAction = null;
     phasePortraits();
   };
 
-  // mientras esté abierto, el botón Acción sólo avanza
   CUT.hijackAction = ()=>{
     if (dialogOpen){
       advanceDialog();
@@ -2426,17 +2419,23 @@ function spawnTempGandalfAhead(targetCamY){
   };
 }
 
-
   function phasePortraits(){
   CUT.phase='cineOverlay';
   const cineScript = [
-    { speaker:'Gandalf', text:'Gandalf el Gris.' },
-    { speaker:'Juan',    text:'Wow.' }
+    { speaker:'Gandalf el Gris', text:'Soy Gandalf el Gris, enviado para oponerme a la Sombra.' },
+    { speaker:'Juan',    text:'¡La pinga!' },
+    { speaker:'Gandalf el Gris',    text:'Chico, traigo malas noticias. La sombra crece.' },
+    { speaker:'Gandalf el Gris',    text:'Los malvados han crucado desde el norte y han traído corrupción a la ciudad.' },
+    { speaker:'Gandalf el Gris',    text:'El pueblo ya no es seguro.' },
+    { speaker:'Gandalf el Gris',    text:'Su base se oculta en el supermercado.' },
+    { speaker:'Gandalf el Gris',    text:'Necesito tu ayuda para detenerlos.' },
+    { speaker:'Juan',    text:'¿La mía? ¿Por qué yo?' },
+    { speaker:'Gandalf el Gris',    text:'Lo siento no hay tiempo para más preguntas. Los primeros ya están aquí.' },
+    { speaker:'Gandalf el Gris',    text:'Te estaré observando de cerca. Tal vez hoy la suerte nos mire… o tal vez no.' }
   ];
   portraitsOpen(cineScript);
-  CUT.onEnd = ()=>{ fadeOutFogThenEnd(); }; // lo que ya tenías
+  CUT.onEnd = ()=>{ fadeOutFogThenEnd(); }; 
 }
-
 
 
 function fadeOutFogThenEnd(){
@@ -2446,7 +2445,6 @@ function fadeOutFogThenEnd(){
     if (!CUT.active || CUT.id!=='cine1') return;
     const k = Math.min(1, (performance.now()-t0)/dur);
 
-    // ✅ usar tFill (existe), no fillT
     FOG.tFill = (1 - k) * FOG.tFill;
 
     for (const p of FOG.parts) {}
@@ -2560,47 +2558,82 @@ function step2() {
     }
     requestAnimationFrame(step);
 
-    openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
-          CUT.hijackAction = () => {
-        if (isTyping) return advanceDialog();
-        closeDialog();
-        _cine2_openMenu();
+openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
 
-        CUT.hijackAction = () => {
-          const choice = _cine2_menuConfirm();
-          if (choice < 0) return;
+CUT.hijackAction = () => {
+  if (isTyping) return advanceDialog();
 
-          _cine2_closeMenu();
-          const R = PORTRAITS.right;
-          const mid = R.inX - Math.round(screenRect.dw * 0.04);
-          const back = R.inX;
+  // NO cerrar el diálogo aquí: queremos el menú encima del diálogo
+  _cine2_openMenu();
 
-          R.sFrom = 1.00;
-          R.sTo = 1.06;
-          _startSlide(R, mid, () => {
-            R.sFrom = 1.06;
-            R.sTo = 1.00;
-            _startSlide(R, back, () => {
-              const L = PORTRAITS.left;
-              const orig = L.inX;
-              const kick = orig + Math.round(screenRect.dw * 0.02);
-              L.sFrom = 1.00;
-              L.sTo = 0.96;
-              _startSlide(L, kick, () => {
-                L.sFrom = 0.96;
-                L.sTo = 1.00;
-                _startSlide(L, orig, () => {
-                  HPBARS.setTargets(1, 50);
-                  setTimeout(step9, 800);
-                });
-              });
-            });
+  // A partir de ahora, Acción confirma selección
+  CUT.hijackAction = () => {
+    const choice = _cine2_menuConfirm();
+    if (choice < 0) return;
+
+    // Al confirmar: cerrar diálogo y el menú, y ejecutar la coreografía
+    closeDialog();
+    _cine2_closeMenu();
+
+    const R = PORTRAITS.right;   // Juan
+    const L = PORTRAITS.left;    // Voldemort
+    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+    const back = R.inX;
+
+    // Juan: pequeño dash hacia delante y vuelve
+    R.sFrom = 1.00; R.sTo = 1.06;
+    _startSlide(R, mid, () => {
+      R.sFrom = 1.06; R.sTo = 1.00;
+      _startSlide(R, back, () => {
+
+        // Voldemort: reacción de recibir (kick)
+        const orig = L.inX;
+        const kick = orig + Math.round(screenRect.dw * 0.02);
+        L.sFrom = 1.00; L.sTo = 0.96;
+        _startSlide(L, kick, () => {
+          L.sFrom = 0.96; L.sTo = 1.00;
+          _startSlide(L, orig, () => {
+            HPBARS.setTargets(1, 50);
+
+            // Después del golpe, Juan sale y re-entra Voldemort “recibiendo”
+            setTimeout(step9, 800);
           });
-        };
-      };
+        });
+
+      });
+    });
+  };
+};
+
 
 }
 
+  function step9(){
+  const R = PORTRAITS.right; // Juan
+  const L = PORTRAITS.left;  // Voldemort
+
+  // 1) Juan se va fuera de escena (sale por su lado)
+  _startSlide(R, R.outX, () => {
+
+    // 2) Asegura a Voldemort fuera, y luego lo haces entrar
+    L.x = L.outX; // por si acaso
+    _startSlide(L, L.inX, () => {
+      // 3) Mini “hit” al entrar (recibir)
+      const orig = L.inX;
+      const kick = orig + Math.round(screenRect.dw * 0.02);
+      L.sFrom = 1.00; L.sTo = 0.96;
+      _startSlide(L, kick, () => {
+        L.sFrom = 0.96; L.sTo = 1.00;
+        _startSlide(L, orig, () => {
+          // aquí puedes continuar el flujo (otro diálogo, siguiente fase, etc.)
+          // p.ej.: CUT.hijackAction = ()=>{ ... };
+        });
+      });
+    });
+  });
+}
+
+  
   function _cine2_openMenu(){
   const el = document.getElementById('attackMenu');
   if (!el) return;
@@ -3211,7 +3244,6 @@ function update(dt){
   const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
   if (canCenterCam) centerCameraOnPlayer();
 
-  // La niebla debe actualizar SIEMPRE (incluida la cinemática)
   fogUpdate(dt);
 
   // ---------------- Zonas de ambiente ----------------
