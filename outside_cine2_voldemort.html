@@ -254,7 +254,7 @@ function drawHPBars(){
   const wSSJ  = Math.round(barW * (HPBARS.ssj/100));
   const wJuan = Math.round(barW * (HPBARS.juan/100));
 
-    const leftName  = HPBARS.leftName  || 'SSJ';
+  const leftName  = HPBARS.leftName  || 'SSJ';
   const rightName = HPBARS.rightName || 'Juan';
 
   ctx.save();
@@ -265,8 +265,8 @@ function drawHPBars(){
   ctx.fillStyle = nameColor;
   ctx.textBaseline = 'bottom';
 
-  ctx.fillText('SSJ',  leftX,  yTop - 2);           // izquierda
-  ctx.fillText('Juan', rightX + barW - ctx.measureText('Juan').width, yTop - 2); // derecha alineado dcha
+  ctx.fillText(leftName,  leftX,  yTop - 2);
+  ctx.fillText(rightName, rightX + barW - ctx.measureText(rightName).width, yTop - 2);
 
   // Barras: fondo + relleno + marco
   // -- SSJ (izquierda)
@@ -2789,8 +2789,19 @@ function cine3_beginPortraits(){
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Barras de vida
-  HPBARS.show(10, 100);
+    HPBARS.leftName  = 'Juan SSJ';
+    HPBARS.rightName  = 'Juan';
+    HPBARS.alpha  = 0; 
+    HPBARS.show(10, 100);
+
+    const t0 = performance.now();
+    const dur = 400;
+    function step(t){
+      const k = Math.min(1, (t - t0) / dur);
+      HPBARS.alpha = k;
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
 
   // Entra primero SSJ por la izquierda
   _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
