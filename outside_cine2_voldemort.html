@@ -932,8 +932,6 @@ function _makeSide(img, side, name, slotOverride){
 }
 
 
-
-
 function _startSlide(node, toX, cb){
   node.anim = true;
   node.t = 0;
@@ -952,7 +950,6 @@ function _startSlide(node, toX, cb){
     node.sFrom = node.sFrom ?? 1.00; node.sTo = node.sTo ?? 1.00;
   }
 }
-
 
 
 function _nodeForSpeaker(name){
@@ -2519,9 +2516,7 @@ function step2() {
   
 }
 
-function _ease(x){ return x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2; }
-
-function _nodeForSpeaker(name){
+function _nodeForSpeaker2(name){
   const key = (name||'').toLowerCase();
   if (key === 'voldemort'){
     if (!PORTRAITS.left){
@@ -2555,11 +2550,11 @@ function _cine2_openPortraits(){
   PORTRAITS.blurK  = 0;
   PORTRAITS.stage  = 'entering';
 
-  PORTRAITS.left  = _nodeForSpeaker('Voldemort');
-  PORTRAITS.right = _nodeForSpeaker('Juan');
+  PORTRAITS.left  = _nodeForSpeaker2('Voldemort');
+  PORTRAITS.right = _nodeForSpeaker2('Juan');
 
   const line0 = PORTRAITS.script[PORTRAITS.idx];
-  const node0 = _nodeForSpeaker(line0.speaker);
+  const node0 = _nodeForSpeaker2(line0.speaker);
 
   _startSlide(node0, node0.inX, ()=>{
     PORTRAITS.stage = 'speaking';
@@ -2597,8 +2592,8 @@ function _nextPortraitLine2(){
   const prev = PORTRAITS.script[PORTRAITS.idx-1];
   const next = PORTRAITS.script[PORTRAITS.idx];
 
-  const prevNode = _nodeForSpeaker(prev.speaker);
-  const nextNode = _nodeForSpeaker(next.speaker);
+  const prevNode = _nodeForSpeaker2(prev.speaker);
+  const nextNode = _nodeForSpeaker2(next.speaker);
 
   if (prev.speaker === next.speaker){
     PORTRAITS.stage = 'speaking';
