@@ -2611,6 +2611,98 @@ venganzaVoldemort();
 };
 }
 
+  // Cierra retratos y overlay de la cine (sin tocar HPBARS)
+// Uso:
+//   _cine2_closePortraitsAndOverlay();
+//   _cine2_closePortraitsAndOverlay({ animate:false });
+//   _cine2_closePortraitsAndOverlay({ duration:320, onDone:()=>console.log('chiuso!') });
+function _cine2_closePortraitsAndOverlay(opts = {}){
+  const {
+    animate    = true,
+    duration   = 260,     // solo si tu _startSlide usa su propio tiempo, ignóralo
+    removeBlur = true,
+    onDone     = null
+  } = opts;
+
+  // 1) Quitar blur de portraits
+  if (removeBlur && typeof PORTRAITS !== 'undefined'){
+    PORTRAITS.blurK = 0;
+  }
+
+  // 2) Función para cerrar overlay con varias APIs posibles
+  function _closeOverlaySafe(){
+    try{
+      if (typeof closeOverlay === 'function'){
+        closeOverlay();
+      }else if (typeof OVERLAY !== 'undefined' && OVERLAY && typeof OVERLAY.hide === 'function'){
+        OVERLAY.hide();
+      }else if (typeof setOverlay === 'function'){
+        setOverlay(false);
+      }
+      // si llevas ownership: if (OVERLAY && OVERLAY.owner==='cine2'){ OVERLAY.owner=null; }
+    }catch(e){
+      console.warn('[cine2] overlay close fallback:', e);
+    }
+  }
+
+  // 3) Cerrar portraits (slide a outX). Si no hay, simplemente termina.
+  let pending = 0;
+  function doneOne(){
+    pending--;
+    if (pending <= 0){
+      // marcar inactivo y limpiar referencias básicas
+      try{
+        PORTRAITS.active = false;
+      }catch(e){}
+      _closeOverlaySafe();
+      if (typeof onDone === 'function') onDone();
+    }
+  }
+
+  // Si no hay retratos activos, igual cerramos overlay y listo
+  const L = (typeof PORTRAITS !== 'undefined') ? PORTRAITS.left  : null;
+  const R = (typeof PORTRAITS !== 'undefined') ? PORTRAITS.right : null;
+
+  // Cierre instantáneo (sin animar)
+  if (!animate){
+    try{
+      if (L){ L.x = L.outX; }
+      if (R){ R.x = R.outX; }
+      PORTRAITS.active = false;
+    }catch(e){}
+    _closeOverlaySafe();
+    if (typeof onDone === 'function') onDone();
+    return;
+  }
+
+  // Cierre animado con _startSlide
+  const slides = [];
+  if (L && typeof L.outX !== 'undefined') slides.push(L);
+  if (R && typeof R.outX !== 'undefined') slides.push(R);
+
+  if (slides.length === 0){
+    // nada que animar
+    _closeOverlaySafe();
+    if (typeof onDone === 'function') onDone();
+    return;
+  }
+
+  pending = slides.length;
+  for (const node of slides){
+    try{
+      // opcional: pequeño ajuste de escala para “salida”
+      node.sFrom = 1.00; node.sTo = 0.98;
+      _startSlide(node, node.outX, doneOne);
+    }catch(e){
+      console.warn('[cine2] slide-out portrait falló:', e);
+      // fuerza estado final
+      try{ node.x = node.outX; }catch(_){}
+      doneOne();
+    }
+  }
+}
+
+
   
   function venganzaVoldemort(){
     const v = NPCS.find(n => n?.id === 'voldemort_perfil');
