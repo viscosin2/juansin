@@ -208,6 +208,8 @@ const DEFAULT_SHADOW = {
 // ====== BARRAS DE VIDA PARA CINE ======
 const HPBARS = {
   active:false, alpha:0, fadeInMs:400, fadeOutMs:400,
+  leftName:'SSJ',
+  rightName:'Juan',
   juan:100, ssj:100, juanT:100, ssjT:100, speed:120, // % por segundo
   show(juanPct=100, ssjPct=100){ this.active=true; this.alpha=0; this._showing=true; this._hiding=false; this.juan=this.juanT=juanPct; this.ssj=this.ssjT=ssjPct; },
   setTargets(juanPct, ssjPct){ if(juanPct!=null) this.juanT=juanPct; if(ssjPct!=null) this.ssjT=ssjPct; },
@@ -222,7 +224,7 @@ const HPBARS = {
     if (this._hiding){ this.alpha = Math.max(0, this.alpha - (dt*1000)/this.fadeOutMs); if(this.alpha<=0){ this._hiding=false; this.active=false; } }
   }
 };
-
+  
   function _ease(t){
   return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
 }
@@ -251,6 +253,9 @@ function drawHPBars(){
   // Escalas de relleno
   const wSSJ  = Math.round(barW * (HPBARS.ssj/100));
   const wJuan = Math.round(barW * (HPBARS.juan/100));
+
+    const leftName  = HPBARS.leftName  || 'SSJ';
+  const rightName = HPBARS.rightName || 'Juan';
 
   ctx.save();
   ctx.globalAlpha = a;
@@ -2489,16 +2494,62 @@ function step2() {
 
       function step5() {
         _cine2_openPortraits();
-        CUT.hijackAction = () => {
-            if (isTyping) return advanceDialog();
-            closeDialog();
-            PORTRAITS.right.img = IMG_JUAN_FIGHT || PORTRAITS.right.img;
-            setTimeout(step8, 700);
-          };
+        
 }
   
 }
 
+
+  function _cine2_startFightUI(){
+  // Cambiar el retrato de Juan por el de pelea
+  if (PORTRAITS && PORTRAITS.right){
+    PORTRAITS.right.img = IMG_JUAN_FIGHT;   // usa tu asset de combate
+    // Si tu draw usa dimensiones del img, recalcula si lo necesitas:
+    if (PORTRAITS.right.img && PORTRAITS.right.img.width){
+      const n = PORTRAITS.right;
+      // Mantén su 'inX/outX' y baseline; no tocamos geometría salvo que tu _makeSide lo requiera
+      n.w = PORTRAITS.right.img.width;
+      n.h = PORTRAITS.right.img.height;
+    }
+  }
+
+  if (typeof HPBARS === 'object'){
+    fightSetBars({
+    leftName: enemigoNombre || 'Voldemort',
+    rightName: jugadorNombre || 'Juan',
+    leftHP: 100,
+    rightHP: 100,
+  });
+    
+    HPBARS.active = true;
+    HPBARS.alpha  = 0;       
+    HPBARS.ssj    = 100;     
+    HPBARS.voldemort   = 100;
+
+    const t0 = performance.now();
+    const dur = 400; // ms
+    function step(t){
+      const k = Math.min(1, (t - t0) / dur);
+      HPBARS.alpha = k;
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // Si quieres, aquí puedes desactivar el hijack o cambiar de fase:
+  // CUT.hijackAction = null; 
+  // CUT.phase = 'fight';
+}
+
+  function fightSetBars({leftName, rightName, leftHP=100, rightHP=100, leftColor, rightColor}={}){
+  if(leftName  != null) HPBARS.leftName  = leftName;
+  if(rightName != null) HPBARS.rightName = rightName;
+  if(leftColor != null) HPBARS.leftColor = leftColor;
+  if(rightColor!= null) HPBARS.rightColor= rightColor;
+  HPBARS.ssj  = leftHP;
+  HPBARS.juan = rightHP;
+}
+  
 function _cine2_openPortraits(){
   const script = [
     { speaker:'Voldemort', text:'Sorpresa.' },
