@@ -2637,23 +2637,35 @@ venganzaVoldemort();
     });   
   }
   
-  function _cine2_continueFight(){
-PORTRAITS.active = true; 
-PORTRAITS.script = script.slice(); 
-PORTRAITS.idx = 0; PORTRAITS.blurK = 0; 
-PORTRAITS.stage = 'entering'; 
-PORTRAITS.left = _makeSide(IMG_VOLD_P, 'left', 'Voldemort'); 
-PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan'); 
-PORTRAITS.left.x = PORTRAITS.left.outX;
-PORTRAITS.right.x = PORTRAITS.right.outX; 
-PORTRAITS.left.inX += 60;
-PORTRAITS.left.x   += 60;
+ function _cine2_continueFight(){
+  console.log('[cine2] continueFight');
 
-    HPBARS.leftName  = 'Voldemort';
-    HPBARS.rightName  = 'Juan';
-    HPBARS.alpha  = 0; 
-    HPBARS.show(100, 100);
+  // --- Setup portraits (usa un guion seguro; elimina "script.slice()" si no existe "script") ---
+  PORTRAITS.active = true;
+  PORTRAITS.stage  = 'entering';
+  PORTRAITS.idx    = 0;
+  PORTRAITS.blurK  = 0;
+  // Si tienes un array de frases, asígnalo; si no, déjalo vacío:
+  PORTRAITS.script = Array.isArray(PORTRAITS.script) ? PORTRAITS.script : [];
 
+  PORTRAITS.left  = _makeSide(IMG_VOLD_P,  'left',  'Voldemort');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,'right', 'Juan');
+
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
+
+  // Pequeño offset que tú añadías
+  PORTRAITS.left.inX += 60;
+  PORTRAITS.left.x   += 60;
+
+  // --- Barras de vida ---
+  HPBARS.leftName  = 'Voldemort';
+  HPBARS.rightName = 'Juan';
+  HPBARS.alpha = 0;
+  HPBARS.show(100, 100);
+
+  // Fade-in de las barras
+  {
     const t0 = performance.now();
     const dur = 400;
     function step(t){
@@ -2662,70 +2674,86 @@ PORTRAITS.left.x   += 60;
       if (k < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
+  }
 
-const line0 = PORTRAITS.script[PORTRAITS.idx]; 
-const node0 = _nodeForSpeaker(line0.speaker); 
+  // --- Juan recibe golpe: pequeño "kick" en su retrato y baja vida a (10,50) ---
+  const R = PORTRAITS.right; // Juan
+  R.x = R.outX;
 
+  _startSlide(R, R.inX, () => {
+    const orig = R.inX;
+    const kick = orig + Math.round(screenRect.dw * 0.02);
 
+    R.sFrom = 1.00; R.sTo = 0.96;
+    _startSlide(R, kick, () => {
+      HPBARS.setTargets(10, 50); // ← Ajusta orden si tu implementación es al revés
+      R.sFrom = 0.96; R.sTo = 1.00;
 
-    
-R.x = R.outX; 
-    _startSlide(R, R.inX, () => {
-      const orig = R.inX;
-      const kick = orig + Math.round(screenRect.dw * 0.02);
-    
-      R.sFrom = 1.00; R.sTo = 0.96;
-      _startSlide(R, kick, () => {
-        HPBARS.setTargets(10, 50);
-        R.sFrom = 0.96; R.sTo = 1.00;
-_startSlide(R, orig, () => {
-  openDialog([{ speaker: '', text: 'Ha sido un golpe duro.' },{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
-CUT.hijackAction = () => {
-        if (isTyping) return advanceDialog();
-        _cine2_openMenu();
-  
-    CUT.hijackAction = () => {
-    const choice = _cine2_menuConfirm();
-    if (choice < 0) return;
-    closeDialog();
-    _cine2_closeMenu();
+      _startSlide(R, orig, () => {
+        openDialog([
+          { speaker:'', text:'Ha sido un golpe duro.' },
+          { speaker:'', text:'¿Cómo quieres atacar?' }
+        ], true);
 
-    const R = PORTRAITS.right;
-    const L = PORTRAITS.left;
-    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
-    const back = R.inX;
+        // Primer hijack: avanzar typing o abrir menú
+        CUT.hijackAction = () => {
+          if (isTyping){ advanceDialog(); return; }
 
-    R.sFrom = 1.00; R.sTo = 1.06;
-    _startSlide(R, mid, () => {
-      R.sFrom = 1.06; R.sTo = 1.00;
-      _startSlide(R, back, () => {
-_startSlide(R, R.outX, () => {
-        
-      L.x = L.outX; 
-    _startSlide(L, L.inX, () => {
-      const orig = L.inX;
-      const kick = orig + Math.round(screenRect.dw * 0.02);
-    
-      L.sFrom = 1.00; L.sTo = 0.96;
-      _startSlide(L, kick, () => {
-        HPBARS.setTargets(0, 10);
-        L.sFrom = 0.96; L.sTo = 1.00;
-_startSlide(L, orig, () => {
-  openDialog([{ speaker:'Voldemort', text:'No puede ser.' }], true);
-CUT.hijackAction = () => {
-        if (isTyping) return advanceDialog();
-        closeDialog();
-};
-    });
+          _cine2_openMenu();
 
+          // Segundo hijack: confirmar elección y ejecutar ataque de Juan
+          CUT.hijackAction = () => {
+            const choice = _cine2_menuConfirm();
+            if (choice < 0) return; // no elegido aún
+
+            closeDialog();
+            _cine2_closeMenu();
+
+            const L = PORTRAITS.left; // Voldemort
+            const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+            const back = R.inX;
+
+            // Anim de "carga" de Juan antes de atacar
+            R.sFrom = 1.00; R.sTo = 1.06;
+            _startSlide(R, mid, () => {
+              R.sFrom = 1.06; R.sTo = 1.00;
+              _startSlide(R, back, () => {
+
+                // Juan sale, entra Voldemort para "recibir" (si esa es tu gramática visual)
+                _startSlide(R, R.outX, () => {
+                  L.x = L.outX;
+                  _startSlide(L, L.inX, () => {
+                    const origL = L.inX;
+                    const kickL = origL + Math.round(screenRect.dw * 0.02);
+
+                    L.sFrom = 1.00; L.sTo = 0.96;
+                    _startSlide(L, kickL, () => {
+                      HPBARS.setTargets(0, 10); // ← Voldemort pierde 50; ajusta si tu orden difiere
+                      L.sFrom = 0.96; L.sTo = 1.00;
+
+                      _startSlide(L, origL, () => {
+                        openDialog([{ speaker:'Voldemort', text:'No puede ser.' }], true);
+
+                        // Tercer hijack: cerrar y soltar control
+                        CUT.hijackAction = () => {
+                          if (isTyping){ advanceDialog(); return; }
+                          closeDialog();
+                          CUT.hijackAction = null;
+                          console.log('[cine2] turno completado');
+                        };
+                      });
+                    });
+                  });
+                });
+              });
+            });
+          }; // ← cierra segundo hijack
+        }; // ← cierra primer hijack
       });
     });
-        });
-      }); 
-    });
-  };
-                           
-  }
+  });
+}
+
 
   function _cine2_closePortraitsAndOverlay(done){
 
