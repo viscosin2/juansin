@@ -2595,9 +2595,9 @@ dialogIndex = 0; renderCurrentLine(true); return; }
   }else{
     // Fin del guion: pasar a la lucha
     if (dialogOpen) closeDialog();
-    PORTRAITS.active = false;     // soltamos el modo portraits
+
     CUT.hijackAction = null;      // ya no secuestramos el botón
-    _cine2_startFightUI();        // <-- tu función de inicio de combate
+    _cine2_startFightUI();
   }
                          
 }; 
