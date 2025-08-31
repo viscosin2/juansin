@@ -2441,7 +2441,7 @@ function step2() {
 
   const v  = _cine2_getVold();
   const tx = v ? (v.x - 25) : player.x;
-  const ty = v ?  v.y  - 10    : player.y;
+  const ty = v ?  v.y  - 14    : player.y;
 
   cine2AutoWalkTo(tx, ty, 700, () => {
     if (v) player.dir = (player.x < v.x) ? 'right' : 'left';
@@ -2489,29 +2489,6 @@ function step2() {
 
       function step5() {
   _cine2_openPortraits();
-
-  // ENTRADA: primero entra el de la izquierda (Voldemort) hasta inX
-  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, () => {
-    openDialog([{ speaker: 'Voldemort', text: 'Sorpresa.' }], true);
-
-    CUT.hijackAction = () => {
-      if (isTyping) return advanceDialog();
-      closeDialog();
-
-      // SALE Voldemort por la izq
-      _startSlide(PORTRAITS.left, PORTRAITS.left.outX, () => {
-        // ENTRA Juan por la dcha
-        _startSlide(PORTRAITS.right, PORTRAITS.right.inX, () => {
-          openDialog([{ speaker: 'Juan', text: 'Wow.' }], true);
-          CUT.hijackAction = () => {
-            if (isTyping) return advanceDialog();
-            closeDialog();
-            // aquí seguirías con step6/step7, etc.
-          };
-        });
-      });
-    };
-  });
 }
   
 }
