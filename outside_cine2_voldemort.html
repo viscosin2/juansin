@@ -2653,7 +2653,7 @@ function playVoldemortRayFx(fromNpc){
 
   const px = screenRect.dx + (fromNpc.x - cam.x) * mapScaleX;
   const py = screenRect.dy + (fromNpc.y - cam.y) * mapScaleY - 30; // altura aprox manos
-  const len = Math.max(40, screenRect.dw * 0.5);
+  const len = Math.max(8, screenRect.dw * 0.5);
   ray.style.left = (px|0) + 'px';
   ray.style.top  = (py|0) + 'px';
   ray.style.transform = `translateX(0) rotate(0deg) scaleX(0)`;
