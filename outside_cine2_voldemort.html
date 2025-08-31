@@ -2399,24 +2399,243 @@ function spawnTempGandalfAhead(targetCamY){
 // No toca cine1 ni cine3, usa los helpers ya existentes.
 async function startCinematic2(){
   try{
-    if (GAME_FLAGS.has_potion){ return; } // si ya se hizo, no repetir
     CUT.active = true; CUT.id = 'cine2'; CUT.phase = 'start';
-    ambientLock = true; freezeIdle('up');
-    // Lanza directamente la secuencia de esconderse y aparición de Gandalf Blanco.
-    // Esta función ya gestiona la niebla en coordenadas de MUNDO, los retratos y el spawn de la pócima.
-    if (typeof startBushHideSequence === 'function'){
-      startBushHideSequence();
-    } else {
-      // Fallback: si no existiera por cualquier motivo, cerramos limpio
-      console.warn('startBushHideSequence no disponible en este build');
-      ambientLock = false;
-      CUT.active = false; CUT.id = null; CUT.phase = null; CUT.hijackAction = null; CUT.onEnd = null;
-    }
+    ambientLock = true; freezeIdle('down');
+
+    // 1) Al pisar: bloqueo + wait 1s + "acércate muchacho"
+    setTimeout(()=>{
+      openDialog([{speaker:'???', text:'Acércate, muchacho.'}], true);
+
+      // Acción -> cerrar
+      CUT.hijackAction = ()=>{
+        if (!dialogOpen){ return; }
+        if (isTyping) { advanceDialog(); return; }
+        closeDialog();
+        CUT.hijackAction = null;
+
+        // 2) Juan se desplaza hasta quedar a -5px en X del Voldemort actual
+        const v = _cine2_getVold();
+        const tx = v ? (v.x - 5) : player.x;
+        const ty = v ? (v.y)     : player.y;
+        cineAutoWalkTo(tx, ty, 700, ()=>{
+          player.dir = v && player.x < v.x ? 'right' : 'left';
+
+          // 3) Diálogo: "¿Quién eres?" -> "Adivina" -> "No tengo tiempo"
+          openDialog([{speaker:'Juan', text:'¿Quién eres?'}], true);
+          CUT.hijackAction = ()=>{
+            if (!dialogOpen) return;
+            if (isTyping){ advanceDialog(); return; }
+            if (dialogIndex < dialogScript.length - 1){ advanceDialog(); return; }
+            // pasa al siguiente bloque
+            closeDialog();
+            // "??? Adivina" -> "Juan No tengo tiempo"
+            openDialog([{speaker:'???', text:'Adivina.'}], true);
+            CUT.hijackAction = ()=>{
+              if (isTyping){ advanceDialog(); return; }
+              closeDialog();
+              openDialog([{speaker:'Juan', text:'No tengo tiempo.'}], true);
+              CUT.hijackAction = ()=>{
+                if (isTyping){ advanceDialog(); return; }
+                closeDialog();
+
+                // 4) Pausa 1s y cambiar sprite Voldemort perfil -> frontal
+                setTimeout(async()=>{
+                  await _cine2_swapVoldProfileToFront();
+
+                  // 5) "Soy Lord Voldemort" (con speaker)
+                  openDialog([{speaker:'Voldemort', text:'Soy Lord Voldemort.'}], true);
+                  CUT.hijackAction = ()=>{
+                    if (isTyping){ advanceDialog(); return; }
+                    // 6) Juan: "Buena, va"
+                    closeDialog();
+                    openDialog([{speaker:'Juan', text:'Buena, va.'}], true);
+                    CUT.hijackAction = ()=>{
+                      if (isTyping){ advanceDialog(); return; }
+                      closeDialog();
+
+                      // 7) Overlay retratos: entra Voldemort por izq diciendo "Sorpresa"
+                      _cine2_openPortraits();
+                      openDialog([{speaker:'Voldemort', text:'Sorpresa.'}], true);
+                      CUT.hijackAction = ()=>{
+                        if (isTyping){ advanceDialog(); return; }
+                        closeDialog();
+
+                        // 8) Sale Voldemort por la izq, entra Juan "Wow"
+                        _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
+                          openDialog([{speaker:'Juan', text:'Wow.'}], true);
+                          CUT.hijackAction = ()=>{
+                            if (isTyping){ advanceDialog(); return; }
+                            closeDialog();
+
+                            // 9) Sale Juan, entra Voldemort "Luchamos" -> Sale Vold, entra Juan "Ok"
+                            _startSlide(PORTRAITS.right, PORTRAITS.right.outX, ()=>{
+                              openDialog([{speaker:'Voldemort', text:'Luchamos.'}], true);
+                              CUT.hijackAction = ()=>{
+                                if (isTyping){ advanceDialog(); return; }
+                                closeDialog();
+                                _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
+                                  openDialog([{speaker:'Juan', text:'Ok.'}], true);
+                                  CUT.hijackAction = ()=>{
+                                    if (isTyping){ advanceDialog(); return; }
+                                    closeDialog();
+
+                                    // 10) Barras de vida ya están. Cambiar retrato de Juan por “pelea”
+                                    PORTRAITS.right.img = IMG_JUAN_FIGHT || PORTRAITS.right.img;
+
+                                    // 11) Espera 1s -> narrador "¿Cómo quieres atacar?" -> abrir desplegable
+                                    setTimeout(()=>{
+                                      openDialog([{speaker:'', text:'¿Cómo quieres atacar?'}], true);
+                                      CUT.hijackAction = ()=>{
+                                        if (isTyping){ advanceDialog(); return; }
+                                        closeDialog(); _cine2_openMenu();
+
+                                        // Acción ahora confirma; ◄ ► cambian opción
+                                        const oldHijack = CUT.hijackAction;
+                                        CUT.hijackAction = ()=>{
+                                          const choice = _cine2_menuConfirm();
+                                          if (choice >= 0){
+                                            _cine2_closeMenu();
+
+                                            // 12) Juan se mueve como SSJ de la cine3 (dash corto) para atacar
+                                            const R = PORTRAITS.right; // Juan en retratos
+                                            // simulamos dash de retrato (igual que cine3)
+                                            const mid = R.inX - Math.round(screenRect.dw*0.04);
+                                            const back= R.inX;
+                                            R.sFrom=1.00; R.sTo=1.06;
+                                            _startSlide(R, mid, ()=>{
+                                              R.sFrom=1.06; R.sTo=1.00;
+                                              _startSlide(R, back, ()=>{
+                                                // 13) Se quita retrato de Juan sin transición, aparece Voldemort “recibiendo”
+                                                const L = PORTRAITS.left;
+                                                // hit react + bajar 50% vida Voldemort
+                                                const orig = L.inX; const kick = orig + Math.round(screenRect.dw*0.02);
+                                                L.sFrom=1.00; L.sTo=0.96;
+                                                _startSlide(L, kick, ()=>{
+                                                  L.sFrom=0.96; L.sTo=1.00; _startSlide(L, orig, null);
+                                                });
+                                                HPBARS.setTargets(1, 50);
+
+                                                // 14) Espera 1s -> Voldemort “Me las pagarás” y vuelve sprite a perfil
+                                                setTimeout(async ()=>{
+                                                  openDialog([{speaker:'Voldemort', text:'Me las pagarás.'}], true);
+                                                  CUT.hijackAction = ()=>{
+                                                    if (isTyping){ advanceDialog(); return; }
+                                                    closeDialog();
+                                                    // volver a “perfil”
+                                                    const vold = _cine2_getVold();
+                                                    if (vold && NPC_IMAGES?.voldemort_perfil){
+                                                      const img = NPC_IMAGES.voldemort_perfil;
+                                                      vold.img = img; vold.iw = img.naturalWidth; vold.ih = img.naturalHeight;
+                                                    }
+
+                                                    // 15) Quitar overlay un segundo
+                                                    _cine2_endPortraitsAndUI();
+                                                    setTimeout(()=>{
+                                                      // 16) Voldemort lanza rayo verde a la izq + "Avada Kedavra"
+                                                      openDialog([{speaker:'Voldemort', text:'Avada Kedavra.'}], true);
+                                                      // (Rayo visual: aquí pondrías tu FX si lo tienes)
+                                                      CUT.hijackAction = ()=>{
+                                                        if (isTyping){ advanceDialog(); return; }
+                                                        closeDialog();
+
+                                                        // 17) Overlay otra vez y portrait de Juan siendo atacado
+                                                        _cine2_openPortraits();
+                                                        // bajada final: repetimos secuencia de ataque del narrador
+                                                        openDialog([{speaker:'', text:'¿Cómo quieres atacar?'}], true);
+                                                        CUT.hijackAction = ()=>{
+                                                          if (isTyping){ advanceDialog(); return; }
+                                                          closeDialog();
+
+                                                          // Repetición “rápida”: ataque Juan -> Voldemort recibe
+                                                          const R2 = PORTRAITS.right, L2 = PORTRAITS.left;
+                                                          const mid2 = R2.inX - Math.round(screenRect.dw*0.04);
+                                                          R2.sFrom=1.00; R2.sTo=1.06;
+                                                          _startSlide(R2, mid2, ()=>{
+                                                            R2.sFrom=1.06; R2.sTo=1.00;
+                                                            _startSlide(R2, R2.inX, ()=>{
+                                                              const orig2=L2.inX; const kick2=orig2+Math.round(screenRect.dw*0.02);
+                                                              L2.sFrom=1.00; L2.sTo=0.94;
+                                                              _startSlide(L2, kick2, ()=>{
+                                                                L2.sFrom=0.94; L2.sTo=1.00; _startSlide(L2, orig2, null);
+                                                              });
+
+                                                              // 18) Diálogo "Es imposible" y vida a 0
+                                                              setTimeout(()=>{
+                                                                openDialog([{speaker:'Voldemort', text:'Es imposible...'}], true);
+                                                                CUT.hijackAction = ()=>{
+                                                                  if (isTyping){ advanceDialog(); return; }
+                                                                  closeDialog();
+                                                                  HPBARS.setTargets(1, 0);
+
+                                                                  // 19) Voldemort se desliza hacia abajo y desaparece
+                                                                  const vold = _cine2_getVold();
+                                                                  if (vold){
+                                                                    // simple fade hacia abajo
+                                                                    const y0 = vold.y, y1 = y0 + 120, t0 = performance.now(), dur=800;
+                                                                    (function slideOut(){
+                                                                      const k = Math.min(1,(performance.now()-t0)/dur);
+                                                                      vold.y = y0 + (y1 - y0)*k;
+                                                                      vold._fadeAlpha = 1 - k;
+                                                                      if (k<1) requestAnimationFrame(slideOut);
+                                                                      else {
+                                                                        const i = NPCS.indexOf(vold);
+                                                                        if (i>=0) NPCS.splice(i,1);
+                                                                        // 20) Cerrar overlays y barras
+                                                                        _cine2_endPortraitsAndUI();
+
+                                                                        // 21) Última línea Juan "ños"
+                                                                        openDialog([{speaker:'Juan', text:'Ños.'}], true);
+                                                                        CUT.hijackAction = ()=>{
+                                                                          if (isTyping){ advanceDialog(); return; }
+                                                                          closeDialog();
+                                                                          // FIN
+                                                                          CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
+                                                                          ambientLock=false; unfreezeIdle();
+                                                                        };
+                                                                      }
+                                                                    })();
+                                                                  } else {
+                                                                    // fallback si no se encuentra el npc
+                                                                    _cine2_endPortraitsAndUI();
+                                                                    CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null;
+                                                                    ambientLock=false; unfreezeIdle();
+                                                                  }
+                                                                };
+                                                              }, 600);
+                                                            });
+                                                          });
+                                                        }; // end hijack repetition
+                                                      }; // end hijack after avada
+                                                    }, 900);
+                                                  }; // end hijack after "me las pagarás"
+                                                }, 800);
+                                              }); // end hit anim
+                                            }); // end dash back
+                                          }; // end confirm first attack
+                                        }; // end hijack for menu
+                                      }, 700);
+                                    }; // end 'Ok'
+                                  }); // slide in left Vold -> dialog OK
+                                }); // end slide right out (Juan)
+                              }); // end dialog "Luchamos"
+                            }); // end slide right (Juan out)
+                          }; // end Wow
+                        }); // end slide left out (Vold)
+                      }; // end "Sorpresa"
+                    }; // end "Buena va"
+                  }); // end Soy Lord Voldemort
+                }, 1000); // end pause before swap
+              }; // end No tengo tiempo
+            }; // end Adivina
+          }; // end ¿Quién eres?
+        }); // end autowalk
+      }; // end first action
+    }, 1000);
   }catch(e){
-    console.error('Error en startCinematic2:', e);
-    // Failsafe para no dejar el input bloqueado
-    ambientLock = false;
-    CUT.active = false; CUT.id = null; CUT.phase = null; CUT.hijackAction = null; CUT.onEnd = null;
+    console.error('Error en startCinematic2 (Voldemort):', e);
+    // failsafe
+    _cine2_endPortraitsAndUI();
+    ambientLock=false; CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
   }
 }
 function fadeOutFogThenEnd(){
