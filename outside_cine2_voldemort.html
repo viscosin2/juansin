@@ -2617,7 +2617,6 @@ venganzaVoldemort();
     v.img = IMG_VOLD_PERFIL; 
     _cine2_closePortraitsAndOverlay(() => {
       const vold = _cine2_getVold();
-      playVoldemortRayFx(vold);      
       setTimeout(() => {
           playVoldemortRayFx(vold);
           openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
@@ -2772,7 +2771,7 @@ function playVoldemortRayFx(fromNpc){
 
   const px = screenRect.dx + (fromNpc.x - cam.x) * mapScaleX;
   const py = screenRect.dy + (fromNpc.y - cam.y) * mapScaleY - 30; // altura aprox manos
-  const len = 10;
+  const len = 15;
   ray.style.left = (px|0) + 'px';
   ray.style.top  = (py|0) + 'px';
   ray.style.transform = `translateX(0) rotate(0deg) scaleX(0)`;
