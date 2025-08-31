@@ -543,8 +543,35 @@ function bindHold(btn,on,off){
 }
 bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
 bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
-bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
-bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
+bindHold(document.getElementById('btn-left'), 
+  ()=>{ 
+    if (CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on){ 
+      _cine2_menuLeft(); 
+    } else { 
+      keys.left=true; 
+    }
+  }, 
+  ()=>{ 
+    if (!(CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on)){ 
+      keys.left=false; 
+    }
+  }
+);
+
+bindHold(document.getElementById('btn-right'), 
+  ()=>{ 
+    if (CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on){ 
+      _cine2_menuRight(); 
+    } else { 
+      keys.right=true; 
+    }
+  }, 
+  ()=>{ 
+    if (!(CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on)){ 
+      keys.right=false; 
+    }
+  }
+);
 function bindPressVisual(el){
   const on=()=>el.classList.add('pressed'), off=()=>el.classList.remove('pressed');
   el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});
