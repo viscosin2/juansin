@@ -2707,7 +2707,7 @@ venganzaVoldemort();
       HPBARS.setTargets(10, 50); // ← Ajusta orden si tu implementación es al revés
       R.sFrom = 0.96; R.sTo = 1.00;
 
-      _startSlide(R, orig, () => {
+        _startSlide(R, orig, () => {
         openDialog([{ speaker:'', text:'Ha sido un golpe duro. Remata esto.' }], true);
 
         CUT.hijackAction = () => {
@@ -2750,7 +2750,7 @@ venganzaVoldemort();
                       _startSlide(L, origL, () => {
                         // -- REEMPLAZA desde aquí --
 openDialog([{ speaker:'Voldemort', text:'No puede ser.' }], true);
-
+_cine3_removeVoldFromMap();
 CUT.hijackAction = () => {
   if (isTyping){ advanceDialog(); return; }
   closeDialog();
@@ -2983,6 +2983,8 @@ function cine2AutoWalkTo(targetX, targetY, ms, onDone, { followCam = true, stepP
     }
   })();
 }
+
+  
 
 // **************************** CINEMATICA 3
 
@@ -3269,6 +3271,11 @@ if (!GAME_FLAGS.juansin_other_halo){
   endCine3();
 }
 
+function _cine3_removeVoldFromMap(){
+  const idx = NPCS.findIndex(n => n?.id === 'voldemort_perfil');
+  if (idx >= 0) NPCS.splice(idx, 1);
+}
+
 function endCine3(){
   // Cierre limpio de la cinematica 3 (sin arrancar el latido aquí)
   CUT.active = false;
@@ -3396,123 +3403,124 @@ function startCinematic4(){
   CUT.active = true; CUT.id='cine4'; CUT.phase='start';
   ambientLock = true; player.moving=false; player.vx=player.vy=0;
 
-  _cine4_openOverlay();
+                      setTimeout(() => {
+                  openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true);
+                  CUT.hijackAction = () => {
+                    if (dialogOpen){
+                      closeDialog();
+                      CUT.hijackAction = null;
+                        _cine4_openOverlay();
   _cine4_beginPortraitsAndBars();
 
   _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
-    // 2) Entra Juan por la derecha
-    _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
+    setTimeout(()=>{
+      cine3_attackSequence(()=>{
 
-      // 3) Ataque inicial del SSJ
-      setTimeout(()=>{
-        _cine4_attackDashLeft(()=>{
-          _cine4_hitShakeRight();
-          // (opcional) si quieres que baje un poco la vida de Juan tras recibir
-          // HPBARS.setTargets(100, 125);
+        _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
 
-          // 4) Narrador + menú de ataque de Juan
+          _startSlide(R, orig, () => {
+        openDialog([{ speaker:'', text:'No tiene ningún efecto. Ataque definitivo.' }], true);
+ CUT.hijackAction = () => {
+          if (isTyping){ advanceDialog(); return; }
+          closeDialog();
           openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
+  
+   CUT.hijackAction = () => {
+    if (isTyping){ advanceDialog(); return; }
+    
+          _cine2_openMenu();
 
-          // bloque corto: si está escribiendo, completar; si no, abrimos desplegable
-          CUT.hijackAction = ()=>{
-            if (!dialogOpen) return;
-            if (isTyping){ advanceDialog(); return; }
+          CUT.hijackAction = () => {
+            const choice = _cine2_menuConfirm();
+            if (choice < 0) return; // no elegido aún
 
-            // Abre tu lista de opciones; usa tu API real de UI:
-            if (typeof openChoiceList === 'function'){
-              openChoiceList(
-                [
-                  { id:'bola_energia', label:'Bola de energía ENORME' },
-                  { id:'puño',         label:'Puño' },
-                  { id:'patada',       label:'Patada' }
-                ],
-                (opt)=>{
-                  // Da igual lo que elija: one-shot al SSJ
-                  closeDialog();
-                  CUT.hijackAction = null;
+            closeDialog();
+            _cine2_closeMenu();
 
-                  // 5) Anim/feedback de ataque de Juan (pequeño zoom del retrato dcha)
-                  const R = PORTRAITS.right;
-                  R.sFrom=1.00; R.sTo=1.10;
-                  _startSlide(R, R.inX, ()=>{
-                    R.sFrom=1.10; R.sTo=1.00;
-                    _startSlide(R, R.inX, null);
-                  });
+            const L = PORTRAITS.left; 
+            const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+            const back = R.inX;
 
-                  // Baja la vida del SSJ a 0
-                  HPBARS.setTargets(0, HPBARS.rightValue ?? 130);
+            R.sFrom = 1.00; R.sTo = 1.06;
+            _startSlide(R, mid, () => {
+              R.sFrom = 1.06; R.sTo = 1.00;
+              _startSlide(R, back, () => {
 
-                  // 6) El retrato del SSJ se desliza hacia ABAJO y desaparece
-                  const L = PORTRAITS.left;
-                  const offY = Math.round(screenRect.dh*0.30);
-                  // Simulamos “salida hacia abajo” moviendo su Y virtual (si no tienes Y, usamos un “down slide” en X & scale)
-                  if (typeof L.y === 'number'){
-                    const y0 = L.y, y1 = y0 + offY;
-                    const t0 = performance.now(), dur = 400;
-                    (function step(){
-                      const k = Math.min(1, (performance.now()-t0)/dur);
-                      L.y = y0 + (y1-y0)*k;
-                      if (k<1) requestAnimationFrame(step);
-                      else {
-                        // retira el lado izquierdo
-                        _startSlide(L, L.outX, ()=>{
-                          PORTRAITS.left = null;
-                          // 7) Cierre limpio y spawns
-                          _cine4_finish();
-                        });
-                      }
-                    })();
-                  }else{
-                    // Fallback: simplemente sacarlo por X
-                    _startSlide(L, L.outX, ()=>{
-                      PORTRAITS.left = null;
-                      _cine4_finish();
+                _startSlide(R, R.outX, () => {
+                  L.x = L.outX;
+                  _startSlide(L, L.inX, () => {
+                    const origL = L.inX;
+                    const kickL = origL + Math.round(screenRect.dw * 0.02);
+
+                    L.sFrom = 1.00; L.sTo = 0.96;
+                    _startSlide(L, kickL, () => {
+                      HPBARS.setTargets(130, 0); 
+                      L.sFrom = 0.96; L.sTo = 1.00;
+
+                      _startSlide(L, origL, () => {
+                        _cine4_removeSSJFromMap();
+openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'SOS' }], true);
+
+CUT.hijackAction = () => {
+  if (isTyping){ advanceDialog(); return; }
+  closeDialog();
+  const L = PORTRAITS.left;
+const startY = (L.y ?? 0);
+const endY   = startY + Math.round(screenRect.dh * 0.8); // resbala ~80% de alto
+const t0 = performance.now();
+const dur = 550;
+
+function fallStep(t){
+  const k = Math.min(1, (t - t0) / dur);
+  L.y = startY + (endY - startY) * k;
+  if (k < 1){
+    requestAnimationFrame(fallStep);
+  }else{
+    endCine4();
+  }
+}
+requestAnimationFrame(fallStep);
+  
+};
+                      });
                     });
-                  }
-                }
-              );
-            }else{
-              // Fallback sin UI de lista: confirma con acción
-              closeDialog();
-              CUT.hijackAction = null;
-              HPBARS.setTargets(0, HPBARS.rightValue ?? 130);
-              _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
-                PORTRAITS.left = null;
-                _cine4_finish();
+                  });
+                });
               });
-            }
-          };
+            });
+            
+            )};
+            }; 
+          };    
+            )};              
+            )};
         });
-      }, 500);
+      });                
     });
-  });
+                  };        
+                });
+
 }
 
-/* ---------- Cierre y spawns ---------- */
-function _cine4_finish(){
-  // Borra al SSJ del mapa
-  _cine4_removeSSJFromMap();
-
-  // Cierre de retratos + overlay
-  _cine4_endPortraitsAndBars(()=>{
-    _cine4_closeOverlay();
-
-    // Spawns aliados alrededor de Juan
-    //_cine4_spawnAlliesAroundPlayer();
-
-    // Liberar control
-    CUT.active = false; CUT.id = null; CUT.phase = null;
-    CUT.hijackAction = null; CUT.onEnd = null;
-    ambientLock = false;
-
-    // pequeño diálogo de color si quieres
-    openDialog([{ speaker:'Gandalf (Gris)', text:'Has luchado bien, muchacho.' }], true);
-  });
+function endCine4(){ 
+  CUT.active=false; 
+  CUT.id=null; 
+  CUT.phase=null; 
+  CUT.hijackAction=null; 
+  CUT.onEnd=null; 
+  ambientLock=false; 
+      _cine2_closePortraitsAndOverlay(() => {
+openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true); 
+  CUT.hijackAction = () => { 
+    if (isTyping){ advanceDialog(); 
+                  return; } 
+    closeDialog(); 
+    CUT.hijackAction = null;
+  }; 
+    });   
 }
 
 
-  
-  
 /* ========== MOVIMIENTO / MEGAUPDATE ========== */
 function cornerSlide(targetX, targetY, vx, vy){
   const SLIDE = 3;
@@ -3583,6 +3591,7 @@ function update(dt){
       if (cz.id === 'cine1'){ startCinematic1(); return; }
       if (cz.id === 'cine2'){ startCinematic2(); return; }
       if (cz.id === 'cine3'){ startCinematic3(); return; }
+      if (cz.id === 'cine3'){ startCinematic4(); return; }
     }
   }
 
