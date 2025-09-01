@@ -4091,32 +4091,27 @@ if (n.halo) {
   ctx.restore();
 }
 
-// === sprite ===
+// === sprite (una sola vez, con flipX y fadeAlpha) ===
 ctx.save();
-if (n.flipX) {
-  ctx.translate(dx + dw, dy);
-  ctx.scale(-1, 1);
-  ctx.drawImage(n.img, 0, 0, dw, dh);
-} else {
-  ctx.drawImage(n.img, dx, dy, dw, dh);
-}
-ctx.restore();
 
-// (después ya va tu fadeAlpha, etc.)
-ctx.save();
-if (typeof n._fadeAlpha === 'number'){
+// aplica fade si existe
+if (typeof n._fadeAlpha === 'number') {
   ctx.globalAlpha *= Math.max(0, Math.min(1, n._fadeAlpha));
 }
 
-if (!n.img) { ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh); }
-else { ctx.drawImage(n.img,0,0,n.iw,n.ih,dx,dy,dw,dh); }
+if (!n.img) {
+  // placeholder si no hay imagen
+  ctx.fillStyle = '#999';
+  ctx.fillRect(dx, dy, dw, dh);
+} else if (n.flipX) {
+  // espejo horizontal (mismo patrón que en PROPS)
+  ctx.scale(-1, 1);
+  ctx.drawImage(n.img, 0, 0, n.iw, n.ih, -dx - dw, dy, dw, dh);
+} else {
+  ctx.drawImage(n.img, 0, 0, n.iw, n.ih, dx, dy, dw, dh);
+}
 
 ctx.restore();
-
-
-// (después de esto, dibujas el sprite como ya haces)
-if (!n.img) { ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh); }
-else { ctx.drawImage(n.img,0,0,n.iw,n.ih,dx,dy,dw,dh); }
 
       // FX disparo (igual que antes)
      if (isNPCFxActive(n)) {
