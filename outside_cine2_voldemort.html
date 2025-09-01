@@ -422,8 +422,8 @@ const NPC_CATALOG = {
   voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.55 }},
   soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },fireFxMs: 140},
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  patata1: { src: 'assets/npcs/patata1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  patata2: { src: 'assets/npcs/patata2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  patata1: { src: 'assets/npcs/patatas1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  patata2: { src: 'assets/npcs/patatas2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   faramir: { src: 'assets/npcs/faramir.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   denethor: { src: 'assets/npcs/denethor.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   juansin_idle: { src: 'assets/juan_character/idle_down_shoes.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 }, depthBand: 8, depthAnchorY: 1, shadow:{ alpha:0.30, offsetY:-3, scaleX:1/2.4, scaleY:1/7 } },
@@ -449,7 +449,7 @@ const NPC_PLACED = {
   patata2: [{id:'patata2', type:'percent', x: 86, y: 62, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_patata1', denethor1:true,
      dialogBlocked:[ {speaker:'Godo', text:'¿Mijo? ¿Majo? PAPAAAAAA'}], dialog: [{ speaker:'Godo', text:'¿Me podría dar...' },{ speaker:'Godo', text:'unas pata ti tas?' }]
     }],
-  faramir: [{id:'faramir', type:'percent', x: 94, y: 70, interact: { x:-14, y: 12, w:28, h:16 }, faramir:true, dialogBlocked:[ {speaker:'Faramir', text:'Vete por la autopista, pa que la veas. Está hecha polvo.'}], requiresFlag:'talked_denethor',  faramir1:true, dialog: [{ speaker:'Faramir', text:'¡Date una vuelta!'},{ speaker:'Faramir', text:'Pa que la veas... cómo está la Avenida Anaga...'}],dialog2: [{ speaker:'Faramir', text:'Muchacho... levántate ahí, muchacho...'}]
+  faramir: [{id:'faramir', type:'percent', x: 86, y: 70, interact: { x:-14, y: 12, w:28, h:16 }, faramir:true, dialogBlocked:[ {speaker:'Faramir', text:'Vete por la autopista, pa que la veas. Está hecha polvo.'}], requiresFlag:'talked_denethor',  faramir1:true, dialog: [{ speaker:'Faramir', text:'¡Date una vuelta!'},{ speaker:'Faramir', text:'Pa que la veas... cómo está la Avenida Anaga...'}],dialog2: [{ speaker:'Faramir', text:'Muchacho... levántate ahí, muchacho...'}]
     }],
   denethor: [{id:'denethor', type:'percent', x: 94, y: 70, interact: { x:-14, y: 12, w:28, h:16 }, denethor:true, dialogBlocked:[ {speaker:'Denethor', text:'¡Tas diciendo hombre!'}], requiresFlag:'talked_faramir',  faramir1:true, dialog: [{ speaker:'Denethor', text:'¡ME DA IGUAL LA AVENIDA ANAGA!'},{ speaker:'Denethor', text:'Yo quiero que me pongas la luz.'},{ speaker:'Denethor', text:'Ayquemecaigocoño...'}],
     }],
@@ -650,7 +650,7 @@ function buildNPCs(){
         onFire: !!p.onFire,
         patata: !!p.patata,
         faramir: !!p.faramir,
-        faramir2: !!p.faramir2,
+        faramir1: !!p.faramir1,
         denethor: !!p.denethor,
         muzzleOffset: spec.muzzleOffset || {x:0,y:0},
         fireFxMs: spec.fireFxMs || 120,
@@ -875,6 +875,8 @@ if (npcHit){
       if (!GAME_FLAGS.talked_faramir) {
         if (npc.dialogBlocked && npc.dialogBlocked.length){
           openDialog(npc.dialogBlocked, true); // "¡Tas diciendo hombre!"
+          // 🔑 CLAVE PARA EVITAR EL DEADLOCK Y SEGUIR LA SECUENCIA:
+          GAME_FLAGS.talked_denethor = true; // ← con esto ya desbloqueas a Faramir
         } else {
           showToast('No parece querer hablar ahora.', 1400);
         }
@@ -887,14 +889,14 @@ if (npcHit){
           openDialog(npc.dialog, true); // "Me da igual... / Yo quiero que me pongas la luz.. / ayquemecaigocoño"
         }
         const _den = NPCS.find(n => n.id === 'denethor');
-        if (_den) _den.src = 'assets/npcs/denethorcaido.png';
-        GAME_FLAGS.talked_denethor    = true;  // marcamos que ya habló Denethor
+        if (_den) _den.src = 'assets/npcs/denethorcaido.png'; // CAMBIO DE PNG
+
+        GAME_FLAGS.talked_denethor    = true;  // marcamos que ya habló Denethor (final)
         GAME_FLAGS.denethor_finalized = true;  // no se repite nunca más
         return;
       }
 
-      // 3) Después de eso, Denethor ya no repite (silencio o un toast cortito si quieres)
-      // showToast('Denethor te ignora.', 1000);
+      // 3) Después de eso, Denethor ya no repite
       return;
     }
     // ====== FIN SECUENCIA FARAMIR / DENETHOR ======
@@ -926,6 +928,7 @@ if (npcHit){
     return;
   }
 }
+
 
 
   // 2) Props con "say" => toast
