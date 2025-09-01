@@ -4083,12 +4083,13 @@ if (n.halo) {
   g.addColorStop(1.00, `rgba(${halo.color}, 0)`);
 
   ctx.save();
-ctx.globalCompositeOperation = 'lighter';
-ctx.fillStyle = g;
-ctx.beginPath();
-ctx.arc(cx, cy, Rp, 0, Math.PI*2);
-ctx.fill();
-ctx.restore();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, Rp, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
 
 // === sprite ===
 ctx.save();
@@ -4100,10 +4101,8 @@ if (n.flipX) {
   ctx.drawImage(n.img, dx, dy, dw, dh);
 }
 ctx.restore();
-}
 
-
-// (después del halo, justo antes del sprite)
+// (después ya va tu fadeAlpha, etc.)
 ctx.save();
 if (typeof n._fadeAlpha === 'number'){
   ctx.globalAlpha *= Math.max(0, Math.min(1, n._fadeAlpha));
