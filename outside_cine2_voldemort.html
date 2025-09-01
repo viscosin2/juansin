@@ -451,8 +451,8 @@ const NPC_PLACED = {
     }],
   patata1: [{id:'patata1', type:'percent', x: 63.6, y: 20, interact: { x:-13, y: 10, w:29, h:18 }, patatas:true, dialog: [{ speaker:'Canario medio', text:'¿Me podría dar unas papitas con mojo, por favor?'}],
     }],
-  patata2: [{id:'patata2', type:'percent', x: 66.6, y: 20, interact: { x:-13, y: 10, w:29, h:18 },requiresFlag:'talked_patata1', denethor1:true,
-     dialogBlocked:[ {speaker:'Godo', text:'¿Mijo? ¿Majo? PAPAAAAAA'}], dialog: [{ speaker:'Godo', text:'¿Me podría dar...' },{ speaker:'Godo', text:'unas pata ti tas?' }]
+  patata2: [{id:'patata2', type:'percent', x: 66.6, y: 20, interact: { x:-13, y: 10, w:29, h:18 },
+     dialogBlocked:[ {speaker:'Godo', text:'¿Papa? ¿Mojo? ¿Miniño? ¿Muchacho?'}], dialog: [{ speaker:'Godo', text:'¿Me podría dar...' },{ speaker:'Godo', text:'unas pata ti tas?' }]
     }],
   faramir: [{id:'faramir', type:'percent', x: 11.5, y: 8, interact: { x:-13, y: 10, w:29, h:18 }, faramir:true, dialogBlocked:[ {speaker:'Faramir', text:'Vete por la autopista, pa que la veas. Está hecha polvo.'}], requiresFlag:'talked_denethor',  faramir1:true, dialog: [{ speaker:'Faramir', text:'¡Date una vuelta!'},{ speaker:'Faramir', text:'Pa que la veas... cómo está la Avenida Anaga...'}],dialog2: [{ speaker:'Faramir', text:'Muchacho... levántate ahí, muchacho...'}]
     }],
@@ -911,9 +911,20 @@ if (npcHit){
     setTimeout(() => { triggerNPCShot(npc); }, 1500);
     GAME_FLAGS.talked_gunner = true;
   }
-  if (npc.patatas){
-    GAME_FLAGS.talked_patata1 = true;
+  if (npc.id === 'patata1') {
+  if (npc.dialog) openDialog(npc.dialog, true);
+  GAME_FLAGS.talked_patata1 = true;
+  return;
+}
+
+if (npc.id === 'patata2') {
+  if (!GAME_FLAGS.talked_patata1 && npc.dialogBlocked) {
+    openDialog(npc.dialogBlocked, true); // "¿Mijo? ¿Majo? PAPAAAAAA"
+    return;
   }
+  if (npc.dialog) openDialog(npc.dialog, true); // "¿Me podría dar... unas pata ti tas?"
+  return;
+}
 }
 
 
