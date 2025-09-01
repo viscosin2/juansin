@@ -1576,7 +1576,7 @@ function openSoloGandalfEpic(script){
 
   // zoom épico progresivo mientras habla (hasta tope)
   const maxScaleBoost = 1.20; // ~+10%
-  const growMs = 10000;
+  const growMs = 4000;
   (function epicZoom(t0 = performance.now()){
     if (!PORTRAITS.active || !PORTRAITS.soloEpic) return;
     const k = Math.min(1, (performance.now()-t0)/growMs);
@@ -3722,7 +3722,7 @@ function update(dt){
   setTimeout(()=>{
     initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
     interactBlocked = true;     // ← bloquea interacciones
-    openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true);
+    openDialog([{speaker:'Juan', text:'Uff... Qué pelete.'}], true);
     introActive = false;
   }, 300);
 }
