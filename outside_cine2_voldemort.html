@@ -325,7 +325,7 @@ const GAME_FLAGS = {
   talked_gunner: false,
   juansin_other_halo: false,
   need_potion:false,   // ← nuevo: SSJ bloqueado hasta tomarla
-  has_potion:false     // ← nuevo: ya recogida/consumida
+  has_potion:true     // ← nuevo: ya recogida/consumida
 };
 
   
@@ -358,9 +358,9 @@ async function preloadCinematicImages(){
 
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
-  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
-  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:false },
-  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
+  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
+  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:true },
+  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:true }
 
 ];
   function buildCineZones(){
@@ -3407,8 +3407,8 @@ function startCinematic4(){
                   openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true);
                   CUT.hijackAction = () => {
                     if (dialogOpen){
-                      closeDialog();
                       CUT.hijackAction = null;
+                      closeDialog();
                         _cine4_openOverlay();
   _cine4_beginPortraitsAndBars();
 
@@ -3422,6 +3422,7 @@ function startCinematic4(){
         openDialog([{ speaker:'', text:'No tiene ningún efecto. Ataque definitivo.' }], true);
  CUT.hijackAction = () => {
           if (isTyping){ advanceDialog(); return; }
+   
           closeDialog();
           openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
   
@@ -3454,12 +3455,12 @@ function startCinematic4(){
 
                     L.sFrom = 1.00; L.sTo = 0.96;
                     _startSlide(L, kickL, () => {
-                      HPBARS.setTargets(130, 0); 
+                      HPBARS.setTargets(100, 150); 
                       L.sFrom = 0.96; L.sTo = 1.00;
 
                       _startSlide(L, origL, () => {
                         _cine4_removeSSJFromMap();
-openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'SOS' }], true);
+                        openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'SOS' }], true);
 
 CUT.hijackAction = () => {
   if (isTyping){ advanceDialog(); return; }
