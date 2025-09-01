@@ -883,9 +883,7 @@ if (npcHit){
     // B) Después de haber hablado con Faramir → Denethor suelta su bloque final UNA VEZ
     if (!GAME_FLAGS.denethor_finalized) {
       if (npc.dialog && npc.dialog.length){    
-          openDialog(npc.dialog, true, () => {
-  _npc_swapDenethorCaido();
-});
+          openDialog(npc.dialog, true); const i=setInterval(()=>{ if(!dialogOpen){ clearInterval(i); _npc_swapDenethorCaido(); } },100);
       }
 
 
