@@ -424,10 +424,10 @@ const NPC_CATALOG = {
   voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.55 }},
   soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },fireFxMs: 140},
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  patata1: { src: 'assets/npcs/patatas1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  patata2: { src: 'assets/npcs/patatas2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  faramir: { src: 'assets/npcs/faramir.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  denethor: { src: 'assets/npcs/denethor.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  patata1: { src: 'assets/npcs/patatas1.png', flipX:true, scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  patata2: { src: 'assets/npcs/patatas2.png', flipX:true, scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  faramir: { src: 'assets/npcs/faramir.png', flipX:true, scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  denethor: { src: 'assets/npcs/denethor.png', flipX:true,scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   juansin_idle: { src: 'assets/juan_character/idle_down_shoes.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 }, depthBand: 8, depthAnchorY: 1, shadow:{ alpha:0.30, offsetY:-3, scaleX:1/2.4, scaleY:1/7 } },
 
 };
@@ -449,14 +449,14 @@ const NPC_PLACED = {
   soldado2: [{id:'guard1', type:'percent', x: 86, y: 66, interact: { x:-13, y: 10, w:29, h:18 },requiresFlag:'talked_gunner',  
      dialogBlocked:[ {speaker:'Boliche', text:'¡Como en el Call of Duty, señores!'}], dialog: [{ speaker:'Boliche', text:'¡Ah! ¡Mi lentilla!' }]
     }],
-  patata1: [{id:'patata1', type:'percent', x: 63.6, y: 20, interact: { x:-13, y: 10, w:29, h:18 }, patatas:true, dialog: [{ speaker:'Canario medio', text:'¿Me podría dar unas papitas con mojo, por favor?'}],
+  patata1: [{id:'patata1', type:'percent', x: 66.6, y: 20, interact: { x:-13, y: 10, w:29, h:18 }, patatas:true, dialog: [{ speaker:'Canario medio', text:'¿Me podría dar unas papitas con mojo, por favor?'}],
     }],
-  patata2: [{id:'patata2', type:'percent', x: 66.6, y: 20, interact: { x:-13, y: 10, w:29, h:18 },
+  patata2: [{id:'patata2', type:'percent', x: 63.6, y: 20, interact: { x:-13, y: 10, w:29, h:18 },
      dialogBlocked:[ {speaker:'Godo', text:'¿Papa? ¿Mojo? ¿Miniño? ¿Muchacho?'}], dialog: [{ speaker:'Godo', text:'¿Me podría dar...' },{ speaker:'Godo', text:'unas pata ti tas?' }]
     }],
-  faramir: [{id:'faramir', type:'percent', x: 11.5, y: 8, interact: { x:-13, y: 10, w:29, h:18 }, faramir:true, dialogBlocked:[ {speaker:'Faramir', text:'Vete por la autopista, pa que la veas. Está hecha polvo.'}], requiresFlag:'talked_denethor',  faramir1:true, dialog: [{ speaker:'Faramir', text:'¡Date una vuelta!'},{ speaker:'Faramir', text:'Pa que la veas... cómo está la Avenida Anaga...'}],dialog2: [{ speaker:'Faramir', text:'Muchacho... levántate ahí, muchacho...'}]
+  faramir: [{id:'faramir', type:'percent', x: 15.5, y: 8, interact: { x:-13, y: 10, w:29, h:18 }, faramir:true, dialogBlocked:[ {speaker:'Faramir', text:'Vete por la autopista, pa que la veas. Está hecha polvo.'}], requiresFlag:'talked_denethor',  faramir1:true, dialog: [{ speaker:'Faramir', text:'¡Date una vuelta!'},{ speaker:'Faramir', text:'Pa que la veas... cómo está la Avenida Anaga...'}],dialog2: [{ speaker:'Faramir', text:'Muchacho... levántate ahí, muchacho...'}]
     }],
-  denethor: [{id:'denethor', type:'percent', x: 14.5, y: 8, interact: { x:-13, y: 10, w:29, h:18 }, denethor:true, dialogBlocked:[ {speaker:'Denethor', text:'¡Tas diciendo hombre!'}], requiresFlag:'talked_faramir',  faramir1:true, dialog: [{ speaker:'Denethor', text:'¡ME DA IGUAL LA AVENIDA ANAGA!'},{ speaker:'Denethor', text:'Yo quiero que me pongas la luz.'},{ speaker:'Denethor', text:'Ayquemecaigocoño...'}],
+  denethor: [{id:'denethor', type:'percent', x: 12.5, y: 8, interact: { x:-13, y: 10, w:29, h:18 }, denethor:true, dialogBlocked:[ {speaker:'Denethor', text:'¡Tas diciendo hombre!'}], requiresFlag:'talked_faramir',  faramir1:true, dialog: [{ speaker:'Denethor', text:'¡ME DA IGUAL LA AVENIDA ANAGA!'},{ speaker:'Denethor', text:'Yo quiero que me pongas la luz.'},{ speaker:'Denethor', text:'Ayquemecaigocoño...'}],
     }],
   juansin_idle: [{id:'juansin_other', type:'percent', x: 77, y: 76, interact: { x:-13, y: 10, w:29, h:18 }
   }],
@@ -4083,10 +4083,23 @@ if (n.halo) {
   g.addColorStop(1.00, `rgba(${halo.color}, 0)`);
 
   ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(cx, cy, Rp, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
+ctx.globalCompositeOperation = 'lighter';
+ctx.fillStyle = g;
+ctx.beginPath();
+ctx.arc(cx, cy, Rp, 0, Math.PI*2);
+ctx.fill();
+ctx.restore();
+
+// === sprite ===
+ctx.save();
+if (n.flipX) {
+  ctx.translate(dx + dw, dy);
+  ctx.scale(-1, 1);
+  ctx.drawImage(n.img, 0, 0, dw, dh);
+} else {
+  ctx.drawImage(n.img, dx, dy, dw, dh);
+}
+ctx.restore();
 }
 
 
