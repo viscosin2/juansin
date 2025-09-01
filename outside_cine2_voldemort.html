@@ -433,30 +433,30 @@ const NPC_CATALOG = {
 };
 
 const NPC_PLACED = {
-  abuela: [{type:'percent', x: 24, y: 90, interact: { x:-14, y: 12, w:28, h:16 }, 
-     dialog: [{ speaker:'Abuela', text:'Buenas tardes, Juan. ¿Has visto a mi gato?' }, { speaker:'Juan',text:'Mmm… creo que estaba por el río.' }]
+  abuela: [{type:'percent', x: 24, y: 91, interact: { x:-14, y: 12, w:28, h:16 }, 
+     dialog: [{ speaker:'Juan', text:'Hola, abuela.' }, { speaker:'Abuela',text:'Ay mijo...' }]
     }],
-  abuela1: [{type:'percent', x: 48, y: 20, interact: { x:-14, y: 12, w:28, h:16 }, 
+  abuela1: [{type:'percent', x: 46, y: 19.5, interact: { x:-14, y: 12, w:28, h:16 }, 
      dialog: [{ speaker:'Abuela Negra', text:'Hola, Juan.' }, { speaker:'Juan',text:'¿Qué fue?' },{ speaker:'Abuela Negra', text:'El gato se ha vuelto a escapar.' }, { speaker:'Juan',text:'Ños... ¿Otra vez?'}, { speaker:'Juan',text:'Me pareció verlo cerca del río...'}]
     }],
   gato1: [{type:'percent', x: 21, y: 61, interact: { x:-14, y: 12, w:28, h:16 }, 
      dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
     }],
-  voldemort_perfil: [{id:'voldemort_perfil',type:'percent', x: 82, y: 15.5}],
+  voldemort_perfil: [{id:'voldemort_perfil',type:'percent', x: 82.2, y: 16.5}],
   soldado1: [{id:'gunner1', type:'percent', x: 94, y: 66, interact: { x:-14, y: 12, w:28, h:16 },onFire:true, 
      dialog: [{ speaker:'Armiche', text:'Ahí te va un pequeño perdigón.'}],sound: "assets/sounds/shot.mp3"
     }],
   soldado2: [{id:'guard1', type:'percent', x: 86, y: 66, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_gunner',  
      dialogBlocked:[ {speaker:'Boliche', text:'¡Como en el Call of Duty, señores!'}], dialog: [{ speaker:'Boliche', text:'¡Ah! ¡Mi lentilla!' }]
     }],
-  patata1: [{id:'patata1', type:'percent', x: 65, y: 20, interact: { x:-14, y: 12, w:28, h:16 }, patatas:true, dialog: [{ speaker:'Canario medio', text:'¿Me podría dar unas papitas con mojo, por favor?'}],
+  patata1: [{id:'patata1', type:'percent', x: 64, y: 20, interact: { x:-14, y: 12, w:28, h:16 }, patatas:true, dialog: [{ speaker:'Canario medio', text:'¿Me podría dar unas papitas con mojo, por favor?'}],
     }],
-  patata2: [{id:'patata2', type:'percent', x: 68, y: 20, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_patata1', denethor1:true,
+  patata2: [{id:'patata2', type:'percent', x: 67, y: 20, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_patata1', denethor1:true,
      dialogBlocked:[ {speaker:'Godo', text:'¿Mijo? ¿Majo? PAPAAAAAA'}], dialog: [{ speaker:'Godo', text:'¿Me podría dar...' },{ speaker:'Godo', text:'unas pata ti tas?' }]
     }],
-  faramir: [{id:'faramir', type:'percent', x: 10, y: 8, interact: { x:-14, y: 12, w:28, h:16 }, faramir:true, dialogBlocked:[ {speaker:'Faramir', text:'Vete por la autopista, pa que la veas. Está hecha polvo.'}], requiresFlag:'talked_denethor',  faramir1:true, dialog: [{ speaker:'Faramir', text:'¡Date una vuelta!'},{ speaker:'Faramir', text:'Pa que la veas... cómo está la Avenida Anaga...'}],dialog2: [{ speaker:'Faramir', text:'Muchacho... levántate ahí, muchacho...'}]
+  faramir: [{id:'faramir', type:'percent', x: 12, y: 8, interact: { x:-14, y: 12, w:28, h:16 }, faramir:true, dialogBlocked:[ {speaker:'Faramir', text:'Vete por la autopista, pa que la veas. Está hecha polvo.'}], requiresFlag:'talked_denethor',  faramir1:true, dialog: [{ speaker:'Faramir', text:'¡Date una vuelta!'},{ speaker:'Faramir', text:'Pa que la veas... cómo está la Avenida Anaga...'}],dialog2: [{ speaker:'Faramir', text:'Muchacho... levántate ahí, muchacho...'}]
     }],
-  denethor: [{id:'denethor', type:'percent', x: 13, y: 8, interact: { x:-14, y: 12, w:28, h:16 }, denethor:true, dialogBlocked:[ {speaker:'Denethor', text:'¡Tas diciendo hombre!'}], requiresFlag:'talked_faramir',  faramir1:true, dialog: [{ speaker:'Denethor', text:'¡ME DA IGUAL LA AVENIDA ANAGA!'},{ speaker:'Denethor', text:'Yo quiero que me pongas la luz.'},{ speaker:'Denethor', text:'Ayquemecaigocoño...'}],
+  denethor: [{id:'denethor', type:'percent', x: 15, y: 8, interact: { x:-14, y: 12, w:28, h:16 }, denethor:true, dialogBlocked:[ {speaker:'Denethor', text:'¡Tas diciendo hombre!'}], requiresFlag:'talked_faramir',  faramir1:true, dialog: [{ speaker:'Denethor', text:'¡ME DA IGUAL LA AVENIDA ANAGA!'},{ speaker:'Denethor', text:'Yo quiero que me pongas la luz.'},{ speaker:'Denethor', text:'Ayquemecaigocoño...'}],
     }],
   juansin_idle: [{id:'juansin_other', type:'percent', x: 77, y: 76, interact: { x:-14, y: 12, w:28, h:16 }
   }],
