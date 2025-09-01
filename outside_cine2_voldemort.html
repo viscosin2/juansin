@@ -357,7 +357,7 @@ async function preloadCinematicImages(){
   IMG_VOLD_FRONT = await loadImage('assets/npcs/voldemort.png').catch(()=>null);
   IMG_VOLD_PERFIL = await loadImage('assets/npcs/voldemort_perfil.png').catch(()=>null);
   IMG_VOLD_P     = await loadImage('assets/portraits/voldemort_portrait.png').catch(()=>null);
-  IMG_DENETHOR_CAIDO     = await loadImage('assets/portraits/denethorcaido.png').catch(()=>null);
+  IMG_DENETHOR_CAIDO     = await loadImage('assets/npcs/denethorcaido.png').catch(()=>null);
 }
 
   // ------------------------ ZONAS CINE
@@ -886,7 +886,7 @@ if (npcHit){
         openDialog(npc.dialog, true); // "Me da igual... / Yo quiero... / ayquemecaigocoño"
       }
       // Cambiar sprite a caído justo tras decir su bloque final
-      setTimeout(() => { _npc_swapDenethorCaido(); }, 3000);
+       _npc_swapDenethorCaido();
 
       GAME_FLAGS.talked_denethor    = true;
       GAME_FLAGS.denethor_finalized = true; // ya no se repite más
