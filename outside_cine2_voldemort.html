@@ -882,11 +882,13 @@ if (npcHit){
 
     // B) Después de haber hablado con Faramir → Denethor suelta su bloque final UNA VEZ
     if (!GAME_FLAGS.denethor_finalized) {
-      if (npc.dialog && npc.dialog.length){      
-        openDialog(npc.dialog, true); // "Me da igual... / Yo quiero... / ayquemecaigocoño"
+      if (npc.dialog && npc.dialog.length){    
+          openDialog(npc.dialog, true, () => {
+  _npc_swapDenethorCaido();
+});
       }
       // Cambiar sprite a caído justo tras decir su bloque final
-       _npc_swapDenethorCaido();
+
 
       GAME_FLAGS.talked_denethor    = true;
       GAME_FLAGS.denethor_finalized = true; // ya no se repite más
