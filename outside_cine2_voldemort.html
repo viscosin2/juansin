@@ -647,6 +647,7 @@ function buildNPCs(){
         scale: s,
         depthBand: spec.depthBand ?? DEPTH_BAND,
         depthAnchorY: spec.depthAnchorY ?? 0,
+        flipX: (typeof p.flipX === 'boolean') ? p.flipX : !!spec.flipX,
         dialog: Array.isArray(p.dialog) ? p.dialog : null,
         dialog2: Array.isArray(p.dialog2) ? p.dialog2 : null,
         sound: p.sound ? new Audio(p.sound) : null,
