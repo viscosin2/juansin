@@ -323,9 +323,12 @@ let _nowSec = 0;  // tiempo en segundos (lo llenamos en loop)
 
 const GAME_FLAGS = {
   talked_gunner: false,
+  talkedpatata1: false,
   juansin_other_halo: false,
   need_potion:false,   // ← nuevo: SSJ bloqueado hasta tomarla
-  has_potion:false     // ← nuevo: ya recogida/consumida
+  has_potion:false,
+  talked_faramir: false,
+  talked_denethor:false
 };
 
   
@@ -419,6 +422,10 @@ const NPC_CATALOG = {
   voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.55 }},
   soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },fireFxMs: 140},
   soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  patata1: { src: 'assets/npcs/patata1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  patata2: { src: 'assets/npcs/patata2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  faramir: { src: 'assets/npcs/faramir.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
+  denethor: { src: 'assets/npcs/denethor.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
   juansin_idle: { src: 'assets/juan_character/idle_down_shoes.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 }, depthBand: 8, depthAnchorY: 1, shadow:{ alpha:0.30, offsetY:-3, scaleX:1/2.4, scaleY:1/7 } },
 
 };
@@ -434,8 +441,17 @@ const NPC_PLACED = {
   soldado1: [{id:'gunner1', type:'percent', x: 94, y: 66, interact: { x:-14, y: 12, w:28, h:16 },onFire:true, 
      dialog: [{ speaker:'Armiche', text:'Ahí te va un pequeño perdigón.'}],sound: "assets/sounds/shot.mp3"
     }],
-  soldado2: [{id:'guard1', type:'percent', x: 86, y: 66, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_gunner', 
+  soldado2: [{id:'guard1', type:'percent', x: 86, y: 66, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_gunner',  
      dialogBlocked:[ {speaker:'Boliche', text:'¡Como en el Call of Duty, señores!'}], dialog: [{ speaker:'Boliche', text:'¡Ah! ¡Mi lentilla!' }]
+    }],
+  patata1: [{id:'patata1', type:'percent', x: 94, y: 62, interact: { x:-14, y: 12, w:28, h:16 }, patatas:true, dialog: [{ speaker:'Canario medio', text:'¿Me podría dar unas papitas con mojo, por favor?'}],
+    }],
+  patata2: [{id:'patata2', type:'percent', x: 86, y: 62, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_patata1', denethor1:true,
+     dialogBlocked:[ {speaker:'Godo', text:'¿Mijo? ¿Majo? PAPAAAAAA'}], dialog: [{ speaker:'Godo', text:'¿Me podría dar...' },{ speaker:'Godo', text:'unas pata ti tas?' }]
+    }],
+  faramir: [{id:'faramir', type:'percent', x: 94, y: 70, interact: { x:-14, y: 12, w:28, h:16 }, faramir:true, dialogBlocked:[ {speaker:'Faramir', text:'Vete por la autopista, pa que la veas. Está hecha polvo.'}], requiresFlag:'talked_denethor',  faramir1:true, dialog: [{ speaker:'Faramir', text:'¡Date una vuelta!'},{ speaker:'Faramir', text:'Pa que la veas... cómo está la Avenida Anaga...'}],dialog2: [{ speaker:'Faramir', text:'Muchacho... levántate ahí, muchacho...'}]
+    }],
+  denethor: [{id:'denethor', type:'percent', x: 94, y: 70, interact: { x:-14, y: 12, w:28, h:16 }, denethor:true, dialogBlocked:[ {speaker:'Denethor', text:'¡Tas diciendo hombre!'}], requiresFlag:'talked_faramir',  faramir1:true, dialog: [{ speaker:'Denethor', text:'¡ME DA IGUAL LA AVENIDA ANAGA!'},{ speaker:'Denethor', text:'Yo quiero que me pongas la luz.'},{ speaker:'Denethor', text:'Ayquemecaigocoño...'}],
     }],
   juansin_idle: [{id:'juansin_other', type:'percent', x: 77, y: 76, interact: { x:-14, y: 12, w:28, h:16 }
   }],
@@ -823,6 +839,15 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
       if (npc.onFire){
         setTimeout(() => { triggerNPCShot(npc); }, 1500);
         GAME_FLAGS.talked_gunner = true;
+      }
+        if (npc.patatas){
+        GAME_FLAGS.talked_patata1 = true;
+      }
+      if (npc.faramir){
+        GAME_FLAGS.talked_faramir = true;
+      }
+      if (npc.denethor){
+        GAME_FLAGS.talked_denethor = true;
       }
       return;
     }
@@ -3350,7 +3375,7 @@ function _cine4_beginPortraitsAndBars(){
     HPBARS.leftName  = 'Juan SSJ';
     HPBARS.rightName  = 'Juan';
     HPBARS.alpha  = 0; 
-    HPBARS.show(100, 140);
+    HPBARS.show(150, 100);
 
     const t0 = performance.now();
     const dur = 400;
