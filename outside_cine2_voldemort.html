@@ -325,7 +325,7 @@ const GAME_FLAGS = {
   talked_gunner: false,
   juansin_other_halo: false,
   need_potion:false,   // ← nuevo: SSJ bloqueado hasta tomarla
-  has_potion:true     // ← nuevo: ya recogida/consumida
+  has_potion:false     // ← nuevo: ya recogida/consumida
 };
 
   
@@ -360,7 +360,7 @@ async function preloadCinematicImages(){
   const CINE_ZONES = [
   { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
   { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:true },
-  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:true }
+  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
 
 ];
   function buildCineZones(){
@@ -3274,7 +3274,25 @@ if (!GAME_FLAGS.juansin_other_halo){
 function _cine3_removeVoldFromMap(){
   const idx = NPCS.findIndex(n => n?.id === 'voldemort_perfil');
   if (idx >= 0) NPCS.splice(idx, 1);
+
+  if (typeof COLLIDERS !== 'undefined' && Array.isArray(COLLIDERS)){
+    for (let i = COLLIDERS.length - 1; i >= 0; i--){
+      const c = COLLIDERS[i];
+      if (c?.id === 'voldemort_perfil' || c?.ref?.id === 'voldemort_perfil'){
+        COLLIDERS.splice(i, 1);
+      }
+    }
+  }
+  if (typeof INTERACTS !== 'undefined' && Array.isArray(INTERACTS)){
+    for (let i = INTERACTS.length - 1; i >= 0; i--){
+      const it = INTERACTS[i];
+      if (it?.id === 'voldemort_perfil' || it?.ref?.id === 'voldemort_perfil'){
+        INTERACTS.splice(i, 1);
+      }
+    }
+  }
 }
+
 
 function endCine3(){
   // Cierre limpio de la cinematica 3 (sin arrancar el latido aquí)
@@ -3393,9 +3411,31 @@ function _cine4_spawnNPC(id, spritePath, x, y, name=''){
 
 /* ---------- Borrado del SSJ del mapa ---------- */
 function _cine4_removeSSJFromMap(){
+  // quitar del array de NPCs
   const idx = NPCS.findIndex(n => n?.id === 'juansin_other');
   if (idx >= 0) NPCS.splice(idx, 1);
+
+  // quitar colliders con ese id (o ref.id)
+  if (typeof COLLIDERS !== 'undefined' && Array.isArray(COLLIDERS)){
+    for (let i = COLLIDERS.length - 1; i >= 0; i--){
+      const c = COLLIDERS[i];
+      if (c?.id === 'juansin_other' || c?.ref?.id === 'juansin_other'){
+        COLLIDERS.splice(i, 1);
+      }
+    }
+  }
+
+  // quitar interact zones si las tienes
+  if (typeof INTERACTS !== 'undefined' && Array.isArray(INTERACTS)){
+    for (let i = INTERACTS.length - 1; i >= 0; i--){
+      const it = INTERACTS[i];
+      if (it?.id === 'juansin_other' || it?.ref?.id === 'juansin_other'){
+        INTERACTS.splice(i, 1);
+      }
+    }
+  }
 }
+
 
 /* ---------- Entrada principal ---------- */
 function startCinematic4(){
