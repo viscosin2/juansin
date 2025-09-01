@@ -643,10 +643,15 @@ function buildNPCs(){
         depthBand: spec.depthBand ?? DEPTH_BAND,
         depthAnchorY: spec.depthAnchorY ?? 0,
         dialog: Array.isArray(p.dialog) ? p.dialog : null,
+        dialog2: Array.isArray(p.dialog2) ? p.dialog2 : null,
         sound: p.sound ? new Audio(p.sound) : null,
         dialogBlocked: Array.isArray(p.dialogBlocked) ? p.dialogBlocked : null,
         requiresFlag: p.requiresFlag || null,
         onFire: !!p.onFire,
+        patata: !!p.patata,
+        faramir: !!p.faramir,
+        faramir2: !!p.faramir2,
+        denethor: !!p.denethor,
         muzzleOffset: spec.muzzleOffset || {x:0,y:0},
         fireFxMs: spec.fireFxMs || 120,
         _fxActive: false,
@@ -802,56 +807,126 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
   // ——— A partir de aquí, interacciones normales ———
 
   // 1) NPCs con diálogo / lógica especial
-  const npcHit = getNPCInteractHit();
-  if (npcHit){
-    const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
-    if (npc){   
-          if (npc.id === 'juansin_other' && GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
+  // --- Handler de interacción con NPC (con secuencia Faramir/Denethor) ---
+const npcHit = getNPCInteractHit();
+if (npcHit){
+  const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
+  if (npc){
+
+    // Init suave del flag de "no repetir nunca" de Denethor
+    if (typeof GAME_FLAGS.denethor_finalized === 'undefined') {
+      GAME_FLAGS.denethor_finalized = false;
+    }
+
+    // Casos especiales de JUANSIN (los mantengo arriba como los tenías)
+    if (npc.id === 'juansin_other' && GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
       showToast('No tienes fuerza suficiente.', 1600);
       return;
     }
 
-      if (npc.id === 'juansin_other' && GAME_FLAGS.has_potion){
-  startCinematic4();
-  return;
-}
-      
+    if (npc.id === 'juansin_other' && GAME_FLAGS.has_potion){
+      startCinematic4();
+      return;
+    }
+
     if (npc.id === 'juansin_other' && !GAME_FLAGS.juansin_other_halo){
       npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
       GAME_FLAGS.juansin_other_halo = true;
 
-      // (Opcional) mini destello de 300ms al activarse
+      // (Opcional) mini destello de 1000ms al activarse
       npc._fxActive = true;
       npc._fxUntil  = performance.now() + 1000;
     }
 
-      if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
+    // ====== SECUENCIA FARAMIR / DENETHOR (con tus flags) ======
+    if (npc.id === 'faramir') {
+
+      // 1) Bloqueado hasta hablar con Denethor
+      if (!GAME_FLAGS.talked_denethor) {
         if (npc.dialogBlocked && npc.dialogBlocked.length){
-          openDialog(npc.dialogBlocked, true);
+          openDialog(npc.dialogBlocked, true); // "Vete por la autopista..."
         } else {
           showToast('No parece querer hablar ahora.', 1400);
         }
         return;
       }
-      if (npc.dialog && npc.dialog.length){
-        openDialog(npc.dialog, true);
+
+      // 2) Primera vez tras hablar con Denethor: suelta bloque "Date una vuelta..."
+      if (!GAME_FLAGS.talked_faramir) {
+        if (npc.dialog && npc.dialog.length){
+          openDialog(npc.dialog, true); // "¡Date una vuelta! / Pa que la veas... / Avenida Anaga..."
+        }
+        GAME_FLAGS.talked_faramir = true; // ya no volverá a soltar este bloque
+        return;
       }
-      if (npc.onFire){
-        setTimeout(() => { triggerNPCShot(npc); }, 1500);
-        GAME_FLAGS.talked_gunner = true;
-      }
-        if (npc.patatas){
-        GAME_FLAGS.talked_patata1 = true;
-      }
-      if (npc.faramir){
-        GAME_FLAGS.talked_faramir = true;
-      }
-      if (npc.denethor){
-        GAME_FLAGS.talked_denethor = true;
+
+      // 3) A partir de aquí, loop infinito "Muchacho..."
+      if (npc.dialog2 && npc.dialog2.length){
+        openDialog(npc.dialog2, true); // "Muchacho.. levántate ahí muchacho.."
+      } else {
+        showToast('Muchacho... levántate ahí, muchacho...', 1400);
       }
       return;
     }
+
+    if (npc.id === 'denethor') {
+
+      // 1) Bloqueado hasta hablar con Faramir
+      if (!GAME_FLAGS.talked_faramir) {
+        if (npc.dialogBlocked && npc.dialogBlocked.length){
+          openDialog(npc.dialogBlocked, true); // "¡Tas diciendo hombre!"
+        } else {
+          showToast('No parece querer hablar ahora.', 1400);
+        }
+        return;
+      }
+
+      // 2) Solo una vez: suelta bloque final y no se repite más
+      if (!GAME_FLAGS.denethor_finalized) {
+        if (npc.dialog && npc.dialog.length){
+          openDialog(npc.dialog, true); // "Me da igual... / Yo quiero que me pongas la luz.. / ayquemecaigocoño"
+        }
+        const _den = NPCS.find(n => n.id === 'denethor');
+        if (_den) _den.src = 'assets/npcs/denethorcaido.png';
+        GAME_FLAGS.talked_denethor    = true;  // marcamos que ya habló Denethor
+        GAME_FLAGS.denethor_finalized = true;  // no se repite nunca más
+        return;
+      }
+
+      // 3) Después de eso, Denethor ya no repite (silencio o un toast cortito si quieres)
+      // showToast('Denethor te ignora.', 1000);
+      return;
+    }
+    // ====== FIN SECUENCIA FARAMIR / DENETHOR ======
+
+    // Lógica genérica de bloqueo por requiresFlag (la mantengo tal cual)
+    if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
+      if (npc.dialogBlocked && npc.dialogBlocked.length){
+        openDialog(npc.dialogBlocked, true);
+      } else {
+        showToast('No parece querer hablar ahora.', 1400);
+      }
+      return;
+    }
+
+    // Diálogo genérico si tiene
+    if (npc.dialog && npc.dialog.length){
+      openDialog(npc.dialog, true);
+    }
+
+    // Otros efectos que ya tenías
+    if (npc.onFire){
+      setTimeout(() => { triggerNPCShot(npc); }, 1500);
+      GAME_FLAGS.talked_gunner = true;
+    }
+    if (npc.patatas){
+      GAME_FLAGS.talked_patata1 = true;
+    }
+
+    return;
   }
+}
+
 
   // 2) Props con "say" => toast
   const propHit = getInteractHit();
