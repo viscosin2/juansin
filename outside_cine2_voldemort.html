@@ -3679,28 +3679,43 @@ endCine2();
 }
 
   
-/* ---------- Entrada principal ---------- */
-function startCinematic4(){
+function startCinematic4() {
+  CUT.active = true; 
+  CUT.id = 'cine4'; 
+  CUT.phase = 'start';
 
-  CUT.active = true; CUT.id='cine4'; CUT.phase='start';
-  ambientLock = true; player.moving=false; player.vx=player.vy=0;
+  ambientLock = true; 
+  player.moving = false; 
+  player.vx = player.vy = 0;
 
+  openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true);
 
-    openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true);
-    let handled = false;
-                  
+  let armed = true;
+
   CUT.hijackAction = () => {
-          if (isTyping) return advanceDialog();
-          if (handled) return;
-          handled = true;
+    if (typeof isTyping !== 'undefined' && isTyping) { 
+      advanceDialog(); 
+      return; 
+    }
 
-      closeDialog();
-      CUT.hijackAction = null;
-_cine4_step1();
-                              
-       };
- 
-  }
+
+    const didAdvance = advanceDialog && advanceDialog();
+    if (didAdvance) return;
+
+
+    if (typeof dialogOpen !== 'undefined' && dialogOpen) return;
+    if (typeof DIALOG !== 'undefined' && DIALOG.open) return;
+
+    if (!armed) return;
+    armed = false;
+
+    closeDialog && closeDialog();
+    CUT.hijackAction = null;
+
+    _cine4_step1();
+  };
+}
+
 
 function endCine4(){ 
   CUT.active=false; 
