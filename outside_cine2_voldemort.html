@@ -3493,10 +3493,6 @@ function _cine4_step1(){
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Offset que usas en otras cines
-  PORTRAITS.left.inX += 60;
-  PORTRAITS.left.x   += 60;
-
   // --- Barras de vida ---
   HPBARS.leftName  = 'SSJ';
   HPBARS.rightName = 'Juan';
@@ -3522,79 +3518,92 @@ function _cine4_step1(){
 
       // 2) Anim de ataque SSJ
       console.log('[cine4] SSJ attack sequence');
-      cine3_attackSequence(()=>{   // reutiliza tu anim del 3
-        // (si quieres que no haga daño: deja barras tal cual; si no, toca HPBARS.setTargets(...))
+      cine3_attackSequence(()=>{
 
-    // 3) SSJ sale
-_startSlide(L, L.outX, ()=>{
+        // 3) SSJ sale
+        _startSlide(L, L.outX, ()=>{
 
-  // 4) Entra Juan (primero)
-  _startSlide(R, R.inX, ()=>{
+          // 4) Entra Juan (ANTES del mensaje del ataque)
+          _startSlide(R, R.inX, ()=>{
 
-    // Ahora mostramos el mensaje del ataque del SSJ
-    openDialog([{ speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' }], true);
-    CUT.hijackAction = ()=>{
-      if (isTyping) return advanceDialog();
-      closeDialog();
+            // Ahora mostramos el mensaje del ataque del SSJ
+            openDialog([{ speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' }], true);
+            CUT.hijackAction = ()=>{
+              if (isTyping) return advanceDialog();
+              closeDialog();
 
-      // (opcional) Reacción de Juan al impacto
-      if (typeof cine3_hitReaction === 'function') cine3_hitReaction(R);
+              // (opcional) Reacción visual de Juan
+              if (typeof cine3_hitReaction === 'function') cine3_hitReaction(R);
 
-      // Siguiente mensaje: “No ha tenido efecto…”
-      openDialog([{ speaker:'', text:'No ha tenido efecto…' }], true);
-      CUT.hijackAction = ()=>{
-        if (isTyping) return advanceDialog();
-        closeDialog();
+              // Mensaje: no tuvo efecto
+              openDialog([{ speaker:'', text:'No ha tenido efecto…' }], true);
+              CUT.hijackAction = ()=>{
+                if (isTyping) return advanceDialog();
+                closeDialog();
 
-        // 5) ¿Cómo quieres atacar? → menú
-        openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
-        CUT.hijackAction = ()=>{
-          if (isTyping){ advanceDialog(); return; }
+                // 5) Pregunta por el ataque y abre menú
+                openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
+                CUT.hijackAction = ()=>{
+                  if (isTyping){ advanceDialog(); return; }
 
-          _cine2_openMenu();
-          CUT.hijackAction = ()=>{
-            const choice = _cine2_menuConfirm();
-            if (choice < 0) return;
+                  // Reutilizamos el menú de cine2
+                  _cine2_openMenu();
 
-            closeDialog();
-            _cine2_closeMenu();
+                  CUT.hijackAction = ()=>{
 
-            // (resto tal cual: anim de Juan atacando y SSJ recibiendo)
-            const mid  = R.inX - Math.round(screenRect.dw * 0.04);
-            const back = R.inX;
+                    const choice = _cine2_menuConfirm();
+                    if (choice < 0) return; // no elegido aún
 
-            R.sFrom = 1.00; R.sTo = 1.06;
-            _startSlide(R, mid, ()=>{
-              R.sFrom = 1.06; R.sTo = 1.00;
-              _startSlide(R, back, ()=>{
-                _startSlide(R, R.outX, ()=>{
-                  _startSlide(L, L.inX, ()=>{
-                    const orig = L.inX;
-                    const kick = orig + Math.round(screenRect.dw * 0.02);
+                    closeDialog();
+                    _cine2_closeMenu();
 
-                    L.sFrom = 1.00; L.sTo = 0.96;
-                    _startSlide(L, kick, ()=>{
-                      if (typeof HPBARS.setTargets === 'function') HPBARS.setTargets(150, 0);
-                      L.sFrom = 0.96; L.sTo = 1.00;
-                      _startSlide(L, orig, ()=>{
-                        openDialog([{ speaker:'SSJ', text:'¡Argh!' }], true);
-                        CUT.hijackAction = ()=>{
-                          if (isTyping) return advanceDialog();
-                          closeDialog();
-                          _cine4_end();
-                        };
+                    // 6) Anim de Juan atacando
+                    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+                    const back = R.inX;
+
+                    R.sFrom = 1.00; R.sTo = 1.06;
+                    _startSlide(R, mid, ()=>{
+                      R.sFrom = 1.06; R.sTo = 1.00;
+                      _startSlide(R, back, ()=>{
+                        // Juan sale para “cargar” o rematar (igual que en cine2)
+                        _startSlide(R, R.outX, ()=>{
+                          // 7) SSJ entra para recibir el golpe
+                          _startSlide(L, L.inX, ()=>{
+                            const orig = L.inX;
+                            const kick = orig + Math.round(screenRect.dw * 0.02);
+
+                            L.sFrom = 1.00; L.sTo = 0.96;
+                            _startSlide(L, kick, ()=>{
+                              // Baja vida del SSJ (ajusta orden/valores según tu HPBARS)
+                              if (typeof HPBARS.setTargets === 'function') HPBARS.setTargets(150, 0);
+
+                              L.sFrom = 0.96; L.sTo = 1.00;
+                              _startSlide(L, orig, ()=>{
+                                // Fin de esta secuencia -> fin o siguiente paso
+                                openDialog([{ speaker:'SSJ', text:'¡Argh!' }], true);
+                                CUT.hijackAction = ()=>{
+                                  if (isTyping) return advanceDialog();
+                                  closeDialog();
+                                  _cine4_end(); // o _cine4_step2() si continúas
+                                };
+                              });
+                            });
+                          });
+                        });
                       });
                     });
-                  });
-                });
-              });
-            });
-          };
-        };
-      };
+                  };
+                };
+              };
+            };
+          });
+        });
+      });
     };
   });
-});
+}
+
+
 
 
 // Cierra UI y desbloquea (ajústalo a tu helper real)
