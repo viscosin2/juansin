@@ -3469,22 +3469,15 @@ function startCinematic4(){
 
   // 1) Diálogo inicial
   openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true); 
-
-  // 2) Espera a que el jugador cierre/avance y luego pasa a step1
-  CUT.hijackAction = step1;
-
-  function step1(){
-    if (typeof isTyping !== 'undefined' && isTyping) { advanceDialog && advanceDialog(); return; }
-    if (typeof dialogOpen !== 'undefined' && dialogOpen){ advanceDialog && advanceDialog(); return; }
-
-    closeDialog && closeDialog();
-    CUT.hijackAction = null;
-    _cine4_step1();
-  }
-}
+  CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+    
+        _cine4_step1();
+      };
+      }
 
 function _cine4_step1(){
-  console.log('[cine4] step1: preparar portraits + UI');
 
   // --- Setup portraits/UI ---
   PORTRAITS.active = true;
@@ -3495,6 +3488,7 @@ function _cine4_step1(){
 
   PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ,  'left',  'SSJ');
   PORTRAITS.right = _makeSide(IMG_JUAN_FIGHT,'right', 'Juan');
+  PORTRAITS.left.flipX = true;
 
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
