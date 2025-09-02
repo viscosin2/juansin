@@ -115,7 +115,7 @@ const ZOOM = 2.1;
 const START = { mode:'percent', x:7, y:81 };
 const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
 const DEBUG_OBS = false;
-const DEBUG_INTER = true;
+const DEBUG_INTER = false;
 const DEBUG_AMBIENT = false;
 const DEBUG_CINE = false; 
 const DEPTH_BAND = 12;
@@ -433,7 +433,7 @@ const NPC_CATALOG = {
 };
 
 const NPC_PLACED = {
-  abuela: [{type:'percent', x: 24, y: 91, interact: { x:-20, y: 3, w:39, h:30 }, 
+  abuela: [{type:'percent', x: 24, y: 91, interact: { x:-20, y: 3, w:39, h:25 }, 
      dialog: [{ speaker:'Juan', text:'Hola, abuela.' }, { speaker:'Abuela',text:'Ay mijo...' }]
     }],
   abuela1: [{type:'percent', x: 43.4, y: 19.5, interact: { x:-13, y: 10, w:29, h:18 }, 
@@ -505,7 +505,7 @@ const PLACED = {
   casajuan:    [{type:'percent',x:7.2,y:82,say:'Tengo una misión.'}],
   casaclara_amarilla:[{type:'percent',x:24.5,y:90}],
   casaclara_azul:    [{type:'percent',x:5.5,y:45,interact:[{x:20,y:5,w:19,h:18,say:'No pasarás. Céntrate en la misión.'}]}],
-  casaclara:         [{type:'percent',x:7,y:20,interact:[{x:-22,y:5,w:19,h:18,say:'Cerrada. Como tú corazón al conocer a viscosin13...'}]}],
+  casaclara:         [{type:'percent',x:7,y:20,interact:[{x:-12,y:5,w:20,h:18,say:'Cerrada. Como tú corazón al conocer a viscosin13...'}]}],
   casamedia_roja:    [{type:'percent',x:42,y:17}],
   casamedia_rosa:    [{type:'percent',x:62,y:17}],
   casamedia:         [{type:'percent',x:52,y:17}],
