@@ -3551,7 +3551,45 @@ function _cine4_removeSSJFromMap(){
   }
 }
 
+function startCinematic4(){ 
+  // --- Setup CUT/Player ---
+  CUT.active = true; 
+  CUT.id = 'cine4'; 
+  CUT.phase = 'start'; 
+  ambientLock = true; 
+  player.moving = false; 
+  player.vx = player.vy = 0; 
+
+  // --- Diálogo inicial ---
+  openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true); 
+
+  // Disparamos el siguiente paso SOLO cuando el diálogo ya no esté en pantalla
+  let armed = true;
+  CUT.hijackAction = () => {
+    // Si está escribiendo, acelera/avanza y sal
+    if (typeof isTyping !== 'undefined' && isTyping) {
+      advanceDialog && advanceDialog();
+      return;
+    }
+    // Si el diálogo sigue abierto, intenta avanzar (última línea lo cerrará)
+    if ((typeof dialogOpen !== 'undefined' && dialogOpen) || (typeof DIALOG !== 'undefined' && DIALOG.open)) {
+      advanceDialog && advanceDialog();
+      return;
+    }
+    // Aquí ya NO hay diálogo
+    if (!armed) return;
+    armed = false;
+
+    try { closeDialog && closeDialog(); } catch(e) {}
+    CUT.hijackAction = null;
+
+    console.log('[cine4] paso a _cine4_step1');
+    _cine4_step1(); 
+  };
+}
+
 function _cine4_step1(){
+  console.log('[cine4] _cine4_step1 start');
 
   PORTRAITS.active = true;
   PORTRAITS.stage  = 'entering';
@@ -3562,10 +3600,11 @@ function _cine4_step1(){
   PORTRAITS.left  = _makeSide(IMG_VOLD_P,  'left',  'SSJ');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG,'right', 'Juan');
 
+  // Posiciones iniciales (fuera de escena)
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Pequeño offset que tú añadías
+  // Offset extra que querías
   PORTRAITS.left.inX += 60;
   PORTRAITS.left.x   += 60;
 
@@ -3575,6 +3614,7 @@ function _cine4_step1(){
   HPBARS.alpha = 0;
   HPBARS.show(150, 100);
 
+  // Fade-in de barras
   {
     const t0 = performance.now();
     const dur = 400;
@@ -3586,20 +3626,25 @@ function _cine4_step1(){
     requestAnimationFrame(step);
   }
 
-  const R = PORTRAITS.right; // Juan
-  L.x = L.outX;
+  // Aliases seguros
+  const L = PORTRAITS.left;
+  const R = PORTRAITS.right;
 
-  _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
+  // Entra SSJ, ataque, texto, entra Juan, reacción, y paso 2
+  _startSlide(L, L.inX, ()=>{
     setTimeout(()=>{
+      console.log('[cine4] ataque SSJ');
       cine3_attackSequence(()=>{
-        _startSlide(PORTRAITS.left, PORTRAITS.left.outX, ()=>{
+        _startSlide(L, L.outX, ()=>{
           openDialog([{ speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' }], true);
 
-          CUT.hijackAction = ()=>{}; // no-op
+          // No bloquees inputs con un no-op
+          CUT.hijackAction = null;
 
-          _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{
+          _startSlide(R, R.inX, ()=>{
             setTimeout(()=>{
-              cine3_hitReaction(PORTRAITS.right);
+              cine3_hitReaction(R);
+              console.log('[cine4] paso a _cine4_step2');
               _cine4_step2();
             }, 1000);
           });
@@ -3607,9 +3652,8 @@ function _cine4_step1(){
       });
     }, 1000);
   });
-
-
 }
+
 
 
 function _cine4_step2 (){
@@ -3679,20 +3723,6 @@ endCine2();
 }
 
   
-function startCinematic4(){ 
-  CUT.active = true; CUT.id='cine4'; 
-  CUT.phase='start'; 
-  ambientLock = true; player.moving=false; 
-  player.vx=player.vy=0; 
-  openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true); 
-   if (!dialogOpen) return;             
-  if (isTyping) { advanceDialog(); return; }
-
-  closeDialog();
-  CUT.hijackAction = null;
-_cine4_step1(); 
-
-}
 
 
 function endCine4(){ 
