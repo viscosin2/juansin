@@ -115,7 +115,7 @@ const ZOOM = 2.1;
 const START = { mode:'percent', x:7, y:81 };
 const FEET_RADIUS_X = 7, FEET_RADIUS_Y = 4, FEET_OFFSET_Y = 8;
 const DEBUG_OBS = false;
-const DEBUG_INTER = false;
+const DEBUG_INTER = true;
 const DEBUG_AMBIENT = false;
 const DEBUG_CINE = false; 
 const DEPTH_BAND = 12;
@@ -504,7 +504,7 @@ const PLACED = {
   arboloscuro:  [{type:'percent',x:83,y:55},{type:'percent',x:78.5,y:58},{type:'percent',x:63,y:61},{type:'percent',x:85,y:79},{type:'percent',x:78,y:100.5}],
   casajuan:    [{type:'percent',x:7.2,y:82,say:'Tengo una misión.'}],
   casaclara_amarilla:[{type:'percent',x:24.5,y:90}],
-  casaclara_azul:    [{type:'percent',x:5.5,y:45}],
+  casaclara_azul:    [{type:'percent',x:5.5,y:45,interact:[{x:30,y:5,w:19,h:18,say:'No pasarás. Céntrate en la misión.'}]}],
   casaclara:         [{type:'percent',x:7,y:20,interact:[{x:-22,y:5,w:19,h:18,say:'Cerrada. Como tú corazón al conocer a viscosin13...'}]}],
   casamedia_roja:    [{type:'percent',x:42,y:17}],
   casamedia_rosa:    [{type:'percent',x:62,y:17}],
