@@ -364,7 +364,7 @@ async function preloadCinematicImages(){
   const CINE_ZONES = [
   { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
   { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:true },
-  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
+  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:true }
 
 ];
   function buildCineZones(){
@@ -3685,20 +3685,21 @@ function startCinematic4(){
   CUT.active = true; CUT.id='cine4'; CUT.phase='start';
   ambientLock = true; player.moving=false; player.vx=player.vy=0;
 
-                      setTimeout(() => {
-                  openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true);
-                  let handled = false;
-                  CUT.hijackAction = () => {
-                    if (isTyping) return advanceDialog();
-                    if (handled) return;
-                     handled = true;
+
+    openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true);
+    let handled = false;
+                  
+  CUT.hijackAction = () => {
+          if (isTyping) return advanceDialog();
+          if (handled) return;
+          handled = true;
 
       closeDialog();
       CUT.hijackAction = null;
 _cine4_step1();
                               
        };
-    });   
+ 
   }
 
 function endCine4(){ 
