@@ -3581,10 +3581,11 @@ function _cine4_step1(){
                               _startSlide(L, orig, ()=>{
                                 // Fin de esta secuencia -> fin o siguiente paso
                                 openDialog([{ speaker:'SSJ', text:'¡Argh!' }], true);
+                                _cine4_removeSSJFromMap();
                                 CUT.hijackAction = ()=>{
                                   if (isTyping) return advanceDialog();
                                   closeDialog();
-                                  _cine4_end(); // o _cine4_step2() si continúas
+                                  _cine4_end(); 
                                 };
                               });
                             });
@@ -3604,17 +3605,22 @@ function _cine4_step1(){
 }
 
 
-
-
-// Cierra UI y desbloquea (ajústalo a tu helper real)
-function _cine4_end(){
-  console.log('[cine4] end');
-  CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null; ambientLock=false;
-  if (typeof _cine2_closePortraitsAndOverlay === 'function'){
-    _cine2_closePortraitsAndOverlay(()=>{ /* opcional: epílogo */ });
-  }else{
-    PORTRAITS.active=false; HPBARS.hide && HPBARS.hide();
-  }
+  function _cine4_end(){ 
+  CUT.active=false; 
+  CUT.id=null; 
+  CUT.phase=null; 
+  CUT.hijackAction=null; 
+  CUT.onEnd=null; 
+  ambientLock=false; 
+      _cine2_closePortraitsAndOverlay(() => {
+openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true); 
+  CUT.hijackAction = () => { 
+    if (isTyping){ advanceDialog(); 
+                  return; } 
+    closeDialog(); 
+    CUT.hijackAction = null;
+  }; 
+    });   
 }
 
 
