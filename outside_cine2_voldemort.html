@@ -587,14 +587,14 @@ bindHold(document.getElementById('btn-up'),
 
 bindHold(document.getElementById('btn-down'), 
   ()=>{ 
-    if (CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on){ 
+    if (CUT.active && CUT.c2?.menu?.on){ 
       _cine2_menuDown(); 
     } else { 
       keys.down=true; 
     }
   }, 
   ()=>{ 
-    if (!(CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on)){ 
+    if (!(CUT.active && CUT.c2?.menu?.on)){ 
       keys.down=false; 
     }
   }
