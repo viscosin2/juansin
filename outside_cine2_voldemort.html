@@ -3422,84 +3422,7 @@ function endCine3(){
 }
 
 
-  /*************************** CINEMATICA 4*/
-
- function _cine4_openOverlay(){
-  try{
-    if (typeof OVERLAY !== 'undefined' && OVERLAY && typeof OVERLAY.show === 'function'){
-      OVERLAY.show({ owner:'cine4' });
-    }else if (typeof setOverlay === 'function'){
-      setOverlay(true);
-    }
-  }catch(e){ console.warn('[cine4] openOverlay fallback:', e); }
-}
-function _cine4_closeOverlay(){
-  try{
-    if (typeof OVERLAY !== 'undefined' && OVERLAY && typeof OVERLAY.hide === 'function'){
-      if (OVERLAY.owner === 'cine4') OVERLAY.owner = null;
-      OVERLAY.hide();
-    }else if (typeof setOverlay === 'function'){
-      setOverlay(false);
-    }
-  }catch(e){ console.warn('[cine4] closeOverlay fallback:', e); }
-}
-
-/* ---------- Helpers retratos y barras ---------- */
-function _cine4_beginPortraitsAndBars(){
-
-   PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
-  PORTRAITS.active = true;
-  PORTRAITS.blurK = 0;
-  PORTRAITS.forceBlurFallback = false;
-  PORTRAITS.stage = 'entering';
-
-  // Construcción de retratos (letterbox interno)
-  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan');
-  PORTRAITS.left.flipX = true;
-
-  // Parten fuera
-  PORTRAITS.left.x  = PORTRAITS.left.outX;
-  PORTRAITS.right.x = PORTRAITS.right.outX;
-
-    HPBARS.leftName  = 'Juan SSJ';
-    HPBARS.rightName  = 'Juan';
-    HPBARS.alpha  = 0; 
-    HPBARS.show(150, 100);
-
-    const t0 = performance.now();
-    const dur = 400;
-    function step(t){
-      const k = Math.min(1, (t - t0) / dur);
-      HPBARS.alpha = k;
-      if (k < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-}
-
-/* ---------- Animaciones cortas de ataque/daño ---------- */
-function _cine4_attackDashLeft(done){
-  // SSJ (izquierda) hace dash → vuelve
-  const L = PORTRAITS.left;
-  const mid  = L.inX + Math.round(screenRect.dw*0.05);
-  const back = L.inX;
-  L.sFrom=1.00; L.sTo=1.08;
-  _startSlide(L, mid, ()=>{
-    L.sFrom=1.08; L.sTo=1.00;
-    _startSlide(L, back, ()=>{ if (done) done(); });
-  });
-}
-function _cine4_hitShakeRight(){
-  // Juan (derecha) “recibe”
-  const R = PORTRAITS.right;
-  const orig = R.inX, kick = orig + Math.round(screenRect.dw*0.02);
-  R.sFrom=1.00; R.sTo=0.95;
-  _startSlide(R, kick, ()=>{
-    R.sFrom=0.95; R.sTo=1.00;
-    _startSlide(R, orig, null);
-  });
-}
-
+ 
 /* ---------- Fin ordenado de retratos y barras ---------- */
 function _cine4_endPortraitsAndBars(next){
   HPBARS.hide();
@@ -3511,18 +3434,6 @@ function _cine4_endPortraitsAndBars(next){
   if (typeof next === 'function') next();
 }
 
-/* ---------- Spawn helpers ---------- */
-function _cine4_spawnNPC(id, spritePath, x, y, name=''){
-  // Si tu motor ya tiene createNPC, usa esa. Si no, aproximación:
-  const npc = { id, name, x, y, dir:'down', iw:0, ih:0, img:null, solid:false };
-  NPCS.push(npc);
-  loadImage(spritePath).then(img=>{
-    npc.img = img;
-    npc.iw  = img.naturalWidth  || npc.iw;
-    npc.ih  = img.naturalHeight || npc.ih;
-  });
-  return npc;
-}
 
 /* ---------- Borrado del SSJ del mapa ---------- */
 function _cine4_removeSSJFromMap(){
@@ -3551,60 +3462,44 @@ function _cine4_removeSSJFromMap(){
   }
 }
 
+// ========================= CINEMÁTICA 4 =========================
 function startCinematic4(){ 
-  // --- Setup CUT/Player ---
-  CUT.active = true; 
-  CUT.id = 'cine4'; 
-  CUT.phase = 'start'; 
-  ambientLock = true; 
-  player.moving = false; 
-  player.vx = player.vy = 0; 
+  CUT.active = true; CUT.id='cine4'; CUT.phase='lock';
+  ambientLock = true; player.moving=false; player.vx=player.vy=0;
 
-  // --- Diálogo inicial ---
+  // 1) Diálogo inicial
   openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true); 
 
-  // Disparamos el siguiente paso SOLO cuando el diálogo ya no esté en pantalla
-  let armed = true;
-  CUT.hijackAction = () => {
-    // Si está escribiendo, acelera/avanza y sal
-    if (typeof isTyping !== 'undefined' && isTyping) {
-      advanceDialog && advanceDialog();
-      return;
-    }
-    // Si el diálogo sigue abierto, intenta avanzar (última línea lo cerrará)
-    if ((typeof dialogOpen !== 'undefined' && dialogOpen) || (typeof DIALOG !== 'undefined' && DIALOG.open)) {
-      advanceDialog && advanceDialog();
-      return;
-    }
-    // Aquí ya NO hay diálogo
-    if (!armed) return;
-    armed = false;
+  // 2) Espera a que el jugador cierre/avance y luego pasa a step1
+  CUT.hijackAction = step1;
 
-    try { closeDialog && closeDialog(); } catch(e) {}
+  function step1(){
+    if (typeof isTyping !== 'undefined' && isTyping) { advanceDialog && advanceDialog(); return; }
+    if (typeof dialogOpen !== 'undefined' && dialogOpen){ advanceDialog && advanceDialog(); return; }
+
+    closeDialog && closeDialog();
     CUT.hijackAction = null;
-
-    console.log('[cine4] paso a _cine4_step1');
-    _cine4_step1(); 
-  };
+    _cine4_step1();
+  }
 }
 
 function _cine4_step1(){
-  console.log('[cine4] _cine4_step1 start');
+  console.log('[cine4] step1: preparar portraits + UI');
 
+  // --- Setup portraits/UI ---
   PORTRAITS.active = true;
   PORTRAITS.stage  = 'entering';
   PORTRAITS.idx    = 0;
   PORTRAITS.blurK  = 0;
   PORTRAITS.script = Array.isArray(PORTRAITS.script) ? PORTRAITS.script : [];
 
-  PORTRAITS.left  = _makeSide(IMG_VOLD_P,  'left',  'SSJ');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,'right', 'Juan');
+  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ,  'left',  'SSJ');
+  PORTRAITS.right = _makeSide(IMG_JUAN_FIGHT,'right', 'Juan');
 
-  // Posiciones iniciales (fuera de escena)
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Offset extra que querías
+  // Offset que usas en otras cines
   PORTRAITS.left.inX += 60;
   PORTRAITS.left.x   += 60;
 
@@ -3614,134 +3509,118 @@ function _cine4_step1(){
   HPBARS.alpha = 0;
   HPBARS.show(150, 100);
 
-  // Fade-in de barras
-  {
-    const t0 = performance.now();
-    const dur = 400;
-    function step(t){
-      const k = Math.min(1, (t - t0) / dur);
-      HPBARS.alpha = k;
-      if (k < 1) requestAnimationFrame(step);
-    }
+  { // fade-in de barras
+    const t0 = performance.now(), dur = 400;
+    const step = (t)=>{ const k = Math.min(1,(t-t0)/dur); HPBARS.alpha=k; if(k<1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
   }
 
-  // Aliases seguros
-  const L = PORTRAITS.left;
-  const R = PORTRAITS.right;
+  const L = PORTRAITS.left;   // SSJ
+  const R = PORTRAITS.right;  // Juan
 
-  // Entra SSJ, ataque, texto, entra Juan, reacción, y paso 2
+  // 1) Entra SSJ
   _startSlide(L, L.inX, ()=>{
-    setTimeout(()=>{
-      console.log('[cine4] ataque SSJ');
-      cine3_attackSequence(()=>{
+    // SSJ habla
+    openDialog([{ speaker:'SSJ', text:'¡Te voy a hacer polvo!' }], true);
+    CUT.hijackAction = ()=>{
+      if (isTyping) return advanceDialog();
+      closeDialog();
+
+      // 2) Anim de ataque SSJ
+      console.log('[cine4] SSJ attack sequence');
+      cine3_attackSequence(()=>{   // reutiliza tu anim del 3
+        // (si quieres que no haga daño: deja barras tal cual; si no, toca HPBARS.setTargets(...))
+
+        // 3) SSJ sale
         _startSlide(L, L.outX, ()=>{
+          // Mensaje ataque SSJ
           openDialog([{ speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' }], true);
+          CUT.hijackAction = ()=>{
+            if (isTyping) return advanceDialog();
+            closeDialog();
 
-          // No bloquees inputs con un no-op
-          CUT.hijackAction = null;
-
-          _startSlide(R, R.inX, ()=>{
-            setTimeout(()=>{
+            // 4) Entra Juan
+            _startSlide(R, R.inX, ()=>{
+              // Reacción de Juan al golpe
               cine3_hitReaction(R);
-              console.log('[cine4] paso a _cine4_step2');
-              _cine4_step2();
-            }, 1000);
-          });
+
+              // Mensaje: no tuvo efecto
+              openDialog([{ speaker:'', text:'No ha tenido efecto…' }], true);
+              CUT.hijackAction = ()=>{
+                if (isTyping) return advanceDialog();
+                closeDialog();
+
+                // 5) Pregunta por el ataque y abre menú
+                openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
+                CUT.hijackAction = ()=>{
+                  if (isTyping) return advanceDialog();
+
+                  // Si ya tienes menú de cine2, puedes reusar sus funcs:
+                  if (typeof _cine2_openMenu === 'function') _cine2_openMenu(); else _cine4_openMenu();
+
+                  CUT.hijackAction = ()=>{
+                    const confirm = (typeof _cine2_menuConfirm === 'function') ? _cine2_menuConfirm() : _cine4_menuConfirm();
+                    if (confirm < 0) return; // aún no eligió
+                    closeDialog();
+                    if (typeof _cine2_closeMenu === 'function') _cine2_closeMenu(); else _cine4_closeMenu();
+
+                    // 6) Anim de Juan atacando
+                    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+                    const back = R.inX;
+
+                    R.sFrom = 1.00; R.sTo = 1.06;
+                    _startSlide(R, mid, ()=>{
+                      R.sFrom = 1.06; R.sTo = 1.00;
+                      _startSlide(R, back, ()=>{
+                        // Juan sale para “cargar” o rematar (igual que en cine2)
+                        _startSlide(R, R.outX, ()=>{
+                          // 7) SSJ entra para recibir el golpe
+                          _startSlide(L, L.inX, ()=>{
+                            const orig = L.inX;
+                            const kick = orig + Math.round(screenRect.dw * 0.02);
+
+                            L.sFrom = 1.00; L.sTo = 0.96;
+                            _startSlide(L, kick, ()=>{
+                              // Baja vida del SSJ (ajusta a tu gusto)
+                              if (typeof HPBARS.setTargets === 'function') HPBARS.setTargets(80, 100);
+
+                              L.sFrom = 0.96; L.sTo = 1.00;
+                              _startSlide(L, orig, ()=>{
+                                // Fin de esta secuencia -> paso 2 / fin
+                                openDialog([{ speaker:'SSJ', text:'¡Argh!' }], true);
+                                CUT.hijackAction = ()=>{
+                                  if (isTyping) return advanceDialog();
+                                  closeDialog();
+                                  _cine4_end(); // o _cine4_step2() si quieres continuar
+                                };
+                              });
+                            });
+                          });
+                        });
+                      });
+                    });
+                  };
+                };
+              };
+            });
+          };
         });
       });
-    }, 1000);
+    };
   });
 }
 
-
-
-function _cine4_step2 (){
-
-openDialog([{ speaker:'', text:'No tiene ningún efecto.' }], true);
-
-        CUT.hijackAction = () => {
-          if (isTyping){ advanceDialog(); return; }
-          closeDialog();
-          openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
-    
-          CUT.hijackAction = () => {
-          if (isTyping){ advanceDialog(); return; }
-    
-          _cine2_openMenu();
-
-          CUT.hijackAction = () => {
-            const choice = _cine2_menuConfirm();
-            if (choice < 0) return; 
-
-            closeDialog();
-            _cine2_closeMenu();
-
-            const L = PORTRAITS.left; 
-            const mid  = R.inX - Math.round(screenRect.dw * 0.04);
-            const back = R.inX;
-
-            R.sFrom = 1.00; R.sTo = 1.06;
-            _startSlide(R, mid, () => {
-              R.sFrom = 1.06; R.sTo = 1.00;
-              _startSlide(R, back, () => {
-
-                _startSlide(R, R.outX, () => {
-                  L.x = L.outX;
-                  _startSlide(L, L.inX, () => {
-                    const origL = L.inX;
-                    const kickL = origL + Math.round(screenRect.dw * 0.02);
-
-                    L.sFrom = 1.00; L.sTo = 0.96;
-                    _startSlide(L, kickL, () => {
-                      HPBARS.setTargets(150, 0); // ← Voldemort pierde 50; ajusta si tu orden difiere
-                      L.sFrom = 0.96; L.sTo = 1.00;
-
-                      _startSlide(L, origL, () => {
-                        // -- REEMPLAZA desde aquí --
-openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'Morí' }], true);
-_cine4_removeSSJFromMap();
-CUT.hijackAction = () => {
-  if (isTyping){ advanceDialog(); return; }
-  closeDialog();
-
-endCine2();
-
-
-};
-                      });
-                    });
-                  });
-                });
-              });
-            });
-          };
-  };
-        };
-
-
+// Cierra UI y desbloquea (ajústalo a tu helper real)
+function _cine4_end(){
+  console.log('[cine4] end');
+  CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null; ambientLock=false;
+  if (typeof _cine2_closePortraitsAndOverlay === 'function'){
+    _cine2_closePortraitsAndOverlay(()=>{ /* opcional: epílogo */ });
+  }else{
+    PORTRAITS.active=false; HPBARS.hide && HPBARS.hide();
+  }
 }
 
-  
-
-
-function endCine4(){ 
-  CUT.active=false; 
-  CUT.id=null; 
-  CUT.phase=null; 
-  CUT.hijackAction=null; 
-  CUT.onEnd=null; 
-  ambientLock=false; 
-      _cine2_closePortraitsAndOverlay(() => {
-openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true); 
-  CUT.hijackAction = () => { 
-    if (isTyping){ advanceDialog(); 
-                  return; } 
-    closeDialog(); 
-    CUT.hijackAction = null;
-  }; 
-    });   
-}
 
 
 /* ========== MOVIMIENTO / MEGAUPDATE ========== */
