@@ -3535,10 +3535,6 @@ function _cine4_step1(){
 
             // 4) Entra Juan
             _startSlide(R, R.inX, ()=>{
-              // Reacción de Juan al golpe
-              cine3_hitReaction(R);
-
-              // Mensaje: no tuvo efecto
               openDialog([{ speaker:'', text:'No ha tenido efecto…' }], true);
               CUT.hijackAction = ()=>{
                 if (isTyping) return advanceDialog();
@@ -3547,16 +3543,17 @@ function _cine4_step1(){
                 // 5) Pregunta por el ataque y abre menú
                 openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
                 CUT.hijackAction = ()=>{
-                  if (isTyping) return advanceDialog();
+                  if (isTyping){ advanceDialog(); return; }
 
-                  // Si ya tienes menú de cine2, puedes reusar sus funcs:
-                  if (typeof _cine2_openMenu === 'function') _cine2_openMenu(); else _cine4_openMenu();
+                   _cine2_openMenu();
 
                   CUT.hijackAction = ()=>{
-                    const confirm = (typeof _cine2_menuConfirm === 'function') ? _cine2_menuConfirm() : _cine4_menuConfirm();
-                    if (confirm < 0) return; // aún no eligió
+
+                    const choice = _cine2_menuConfirm();
+                    if (choice < 0) return; // no elegido aún
+
                     closeDialog();
-                    if (typeof _cine2_closeMenu === 'function') _cine2_closeMenu(); else _cine4_closeMenu();
+                    _cine2_closeMenu();
 
                     // 6) Anim de Juan atacando
                     const mid  = R.inX - Math.round(screenRect.dw * 0.04);
