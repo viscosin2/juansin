@@ -351,6 +351,7 @@ async function preloadCinematicImages(){
   IMG_JUAN_BIG      = await loadImage('assets/portraits/juansin_portrait.png');
   IMG_JUAN_SSJ      = await loadImage('assets/portraits/juansin_ssj_portrait.png');
   IMG_JUAN_FIGHT    = await loadImage('assets/portraits/juansin_pelea_portrait.png');
+  IMG_FUMAOS    = await loadImage('assets/portraits/fumaos_portrait.png');
   IMG_GANDALF_WHITE = await loadImage('assets/npcs/gandalfblanco.png');
   IMG_GANDALF_WHITE_P = await loadImage('assets/portraits/gandalfblanco_portrait.png');
   IMG_VOLD_FRONT = await loadImage('assets/npcs/voldemort.png').catch(()=>null);
@@ -1166,6 +1167,52 @@ CUT.hijackAction = () => {
 
 }
 
+  function portraitsOpen2(script){
+  PORTRAITS.active = true;
+  PORTRAITS.script = script.slice();
+  PORTRAITS.idx = 0;
+  PORTRAITS.blurK = 0;
+  PORTRAITS.stage = 'entering';
+
+  PORTRAITS.left  = _makeSide(IMG_FUMAOS,  'left',  'DonRamon y Perchita');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
+
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
+
+  const line0 = PORTRAITS.script[PORTRAITS.idx];
+  const node0 = _nodeForSpeaker(line0.speaker);
+  _startSlide(node0, node0.inX, ()=>{
+    PORTRAITS.stage = 'speaking';
+    openDialog([line0], true);
+  });
+
+CUT.hijackAction = () => {
+  if (!PORTRAITS.active) return;
+  if (!dialogOpen) return;
+
+  // 1) si está escribiendo, completar
+  if (isTyping){ advanceDialog(); return; }
+
+  // 2) ¿hay siguiente línea?
+  const next = PORTRAITS.script[PORTRAITS.idx+1];
+  const cur  = dialogScript[dialogIndex]; // la línea actual mostrada
+
+  if (next && cur && next.speaker === cur.speaker){
+    // MISMO SPEAKER -> NO cerrar ni animar retratos, solo cambiar texto
+    PORTRAITS.idx++;
+    dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
+    dialogScript = [ next ]; dialogIndex = 0;
+    renderCurrentLine(true);
+    return;
+  }
+
+  // 3) cambio de speaker -> flujo normal (cierra y anima)
+  closeDialog();
+  _nextPortraitLine();
+};
+
+}
 
 function _nextPortraitLine(){
   PORTRAITS.idx++;
@@ -2547,7 +2594,66 @@ function spawnTempGandalfAhead(targetCamY){
     { speaker:'Gandalf',    text:'Te estaré observando de cerca. Tal vez hoy la suerte nos mire… o tal vez no.' }
   ];
   portraitsOpen(cineScript);
-  CUT.onEnd = ()=>{ fadeOutFogThenEnd(); }; 
+    CUT.onEnd = ()=>{ continueCine1_WithFumaos_Portraits(() => fadeOutFogThenEnd()); };
+}
+
+  // ====== Fumaos solo con PORTRAITS (sin spawns en el mundo) ======
+function continueCine1_WithFumaos_Portraits(doneCb){
+  if (!CUT.active || CUT.id!=='cine1') { if (typeof doneCb==='function') doneCb(); return; }
+
+  // 1) conversación breve con portraits
+  const fumaosScript = [
+    { speaker:'DonRamon y Perchita', text:'Hermano... ¿tú también lo ves brillando o soy yo?' },
+    { speaker:'DonRamon y Perchita', text:'Shh... el brillo te mira de vuelta.' },
+    { speaker:'Juan',    text:'Muchachos, ¿están bien?' },
+    { speaker:'DonRamon y Perchita', text:'Estamos... elevadísimos.' }
+  ];
+  portraitsOpen2(fumaosScript);
+
+  // al terminar esta tanda de portraits…
+  CUT.onEnd = ()=>{
+    // 2) “modo combate”: intenta usar tu UI real; si no existe, activa un fallback simple
+    _cine1_startFakeFightUI(); // no pasa enemigos: no hay NPCs en mundo
+
+    // 3) mensaje de autoderrrota (portraits también)
+    const koScript = [
+      { speaker:'Narrador', text:'Los Fumaos se han AUTODERROTADO de lo fumaos que estaban.' }
+    ];
+    portraitsOpen(koScript);
+
+    // al cerrar el mensaje KO…
+    CUT.onEnd = ()=>{
+      _cine1_stopFakeFightUI();
+      if (typeof doneCb === 'function') doneCb();
+    };
+  };
+}
+
+// ====== UI combate: intenta reutilizar la tuya; si no, fallback ======
+function _cine1_startFakeFightUI(){
+  if (typeof _cine2_startFightUI === 'function'){
+    try { _cine2_startFightUI({ enemies: [] }); return; } catch(e){}
+  }
+  if (typeof startFightUI === 'function'){
+    try { startFightUI({ enemies: [] }); return; } catch(e){}
+  }
+  // Fallback: una banderita por si tu HUD pinta barras cuando esto está activo
+  window.HUD = window.HUD || {};
+  HUD.showHPBars = true;
+  HUD.tempEnemies = []; // vacío: no hay spawns, solo efecto visual
+}
+
+function _cine1_stopFakeFightUI(){
+  if (typeof _cine2_stopFightUI === 'function'){
+    try { _cine2_stopFightUI(); return; } catch(e){}
+  }
+  if (typeof stopFightUI === 'function'){
+    try { stopFightUI(); return; } catch(e){}
+  }
+  if (window.HUD){
+    HUD.showHPBars = false;
+    delete HUD.tempEnemies;
+  }
 }
 
 
