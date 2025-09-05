@@ -205,6 +205,7 @@ const PORTRAIT_SCALES = {
   Gandalf: 2.3,
   Juan:    1.7,
   Voldemort: 2,
+  "DonRamon y Perchita": 2,
   SSJ:     1.7
 };
 
@@ -1179,6 +1180,9 @@ CUT.hijackAction = () => {
 
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
+
+  PORTRAITS.left.inX += 60;
+  PORTRAITS.left.x   += 60;
 
   const line0 = PORTRAITS.script[PORTRAITS.idx];
   const node0 = _nodeForSpeaker(line0.speaker);
