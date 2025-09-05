@@ -1015,17 +1015,9 @@ function _makeSide(img, side, name, slotOverride){
   if (!img) {
     img = { naturalWidth: 64, naturalHeight: 64 };
   }
-
-  // Área horizontal máxima (relativa al área de juego)
   const maxW = Math.floor(screenRect.dw * 0.52);
-
-  // Escala específica por personaje (si existe)
   const charScale = (PORTRAIT_SCALES && PORTRAIT_SCALES[name]) ? PORTRAIT_SCALES[name] : 1;
-
-  // ¿Usamos layout "letterbox"?
   const useLetterbox = (PORTRAITS.layout === 'letterbox');
-
-  // Acolchados
   const padTop = 6, padBottom = 8;
 
   let availH, yBottom;
@@ -1181,6 +1173,8 @@ CUT.hijackAction = () => {
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
+  PORTRAITS.left.yBottom  -= 40;
+    
   PORTRAITS.left.inX += 60;
   PORTRAITS.left.x   += 60;
 
