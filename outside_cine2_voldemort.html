@@ -326,7 +326,7 @@ const GAME_FLAGS = {
   talked_patata1: false,
   juansin_other_halo: false,
   need_potion:false,   // ← nuevo: SSJ bloqueado hasta tomarla
-  has_potion:true,
+  has_potion:false,
   talked_faramir: false,
   talked_denethor:false
 };
@@ -362,9 +362,9 @@ async function preloadCinematicImages(){
 
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
-  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
-  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:true },
-  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:true }
+  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
+  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:false },
+  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
 
 ];
   function buildCineZones(){
@@ -3387,9 +3387,12 @@ if (!GAME_FLAGS.juansin_other_halo){
 }
 
 function _cine3_removeVoldFromMap(){
+  // 1) quitar del array de NPCs
   const idx = NPCS.findIndex(n => n?.id === 'voldemort_perfil');
-  if (idx >= 0) NPCS.splice(idx, 1);
+  let removedNpc = null;
+  if (idx >= 0) removedNpc = NPCS.splice(idx, 1)[0];
 
+  // 2) quitar colliders (si existen)
   if (typeof COLLIDERS !== 'undefined' && Array.isArray(COLLIDERS)){
     for (let i = COLLIDERS.length - 1; i >= 0; i--){
       const c = COLLIDERS[i];
@@ -3398,6 +3401,22 @@ function _cine3_removeVoldFromMap(){
       }
     }
   }
+
+  // 3) quitar de OBSTACLES (aquí es donde realmente lo guardaste)
+  if (typeof OBSTACLES !== 'undefined' && Array.isArray(OBSTACLES)){
+    for (let i = OBSTACLES.length - 1; i >= 0; i--){
+      const o = OBSTACLES[i];
+      const isNpcObstacle = o?.name === 'npc:voldemort_perfil';
+      const nearRemoved = removedNpc
+        ? Math.abs((o.x||0) - (removedNpc.x||0)) < 2 && Math.abs((o.y||0) - (removedNpc.y||0)) < 20
+        : false;
+      if (isNpcObstacle || nearRemoved) {
+        OBSTACLES.splice(i, 1);
+      }
+    }
+  }
+
+  // 4) quitar interact zones
   if (typeof INTERACTS !== 'undefined' && Array.isArray(INTERACTS)){
     for (let i = INTERACTS.length - 1; i >= 0; i--){
       const it = INTERACTS[i];
@@ -3407,6 +3426,7 @@ function _cine3_removeVoldFromMap(){
     }
   }
 }
+
 
 
 function endCine3(){
@@ -3435,13 +3455,13 @@ function _cine4_endPortraitsAndBars(next){
 }
 
 
-/* ---------- Borrado del SSJ del mapa ---------- */
 function _cine4_removeSSJFromMap(){
-  // quitar del array de NPCs
+  // 1) quitar del array de NPCs
   const idx = NPCS.findIndex(n => n?.id === 'juansin_other');
-  if (idx >= 0) NPCS.splice(idx, 1);
+  let removedNpc = null;
+  if (idx >= 0) removedNpc = NPCS.splice(idx, 1)[0];
 
-  // quitar colliders con ese id (o ref.id)
+  // 2) quitar colliders antiguos (si usas COLLIDERS en algún sitio)
   if (typeof COLLIDERS !== 'undefined' && Array.isArray(COLLIDERS)){
     for (let i = COLLIDERS.length - 1; i >= 0; i--){
       const c = COLLIDERS[i];
@@ -3451,7 +3471,24 @@ function _cine4_removeSSJFromMap(){
     }
   }
 
-  // quitar interact zones si las tienes
+  // 3) quitar de OBSTACLES, que es donde realmente metiste el collider
+  if (typeof OBSTACLES !== 'undefined' && Array.isArray(OBSTACLES)){
+    for (let i = OBSTACLES.length - 1; i >= 0; i--){
+      const o = OBSTACLES[i];
+      // por name del tipo
+      const isNpcObstacle = o?.name === 'npc:juansin_idle';
+      // o por cercanía a la posición del NPC eliminado (si lo teníamos)
+      const nearRemoved = removedNpc
+        ? Math.abs((o.x||0) - (removedNpc.x||0)) < 2 && Math.abs((o.y||0) - (removedNpc.y||0)) < 20
+        : false;
+
+      if (isNpcObstacle || nearRemoved) {
+        OBSTACLES.splice(i, 1);
+      }
+    }
+  }
+
+  // 4) quitar interact zones
   if (typeof INTERACTS !== 'undefined' && Array.isArray(INTERACTS)){
     for (let i = INTERACTS.length - 1; i >= 0; i--){
       const it = INTERACTS[i];
@@ -3461,6 +3498,7 @@ function _cine4_removeSSJFromMap(){
     }
   }
 }
+
 
 // ========================= CINEMÁTICA 4 =========================
 function startCinematic4(){ 
@@ -3531,9 +3569,6 @@ function _cine4_step1(){
             CUT.hijackAction = ()=>{
               if (isTyping) return advanceDialog();
               closeDialog();
-
-              // (opcional) Reacción visual de Juan
-              if (typeof cine3_hitReaction === 'function') cine3_hitReaction(R);
 
               // Mensaje: no tuvo efecto
               openDialog([{ speaker:'', text:'No ha tenido efecto…' }], true);
