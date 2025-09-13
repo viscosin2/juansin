@@ -729,8 +729,22 @@ const dialogHintEl = document.getElementById('dialogHint');
 
 let dialogOpen=false, isTyping=false, typingTimer=null, typingSpeed=22, dialogIndex=0;
 let dialogScript = [];
-const DIALOG_BEEP = new Audio("assets/sounds/bip.mp3");
-DIALOG_BEEP.volume = 0.5;
+
+  function playBeep(){
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.05);
+  } catch(e){}
+}
+
 
 function openDialog(lines, startTyping=true){
   dialogScript = lines || [];
@@ -787,7 +801,8 @@ function startTypingEffect(text){
   typingTimer = setInterval(()=>{
     if(i < text.length){
       const ch = text[i++]; dialogTextEl.textContent += ch;
-      if(i % 2 === 0){ try { DIALOG_BEEP.currentTime = 0; DIALOG_BEEP.play(); } catch(e){} }
+      if (i % 2 === 0) playBeep();
+
     } else {
       clearInterval(typingTimer);
       isTyping=false; dialogEl.classList.add('ready'); dialogHintEl.style.opacity=1;
@@ -841,22 +856,22 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
     return;
   }
 
-  // si hay diálogo abierto: avanzar SIEMPRE
-  if (dialogOpen){
-    const wasLast  = (dialogIndex >= dialogScript.length - 1);
-    const wasIntro = (initialDialogLock === true); // estabas en el diálogo de intro
+if (dialogOpen){
+  const wasLast      = (dialogIndex >= dialogScript.length - 1);
+  const wasIntro     = (initialDialogLock === true); 
+  const willFinishNow= (!isTyping) && wasLast;      
 
-    advanceDialog(); // esto llama a closeDialog()
+  advanceDialog(); 
 
-    // Si acabas de cerrar el diálogo de intro, arranca la música del pueblo en ESTE gesto
-    if (wasLast && wasIntro) {
-      combatMusic.pause();
-      combatMusic.currentTime = 0;
-      const p = townMusic.play();
-      if (p && p.catch) p.catch(()=>{});
-    }
-    return;
+  if (willFinishNow && wasIntro) {
+    combatMusic.pause(); 
+    combatMusic.currentTime = 0;
+    const p = townMusic.play(); 
+    if (p && p.catch) p.catch(()=>{});
   }
+  return;
+}
+
 
   // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
   if (interactBlocked) return;
