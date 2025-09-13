@@ -71,8 +71,8 @@
 </style>
 </head>
 <body>
-  <audio id="bgTown" src="assets/sounds/ambientepueblo.mp3" loop preload="auto" playsinline></audio>
-<audio id="bgCombat" src="assets/sounds/combate.mp3" loop preload="auto" playsinline></audio>
+<audio id="bgTown"   src="assets/sounds/ambientepueblo.mp3" loop preload="auto" playsinline></audio>
+<audio id="bgCombat" src="assets/sounds/combate.mp3"        loop preload="auto" playsinline></audio>
 
 <div class="gameboy">
   <div class="screen-container">
@@ -168,19 +168,20 @@ const FOG = {
   areaH: 140
 };
 
-
 const townMusic   = document.getElementById('bgTown');
 const combatMusic = document.getElementById('bgCombat');
 townMusic.volume = 0.5;
 combatMusic.volume = 0.5;
 
-// “cinturón y tirantes” por si algún navegador ignora loop:
-townMusic.addEventListener('ended', () => { townMusic.currentTime = 0; townMusic.play().catch(()=>{}); });
-combatMusic.addEventListener('ended', () => { combatMusic.currentTime = 0; combatMusic.play().catch(()=>{}); });
+// Fallback por si algún navegador ignora loop
+townMusic.addEventListener('ended',  () => { townMusic.currentTime = 0; townMusic.play().catch(()=>{}); });
+combatMusic.addEventListener('ended',() => { combatMusic.currentTime = 0; combatMusic.play().catch(()=>{}); });
 
-// log para detectar rutas mal puestas
-townMusic.addEventListener('error', () => console.warn('No carga ambientepueblo.mp3'));
-combatMusic.addEventListener('error', () => console.warn('No carga combate.mp3'));
+// Log útil si la ruta está mal
+townMusic.addEventListener('error',  () => console.warn('No carga ambientepueblo.mp3'));
+combatMusic.addEventListener('error',() => console.warn('No carga combate.mp3'));
+
+  
 
 
 // ******************************* SMOKE SUPER
@@ -793,13 +794,17 @@ function startTypingEffect(text){
     }
   }, typingSpeed);
 }
-  function playTownMusic(){
-  combatMusic.pause(); combatMusic.currentTime = 0;
-  const p = townMusic.play(); if (p && p.catch) p.catch(()=>{});
+function playTownMusic(){
+  combatMusic.pause(); 
+  combatMusic.currentTime = 0;
+  const p = townMusic.play(); 
+  if (p && p.catch) p.catch(()=>{});
 }
 function playCombatMusic(){
-  townMusic.pause(); townMusic.currentTime = 0;
-  const p = combatMusic.play(); if (p && p.catch) p.catch(()=>{});
+  townMusic.pause(); 
+  townMusic.currentTime = 0;
+  const p = combatMusic.play(); 
+  if (p && p.catch) p.catch(()=>{});
 }
 
   
@@ -823,172 +828,143 @@ function advanceDialog(){
 }
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
-// --- Desbloqueo de audio en la primera pulsación ---
-if (!window._audioUnlocked) {
-  window._audioUnlocked = true;
-  // primar los <audio> para que el navegador permita reproducir después
-  const p1 = townMusic.play();  if (p1 && p1.then) p1.then(()=>townMusic.pause()).catch(()=>{});
-  const p2 = combatMusic.play();if (p2 && p2.then) p2.then(()=>combatMusic.pause()).catch(()=>{});
-}
 
+  // --- Desbloqueo de audio en la primera pulsación ---
+  if (!window._audioUnlocked) {
+    window._audioUnlocked = true;
+    const p1 = townMusic.play();    if (p1 && p1.then) p1.then(()=>townMusic.pause()).catch(()=>{});
+    const p2 = combatMusic.play();  if (p2 && p2.then) p2.then(()=>combatMusic.pause()).catch(()=>{});
+  }
 
+  // Si una cinemática ha secuestrado la acción
   if (CUT.active && typeof CUT.hijackAction === 'function'){
     CUT.hijackAction();
     return;
   }
-// si hay diálogo abierto: avanzar SIEMPRE
-if (dialogOpen){
-  const wasLast  = (dialogIndex >= dialogScript.length - 1);
-  const wasIntro = initialDialogLock === true; // estaba en modo "intro"
 
-  advanceDialog(); // esto acaba llamando a closeDialog()
+  // si hay diálogo abierto: avanzar SIEMPRE
+  if (dialogOpen){
+    const wasLast  = (dialogIndex >= dialogScript.length - 1);
+    const wasIntro = (initialDialogLock === true); // estabas en el diálogo de intro
 
-  // Si acabas de cerrar el diálogo de intro, arranca la música en este MISMO gesto
-  if (wasLast && wasIntro) {
-    // evitamos depender de onDialogClosed por si alguna vez se reasigna
-    combatMusic.pause(); combatMusic.currentTime = 0;
-    const p = townMusic.play(); if (p && p.catch) p.catch(()=>{});
+    advanceDialog(); // esto llama a closeDialog()
+
+    // Si acabas de cerrar el diálogo de intro, arranca la música del pueblo en ESTE gesto
+    if (wasLast && wasIntro) {
+      combatMusic.pause();
+      combatMusic.currentTime = 0;
+      const p = townMusic.play();
+      if (p && p.catch) p.catch(()=>{});
+    }
+    return;
   }
-  return;
-}
-
-
 
   // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
   if (interactBlocked) return;
 
-// --- Handler de interacción con NPC (secuencia exacta Faramir/Denethor) ---
-const npcHit = getNPCInteractHit();
-if (npcHit){
-  const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
-  if (!npc) return;
+  // --- Handler de interacción con NPC (tu lógica tal cual) ---
+  const npcHit = getNPCInteractHit();
+  if (npcHit){
+    const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
+    if (!npc) return;
 
-  // Init suave del flag "finalizado" de Denethor (no repetir su bloque final)
-  if (typeof GAME_FLAGS.denethor_finalized === 'undefined') {
-    GAME_FLAGS.denethor_finalized = false;
-  }
+    if (typeof GAME_FLAGS.denethor_finalized === 'undefined') {
+      GAME_FLAGS.denethor_finalized = false;
+    }
 
-  // --- Casos especiales JUANSIN (igual que los tenías) ---
-  if (npc.id === 'juansin_other' && GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
-    showToast('No tienes fuerza suficiente.', 1600);
-    return;
-  }
-  if (npc.id === 'juansin_other' && GAME_FLAGS.has_potion){
-    startCinematic4();
-    return;
-  }
-  if (npc.id === 'juansin_other' && !GAME_FLAGS.juansin_other_halo){
-    npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
-    GAME_FLAGS.juansin_other_halo = true;
-    npc._fxActive = true;
-    npc._fxUntil  = performance.now() + 1000;
-  }
+    // Casos especiales JUANSIN
+    if (npc.id === 'juansin_other' && GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
+      showToast('No tienes fuerza suficiente.', 1600);
+      return;
+    }
+    if (npc.id === 'juansin_other' && GAME_FLAGS.has_potion){
+      startCinematic4();
+      return;
+    }
+    if (npc.id === 'juansin_other' && !GAME_FLAGS.juansin_other_halo){
+      npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
+      GAME_FLAGS.juansin_other_halo = true;
+      npc._fxActive = true;
+      npc._fxUntil  = performance.now() + 1000;
+    }
 
-  // ================== SECUENCIA FARAMIR / DENETHOR ==================
-  if (npc.id === 'faramir') {
-    // A) Antes de hablar con Denethor → repetir SIEMPRE bloque bloqueado
-    if (!GAME_FLAGS.talked_denethor) {
-      if (npc.dialogBlocked && npc.dialogBlocked.length){
-        openDialog(npc.dialogBlocked, true); // "Vete por la autopista..."
-      } else {
-        showToast('No parece querer hablar ahora.', 1400);
+    // ================== SECUENCIA FARAMIR / DENETHOR ==================
+    if (npc.id === 'faramir') {
+      if (!GAME_FLAGS.talked_denethor) {
+        if (npc.dialogBlocked && npc.dialogBlocked.length){
+          openDialog(npc.dialogBlocked, true);
+        } else {
+          showToast('No parece querer hablar ahora.', 1400);
+        }
+        return;
+      }
+      if (!GAME_FLAGS.denethor_finalized) {
+        if (npc.dialog && npc.dialog.length){ openDialog(npc.dialog, true); }
+        GAME_FLAGS.talked_faramir = true;
+        return;
+      }
+      if (npc.dialog2 && npc.dialog2.length){ openDialog(npc.dialog2, true); }
+      else { showToast('Muchacho... levántate ahí, muchacho...', 1400); }
+      return;
+    }
+
+    if (npc.id === 'denethor') {
+      if (!GAME_FLAGS.talked_faramir) {
+        if (npc.dialogBlocked && npc.dialogBlocked.length){
+          openDialog(npc.dialogBlocked, true);
+          GAME_FLAGS.talked_denethor = true;
+        } else {
+          showToast('No parece querer hablar ahora.', 1400);
+        }
+        return;
+      }
+      if (!GAME_FLAGS.denethor_finalized) {
+        if (npc.dialog && npc.dialog.length){
+          openDialog(npc.dialog, true);
+          const i=setInterval(()=>{ if(!dialogOpen){ clearInterval(i); _npc_swapDenethorCaido(); } },100);
+        }
+        GAME_FLAGS.talked_denethor    = true;
+        GAME_FLAGS.denethor_finalized = true;
+        return;
       }
       return;
     }
 
-    // B) Tras oír "Tas diciendo hombre!" de Denethor y hasta su bloque final,
-    //    Faramir repite SIEMPRE su bloque "Date una vuelta... Avenida Anaga..."
-    if (!GAME_FLAGS.denethor_finalized) {
-      if (npc.dialog && npc.dialog.length){
-        openDialog(npc.dialog, true);
-      }
-      // Garantiza el desbloqueo de Denethor (idempotente)
-      GAME_FLAGS.talked_faramir = true;
+    if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
+      if (npc.dialogBlocked && npc.dialogBlocked.length){ openDialog(npc.dialogBlocked, true); }
+      else { showToast('No parece querer hablar ahora.', 1400); }
       return;
     }
 
-    // C) Después del bloque final de Denethor → Faramir loop infinito "Muchacho..."
-    if (npc.dialog2 && npc.dialog2.length){
-      openDialog(npc.dialog2, true);
-    } else {
-      showToast('Muchacho... levántate ahí, muchacho...', 1400);
-    }
-    return;
-  }
+    if (npc.dialog && npc.dialog.length){ openDialog(npc.dialog, true); }
 
-  if (npc.id === 'denethor') {
-    // A) Hasta hablar con Faramir → repetir SIEMPRE "¡Tas diciendo hombre!"
-    if (!GAME_FLAGS.talked_faramir) {
-      if (npc.dialogBlocked && npc.dialogBlocked.length){
-        openDialog(npc.dialogBlocked, true); // "¡Tas diciendo hombre!"
-        // Clave: marcar que ya "pasó por aquí" para desbloquear a Faramir
-        GAME_FLAGS.talked_denethor = true;
-      } else {
-        showToast('No parece querer hablar ahora.', 1400);
-      }
+    if (npc.onFire){
+      setTimeout(() => { triggerNPCShot(npc); }, 1500);
+      GAME_FLAGS.talked_gunner = true;
+    }
+    if (npc.id === 'patata1') {
+      if (npc.dialog) openDialog(npc.dialog, true);
+      GAME_FLAGS.talked_patata1 = true;
       return;
     }
-
-    // B) Después de haber hablado con Faramir → Denethor suelta su bloque final UNA VEZ
-    if (!GAME_FLAGS.denethor_finalized) {
-      if (npc.dialog && npc.dialog.length){    
-          openDialog(npc.dialog, true); const i=setInterval(()=>{ if(!dialogOpen){ clearInterval(i); _npc_swapDenethorCaido(); } },100);
+    if (npc.id === 'patata2') {
+      if (!GAME_FLAGS.talked_patata1 && npc.dialogBlocked) {
+        openDialog(npc.dialogBlocked, true);
+        return;
       }
-
-
-      GAME_FLAGS.talked_denethor    = true;
-      GAME_FLAGS.denethor_finalized = true; // ya no se repite más
+      if (npc.dialog) openDialog(npc.dialog, true);
       return;
     }
-    return;
   }
 
-  if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
-    if (npc.dialogBlocked && npc.dialogBlocked.length){
-      openDialog(npc.dialogBlocked, true);
-    } else {
-      showToast('No parece querer hablar ahora.', 1400);
-    }
-    return;
-  }
-
-  if (npc.dialog && npc.dialog.length){
-    openDialog(npc.dialog, true);
-  }
-
-  if (npc.onFire){
-    setTimeout(() => { triggerNPCShot(npc); }, 1500);
-    GAME_FLAGS.talked_gunner = true;
-  }
-  if (npc.id === 'patata1') {
-  if (npc.dialog) openDialog(npc.dialog, true);
-  GAME_FLAGS.talked_patata1 = true;
-  return;
-}
-
-if (npc.id === 'patata2') {
-  if (!GAME_FLAGS.talked_patata1 && npc.dialogBlocked) {
-    openDialog(npc.dialogBlocked, true); // "¿Mijo? ¿Majo? PAPAAAAAA"
-    return;
-  }
-  if (npc.dialog) openDialog(npc.dialog, true); // "¿Me podría dar... unas pata ti tas?"
-  return;
-}
-}
-
-
-
-  
-
-
-
-  // 2) Props con "say" => toast
+  // Props con "say" => toast
   const propHit = getInteractHit();
   if (propHit && propHit.say){
     showToast(propHit.say, 1800);
     return;
   }
 }, {passive:false});
+
 
 
 /* ========== UTILS ========== */
