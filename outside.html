@@ -65,24 +65,41 @@
   .dialog-text{ font-family:'VT323',monospace; font-size:18px; letter-spacing:1px; line-height:1.15; color:#E6F6FF; min-height:2.2em; }
   .dialog-hint{ margin-left:auto; color:#B8D7FF; font:600 12px/1 system-ui; opacity:0; transition:opacity .18s ease; }
   .dialog.ready .dialog-hint{ opacity:.9; }
+  .fx-ray{ position:absolute; width:6px; height:3px; background:#00ff66; box-shadow:0 0 10px #00ff66, 0 0 18px #00ff66; transform-origin:left center; z-index:8; display:none; }
+
+  
 </style>
 </head>
 <body>
+<audio id="bgTown"   src="assets/sounds/ambientepueblo.mp3" loop preload="auto" playsinline></audio>
+<audio id="bgCombat" src="assets/sounds/combate.mp3"        loop preload="auto" playsinline></audio>
+
 <div class="gameboy">
   <div class="screen-container">
     <div class="screen">
       <div id="blackfade"></div>
       <div id="toast" class="toast"></div>
+      <div id="rayFx" class="fx-ray"></div>
 
-      <div id="dialog" class="dialog">
-        <div id="dialogName" class="dialog-name"></div>
-        <div id="dialogText" class="dialog-text"></div>
-        <div id="dialogHint" class="dialog-hint">→</div>
-      </div>
+<div id="dialog" class="dialog">
+  <div id="attackMenu" style="
+    position:absolute; left:12px; bottom:100%; margin-bottom:6px;
+    background:rgba(0,0,0,0.7); color:#fff; padding:8px 10px; border:1px solid #fff; border-radius:6px;
+    font-family:'Press Start 2P', monospace; font-size:10px; line-height:1.6; display:none; z-index:1;">
+    <div id="atkOpt0">Bola</div>
+    <div id="atkOpt1">Puñetazo</div>
+  </div>
+
+  <div id="dialogName" class="dialog-name"></div>
+  <div id="dialogText" class="dialog-text"></div>
+  <div id="dialogHint" class="dialog-hint">→</div>
+</div>
+
 
       <canvas id="game"></canvas>
     </div>
   </div>
+
 
   <div class="controls">
     <div class="dpad">
@@ -116,11 +133,11 @@ let BACKCTX = BACKBUF.getContext('2d');
 
 /* ====== ESTADO CINEMÁTICA ====== */
 const CUT = {
-  active: false,        // hay cinemática en curso (bloquea input libre)
-  id: null,             // 'cine1'...
-  phase: null,          // subfase
-  hijackAction: null,   // handler para el botón de acción durante la cine
-  onEnd: null           // callback al terminar
+  active: false,       
+  id: null,          
+  phase: null,         
+  hijackAction: null, 
+  onEnd: null        
 };
 
 
@@ -150,6 +167,22 @@ const FOG = {
   areaW: 360,
   areaH: 140
 };
+
+const townMusic   = document.getElementById('bgTown');
+const combatMusic = document.getElementById('bgCombat');
+townMusic.volume = 0.5;
+combatMusic.volume = 0.5;
+
+// Fallback por si algún navegador ignora loop
+townMusic.addEventListener('ended',  () => { townMusic.currentTime = 0; townMusic.play().catch(()=>{}); });
+combatMusic.addEventListener('ended',() => { combatMusic.currentTime = 0; combatMusic.play().catch(()=>{}); });
+
+// Log útil si la ruta está mal
+townMusic.addEventListener('error',  () => console.warn('No carga ambientepueblo.mp3'));
+combatMusic.addEventListener('error',() => console.warn('No carga combate.mp3'));
+
+  
+
 
 // ******************************* SMOKE SUPER
 
@@ -189,8 +222,10 @@ const PORTRAITS = {
 };
 
 const PORTRAIT_SCALES = {
-  Gandalf: 2,
+  Gandalf: 2.3,
   Juan:    1.7,
+  Voldemort: 2,
+  "DonRamon y Perchita": 2,
   SSJ:     1.7
 };
 
@@ -207,6 +242,8 @@ const DEFAULT_SHADOW = {
 // ====== BARRAS DE VIDA PARA CINE ======
 const HPBARS = {
   active:false, alpha:0, fadeInMs:400, fadeOutMs:400,
+  leftName:'SSJ',
+  rightName:'Juan',
   juan:100, ssj:100, juanT:100, ssjT:100, speed:120, // % por segundo
   show(juanPct=100, ssjPct=100){ this.active=true; this.alpha=0; this._showing=true; this._hiding=false; this.juan=this.juanT=juanPct; this.ssj=this.ssjT=ssjPct; },
   setTargets(juanPct, ssjPct){ if(juanPct!=null) this.juanT=juanPct; if(ssjPct!=null) this.ssjT=ssjPct; },
@@ -221,7 +258,7 @@ const HPBARS = {
     if (this._hiding){ this.alpha = Math.max(0, this.alpha - (dt*1000)/this.fadeOutMs); if(this.alpha<=0){ this._hiding=false; this.active=false; } }
   }
 };
-
+  
   function _ease(t){
   return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
 }
@@ -251,6 +288,9 @@ function drawHPBars(){
   const wSSJ  = Math.round(barW * (HPBARS.ssj/100));
   const wJuan = Math.round(barW * (HPBARS.juan/100));
 
+  const leftName  = HPBARS.leftName  || 'SSJ';
+  const rightName = HPBARS.rightName || 'Juan';
+
   ctx.save();
   ctx.globalAlpha = a;
 
@@ -259,8 +299,8 @@ function drawHPBars(){
   ctx.fillStyle = nameColor;
   ctx.textBaseline = 'bottom';
 
-  ctx.fillText('SSJ',  leftX,  yTop - 2);           // izquierda
-  ctx.fillText('Juan', rightX + barW - ctx.measureText('Juan').width, yTop - 2); // derecha alineado dcha
+  ctx.fillText(leftName,  leftX,  yTop - 2);
+  ctx.fillText(rightName, rightX + barW - ctx.measureText(rightName).width, yTop - 2);
 
   // Barras: fondo + relleno + marco
   // -- SSJ (izquierda)
@@ -303,9 +343,12 @@ let _nowSec = 0;  // tiempo en segundos (lo llenamos en loop)
 
 const GAME_FLAGS = {
   talked_gunner: false,
+  talked_patata1: false,
   juansin_other_halo: false,
   need_potion:false,   // ← nuevo: SSJ bloqueado hasta tomarla
-  has_potion:false     // ← nuevo: ya recogida/consumida
+  has_potion:false,
+  talked_faramir: false,
+  talked_denethor:false
 };
 
   
@@ -328,15 +371,20 @@ async function preloadCinematicImages(){
   IMG_GANDALF       = await loadImage('assets/portraits/gandalf_portrait.png');
   IMG_JUAN_BIG      = await loadImage('assets/portraits/juansin_portrait.png');
   IMG_JUAN_SSJ      = await loadImage('assets/portraits/juansin_ssj_portrait.png');
+  IMG_JUAN_FIGHT    = await loadImage('assets/portraits/juansin_pelea_portrait.png');
+  IMG_FUMAOS    = await loadImage('assets/portraits/fumaos_portrait.png');
   IMG_GANDALF_WHITE = await loadImage('assets/npcs/gandalfblanco.png');
-  IMG_GANDALF_WHITE_P = await loadImage('assets/portraits/gandalfblanco_portrait.png')
-  .then(i=>i)
-  .catch(()=>null);
+  IMG_GANDALF_WHITE_P = await loadImage('assets/portraits/gandalfblanco_portrait.png');
+  IMG_VOLD_FRONT = await loadImage('assets/npcs/voldemort.png').catch(()=>null);
+  IMG_VOLD_PERFIL = await loadImage('assets/npcs/voldemort_perfil.png').catch(()=>null);
+  IMG_VOLD_P     = await loadImage('assets/portraits/voldemort_portrait.png').catch(()=>null);
+  IMG_DENETHOR_CAIDO     = await loadImage('assets/npcs/denethorcaido.png').catch(()=>null);
 }
 
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
   { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
+  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:false },
   { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
 
 ];
@@ -370,7 +418,7 @@ const AMBIENT_ZONES = [
     name:'Bluehour zone', palette:'bluehour',
     dialogOnEnter:[
       { speaker:'Juan', text:'...' },
-      { speaker:'Juan', text:'Mensaje rollo válgame qué oscuro el bosque.' }
+      { speaker:'Juan', text:'Fuerte biruje.' }
     ],
     dialogDelayMs: 500, lockMs: 1000,rect:{type:'percent', x:24, y:0, w:100, h:35}
   },
@@ -391,32 +439,47 @@ let NPC_IMAGES = {}, NPCS = [];
   /* ========== NPCs ========== */
 // Catálogo de tipos de NPC (sprite, escala, collider, etc.)
 const NPC_CATALOG = {
-  abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },halo: { color: '80,255,140', radius: 34, alpha: 0.55 }},
-  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 },fireFxMs: 140},
-  soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:-2, scaleX:1/2.8, scaleY:1/8 }},
-  juansin_idle: { src: 'assets/juan_character/idle_down_shoes.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 }, depthBand: 8, depthAnchorY: 1, shadow:{ alpha:0.30, offsetY:-3, scaleX:1/2.4, scaleY:1/7 } },
+  abuela: { src: 'assets/npcs/abuela.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 }},
+  abuela1: { src: 'assets/npcs/abuela1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 }},
+  gato1: { src: 'assets/npcs/gato1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 }},
+  voldemort_perfil: { src: 'assets/npcs/voldemort_perfil.png', scale: 0.5, collider: { x:-20, y:0, w:30, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetX:2, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 },halo: { color: '80,255,140', radius: 34, alpha: 0.55 }},
+  soldado1: { src: 'assets/npcs/soldado1.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,muzzleOffset: { x: -20, y: -12 },shadow:{ alpha:0.28, offsetY:0, offsetX:2, scaleX:1/3, scaleY:1/7.5 },fireFxMs: 140},
+  soldado2: { src: 'assets/npcs/soldado2.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 }},
+  patata1: { src: 'assets/npcs/patatas1.png', flipX:true, scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 }},
+  patata2: { src: 'assets/npcs/patatas2.png', flipX:true, scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 }},
+  faramir: { src: 'assets/npcs/faramir.png', flipX:true, scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 }},
+  denethor: { src: 'assets/npcs/denethor.png', flipX:true,scale: 0.65, collider: { x:-10, y:0, w:20, h:15 },depthBand: 8, depthAnchorY: 1,shadow:{ alpha:0.28, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 }},
+  juansin_idle: { src: 'assets/juan_character/idle_down_shoes.png', scale: 0.65, collider: { x:-10, y:0, w:20, h:15 }, depthBand: 8, depthAnchorY: 1, shadow:{ alpha:0.28, offsetY:0, scaleX:1/2.1, scaleY:1/7.5 } },
 
 };
 
 const NPC_PLACED = {
-  abuela: [{type:'percent', x: 2.5, y: 9, interact: { x:-14, y: 12, w:28, h:16 }, 
-     dialog: [{ speaker:'Abuelita', text:'Buenas tardes, Juan. ¿Has visto a mi gato?' }, { speaker:'Juan',text:'Mmm… creo que estaba por el río.' }]
+  abuela: [{type:'percent', x: 24, y: 91, interact: { x:-20, y: 3, w:39, h:25 }, 
+     dialog: [{ speaker:'Juan', text:'Hola, abuela.' }, { speaker:'Abuela',text:'Ay mijo...' }]
     }],
-  gato1: [{type:'percent', x: 21, y: 61, interact: { x:-14, y: 12, w:28, h:16 }, 
-     dialog: [{ speaker:'Gato', text:'Hola, buenas.' }, { speaker:'Juan',text:'WTF' }],sound: "assets/sounds/miau.mp3"
+  abuela1: [{type:'percent', x: 43.4, y: 19.5, interact: { x:-13, y: 10, w:29, h:18 }, 
+     dialog: [{ speaker:'Abuela Oscura', text:'Hola, Juan.' }, { speaker:'Juan',text:'¿Qué fue?' },{ speaker:'Abuela Oscura', text:'El gato se ha vuelto a escapar.' }, { speaker:'Juan',text:'Ños... ¿Otra vez?'}, { speaker:'Juan',text:'Me pareció verlo cerca del río...'}]
     }],
-  voldemort_perfil: [{type:'percent', x: 82, y: 15.5, interact: { x:-35, y: 12, w:50, h:16 }, 
-     dialog: [{ speaker:'Voldemort', text:'Ye.' }, { speaker:'Juan',text:'WTF' }]
+  gato1: [{type:'percent', x: 21, y: 61, interact: { x:-13, y: 10, w:29, h:18 }, 
+     dialog: [{ speaker:'Gato', text:'¿Comidita?' }],sound: "assets/sounds/miau.mp3"
     }],
-  soldado1: [{id:'gunner1', type:'percent', x: 94, y: 66, interact: { x:-14, y: 12, w:28, h:16 },onFire:true, 
+  voldemort_perfil: [{id:'voldemort_perfil',type:'percent', x: 82.2, y: 16.5}],
+  soldado1: [{id:'gunner1', type:'percent', x: 94, y: 66, interact: { x:-13, y: 10, w:29, h:18 },onFire:true, 
      dialog: [{ speaker:'Armiche', text:'Ahí te va un pequeño perdigón.'}],sound: "assets/sounds/shot.mp3"
     }],
-  soldado2: [{id:'guard1', type:'percent', x: 86, y: 66, interact: { x:-14, y: 12, w:28, h:16 },requiresFlag:'talked_gunner', 
+  soldado2: [{id:'guard1', type:'percent', x: 86, y: 66, interact: { x:-13, y: 10, w:29, h:18 },requiresFlag:'talked_gunner',  
      dialogBlocked:[ {speaker:'Boliche', text:'¡Como en el Call of Duty, señores!'}], dialog: [{ speaker:'Boliche', text:'¡Ah! ¡Mi lentilla!' }]
     }],
-  juansin_idle: [{id:'juansin_other', type:'percent', x: 77, y: 76, interact: { x:-14, y: 12, w:28, h:16 }
+  patata1: [{id:'patata1', type:'percent', x: 66.6, y: 20, interact: { x:-13, y: 10, w:29, h:18 }, patatas:true, dialog: [{ speaker:'Canario medio', text:'¿Me podría dar unas papitas con mojo, por favor?'}],
+    }],
+  patata2: [{id:'patata2', type:'percent', x: 63.6, y: 20, interact: { x:-13, y: 10, w:29, h:18 },
+     dialogBlocked:[ {speaker:'Godo', text:'¿Papa? ¿Mojo? ¿Miniño? ¿Muchacho?'}], dialog: [{ speaker:'Godo', text:'¿Me podría dar...' },{ speaker:'Godo', text:'unas pata ti tash?' }]
+    }],
+  faramir: [{id:'faramir', type:'percent', x: 15.5, y: 8, interact: { x:-13, y: 10, w:29, h:18 }, faramir:true, dialogBlocked:[ {speaker:'Faramir', text:'Vete por la autopista, pa que la veas. Está hecha polvo.'}], requiresFlag:'talked_denethor',  faramir1:true, dialog: [{ speaker:'Faramir', text:'¡Date una vuelta!'},{ speaker:'Faramir', text:'Pa que la veas... cómo está la Avenida Anaga...'}],dialog2: [{ speaker:'Faramir', text:'Muchacho... levántate ahí, muchacho...'}]
+    }],
+  denethor: [{id:'denethor', type:'percent', x: 12.5, y: 8, interact: { x:-13, y: 10, w:29, h:18 }, denethor:true, dialogBlocked:[ {speaker:'Denethor', text:'¡Tas diciendo hombre!'}], requiresFlag:'talked_faramir',  faramir1:true, dialog: [{ speaker:'Denethor', text:'¡ME DA IGUAL LA AVENIDA ANAGA!'},{ speaker:'Denethor', text:'Yo quiero que me pongas la luz.'},{ speaker:'Denethor', text:'Ayquemecaigocoño...'}],
+    }],
+  juansin_idle: [{id:'juansin_other', type:'percent', x: 77, y: 76, interact: { x:-13, y: 10, w:29, h:18 }
   }],
 };
 
@@ -461,9 +524,9 @@ const PLACED = {
                 {type:'percent',x:83,y:10.5},{type:'percent',x:85,y:32},{type:'percent',x:79,y:35},{type:'percent',x:96,y:9},{type:'percent',x:94,y:20},{type:'percent',x:96.5,y:30}],
   arboloscuro:  [{type:'percent',x:83,y:55},{type:'percent',x:78.5,y:58},{type:'percent',x:63,y:61},{type:'percent',x:85,y:79},{type:'percent',x:78,y:100.5}],
   casajuan:    [{type:'percent',x:7.2,y:82,say:'Tengo una misión.'}],
-  casaclara_amarilla:[{type:'percent',x:24.5,y:90,interact:[{x:-22,y:5,w:19,h:18,say:'Puerta'},{x:12,y:5,w:13,h:18,say:'Un girasol.'}]}],
-  casaclara_azul:    [{type:'percent',x:5.5,y:45}],
-  casaclara:         [{type:'percent',x:7,y:20}],
+  casaclara_amarilla:[{type:'percent',x:24.5,y:90}],
+  casaclara_azul:    [{type:'percent',x:5.5,y:45,interact:[{x:20,y:5,w:16,h:18,say:'No pasarás. Céntrate en la misión.'}]}],
+  casaclara:         [{type:'percent',x:7,y:20,interact:[{x:-12,y:5,w:20,h:18,say:'Cerrada. Como tú corazón al conocer a viscosin13...'}]}],
   casamedia_roja:    [{type:'percent',x:42,y:17}],
   casamedia_rosa:    [{type:'percent',x:62,y:17}],
   casamedia:         [{type:'percent',x:52,y:17}],
@@ -527,10 +590,40 @@ function bindHold(btn,on,off){
   btn.addEventListener('touchend',end,{passive:false});
   btn.addEventListener('touchcancel',end,{passive:false});
 }
-bindHold(document.getElementById('btn-up'),   ()=>keys.up=true,   ()=>keys.up=false);
-bindHold(document.getElementById('btn-down'), ()=>keys.down=true, ()=>keys.down=false);
+
+bindHold(document.getElementById('btn-up'), 
+  ()=>{ 
+    if (CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on){ 
+      _cine2_menuUp(); 
+    } else { 
+      keys.up=true; 
+    }
+  }, 
+  ()=>{ 
+    if (!(CUT.active && CUT.id==='cine2' && CUT.c2?.menu?.on)){ 
+      keys.up=false; 
+    }
+  }
+);
+
+bindHold(document.getElementById('btn-down'), 
+  ()=>{ 
+    if (CUT.active && CUT.c2?.menu?.on){ 
+      _cine2_menuDown(); 
+    } else { 
+      keys.down=true; 
+    }
+  }, 
+  ()=>{ 
+    if (!(CUT.active && CUT.c2?.menu?.on)){ 
+      keys.down=false; 
+    }
+  }
+);
+
 bindHold(document.getElementById('btn-left'), ()=>keys.left=true, ()=>keys.left=false);
 bindHold(document.getElementById('btn-right'),()=>keys.right=true,()=>keys.right=false);
+  
 function bindPressVisual(el){
   const on=()=>el.classList.add('pressed'), off=()=>el.classList.remove('pressed');
   el.addEventListener('touchstart',e=>{e.preventDefault();on()},{passive:false});
@@ -575,11 +668,17 @@ function buildNPCs(){
         scale: s,
         depthBand: spec.depthBand ?? DEPTH_BAND,
         depthAnchorY: spec.depthAnchorY ?? 0,
+        flipX: (typeof p.flipX === 'boolean') ? p.flipX : !!spec.flipX,
         dialog: Array.isArray(p.dialog) ? p.dialog : null,
+        dialog2: Array.isArray(p.dialog2) ? p.dialog2 : null,
         sound: p.sound ? new Audio(p.sound) : null,
         dialogBlocked: Array.isArray(p.dialogBlocked) ? p.dialogBlocked : null,
         requiresFlag: p.requiresFlag || null,
         onFire: !!p.onFire,
+        patata: !!p.patata,
+        faramir: !!p.faramir,
+        faramir1: !!p.faramir1,
+        denethor: !!p.denethor,
         muzzleOffset: spec.muzzleOffset || {x:0,y:0},
         fireFxMs: spec.fireFxMs || 120,
         _fxActive: false,
@@ -630,8 +729,22 @@ const dialogHintEl = document.getElementById('dialogHint');
 
 let dialogOpen=false, isTyping=false, typingTimer=null, typingSpeed=22, dialogIndex=0;
 let dialogScript = [];
-const DIALOG_BEEP = new Audio("assets/sounds/bip.mp3");
-DIALOG_BEEP.volume = 0.5;
+
+  function playBeep(){
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.05);
+  } catch(e){}
+}
+
 
 function openDialog(lines, startTyping=true){
   dialogScript = lines || [];
@@ -645,7 +758,6 @@ function closeDialog(){
   dialogEl.classList.remove('show','ready');
   dialogOpen=false;
 
-  // si el diálogo que se cierra es el inicial, liberamos interacciones
   if (initialDialogLock){
     initialDialogLock = false;
     interactBlocked = false;
@@ -689,13 +801,28 @@ function startTypingEffect(text){
   typingTimer = setInterval(()=>{
     if(i < text.length){
       const ch = text[i++]; dialogTextEl.textContent += ch;
-      if(i % 2 === 0){ try { DIALOG_BEEP.currentTime = 0; DIALOG_BEEP.play(); } catch(e){} }
+      if (i % 2 === 0) playBeep();
+
     } else {
       clearInterval(typingTimer);
       isTyping=false; dialogEl.classList.add('ready'); dialogHintEl.style.opacity=1;
     }
   }, typingSpeed);
 }
+function playTownMusic(){
+  combatMusic.pause(); 
+  combatMusic.currentTime = 0;
+  const p = townMusic.play(); 
+  if (p && p.catch) p.catch(()=>{});
+}
+function playCombatMusic(){
+  townMusic.pause(); 
+  townMusic.currentTime = 0;
+  const p = combatMusic.play(); 
+  if (p && p.catch) p.catch(()=>{});
+}
+
+  
 function advanceDialog(){
   if(!dialogOpen) return;
   const full = dialogScript[dialogIndex]?.text ?? '';
@@ -717,43 +844,67 @@ function advanceDialog(){
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
 
-  // si hay cinemática con hijack, primero eso
+  // --- Desbloqueo de audio en la primera pulsación ---
+  if (!window._audioUnlocked) {
+    window._audioUnlocked = true;
+    const p1 = townMusic.play();    if (p1 && p1.then) p1.then(()=>townMusic.pause()).catch(()=>{});
+  }
+
+  // Si una cinemática ha secuestrado la acción
   if (CUT.active && typeof CUT.hijackAction === 'function'){
     CUT.hijackAction();
     return;
   }
 
-  // si hay diálogo abierto: avanzar SIEMPRE
-  if (dialogOpen){
-    advanceDialog();
-    return;
+if (dialogOpen){
+  const wasLast      = (dialogIndex >= dialogScript.length - 1);
+  const wasIntro     = (initialDialogLock === true); 
+  const willFinishNow= (!isTyping) && wasLast;      
+
+  advanceDialog(); 
+
+  if (willFinishNow && wasIntro) {
+    combatMusic.pause(); 
+    combatMusic.currentTime = 0;
+    const p = townMusic.play(); 
+    if (p && p.catch) p.catch(()=>{});
   }
+  return;
+}
+
 
   // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
   if (interactBlocked) return;
 
-  // ——— A partir de aquí, interacciones normales ———
-
-  // 1) NPCs con diálogo / lógica especial
+  // --- Handler de interacción con NPC (tu lógica tal cual) ---
   const npcHit = getNPCInteractHit();
   if (npcHit){
     const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
-    if (npc){   
-          if (npc.id === 'juansin_other' && GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
+    if (!npc) return;
+
+    if (typeof GAME_FLAGS.denethor_finalized === 'undefined') {
+      GAME_FLAGS.denethor_finalized = false;
+    }
+
+    // Casos especiales JUANSIN
+    if (npc.id === 'juansin_other' && GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
       showToast('No tienes fuerza suficiente.', 1600);
       return;
     }
-      
+    if (npc.id === 'juansin_other' && GAME_FLAGS.has_potion){
+      startCinematic4();
+      return;
+    }
     if (npc.id === 'juansin_other' && !GAME_FLAGS.juansin_other_halo){
       npc.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
       GAME_FLAGS.juansin_other_halo = true;
-
-      // (Opcional) mini destello de 300ms al activarse
       npc._fxActive = true;
       npc._fxUntil  = performance.now() + 1000;
     }
 
-      if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
+    // ================== SECUENCIA FARAMIR / DENETHOR ==================
+    if (npc.id === 'faramir') {
+      if (!GAME_FLAGS.talked_denethor) {
         if (npc.dialogBlocked && npc.dialogBlocked.length){
           openDialog(npc.dialogBlocked, true);
         } else {
@@ -761,24 +912,73 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
         }
         return;
       }
-      if (npc.dialog && npc.dialog.length){
-        openDialog(npc.dialog, true);
+      if (!GAME_FLAGS.denethor_finalized) {
+        if (npc.dialog && npc.dialog.length){ openDialog(npc.dialog, true); }
+        GAME_FLAGS.talked_faramir = true;
+        return;
       }
-      if (npc.onFire){
-        setTimeout(() => { triggerNPCShot(npc); }, 1500);
-        GAME_FLAGS.talked_gunner = true;
+      if (npc.dialog2 && npc.dialog2.length){ openDialog(npc.dialog2, true); }
+      else { showToast('Muchacho... levántate ahí, muchacho...', 1400); }
+      return;
+    }
+
+    if (npc.id === 'denethor') {
+      if (!GAME_FLAGS.talked_faramir) {
+        if (npc.dialogBlocked && npc.dialogBlocked.length){
+          openDialog(npc.dialogBlocked, true);
+          GAME_FLAGS.talked_denethor = true;
+        } else {
+          showToast('No parece querer hablar ahora.', 1400);
+        }
+        return;
       }
+      if (!GAME_FLAGS.denethor_finalized) {
+        if (npc.dialog && npc.dialog.length){
+          openDialog(npc.dialog, true);
+          const i=setInterval(()=>{ if(!dialogOpen){ clearInterval(i); _npc_swapDenethorCaido(); } },100);
+        }
+        GAME_FLAGS.talked_denethor    = true;
+        GAME_FLAGS.denethor_finalized = true;
+        return;
+      }
+      return;
+    }
+
+    if (npc.requiresFlag && !GAME_FLAGS[npc.requiresFlag]){
+      if (npc.dialogBlocked && npc.dialogBlocked.length){ openDialog(npc.dialogBlocked, true); }
+      else { showToast('No parece querer hablar ahora.', 1400); }
+      return;
+    }
+
+    if (npc.dialog && npc.dialog.length){ openDialog(npc.dialog, true); }
+
+    if (npc.onFire){
+      setTimeout(() => { triggerNPCShot(npc); }, 1500);
+      GAME_FLAGS.talked_gunner = true;
+    }
+    if (npc.id === 'patata1') {
+      if (npc.dialog) openDialog(npc.dialog, true);
+      GAME_FLAGS.talked_patata1 = true;
+      return;
+    }
+    if (npc.id === 'patata2') {
+      if (!GAME_FLAGS.talked_patata1 && npc.dialogBlocked) {
+        openDialog(npc.dialogBlocked, true);
+        return;
+      }
+      if (npc.dialog) openDialog(npc.dialog, true);
       return;
     }
   }
 
-  // 2) Props con "say" => toast
+  // Props con "say" => toast
   const propHit = getInteractHit();
   if (propHit && propHit.say){
     showToast(propHit.say, 1800);
     return;
   }
 }, {passive:false});
+
 
 
 /* ========== UTILS ========== */
@@ -852,17 +1052,9 @@ function _makeSide(img, side, name, slotOverride){
   if (!img) {
     img = { naturalWidth: 64, naturalHeight: 64 };
   }
-
-  // Área horizontal máxima (relativa al área de juego)
   const maxW = Math.floor(screenRect.dw * 0.52);
-
-  // Escala específica por personaje (si existe)
   const charScale = (PORTRAIT_SCALES && PORTRAIT_SCALES[name]) ? PORTRAIT_SCALES[name] : 1;
-
-  // ¿Usamos layout "letterbox"?
   const useLetterbox = (PORTRAITS.layout === 'letterbox');
-
-  // Acolchados
   const padTop = 6, padBottom = 8;
 
   let availH, yBottom;
@@ -933,8 +1125,6 @@ function _makeSide(img, side, name, slotOverride){
 }
 
 
-
-
 function _startSlide(node, toX, cb){
   node.anim = true;
   node.t = 0;
@@ -955,9 +1145,8 @@ function _startSlide(node, toX, cb){
 }
 
 
-
 function _nodeForSpeaker(name){
-  if (name === 'Gandalf' || name === 'SSJ') return PORTRAITS.left;
+  if (name === 'Gandalf' || name === 'SSJ' || name === 'Voldemort' || name === 'DonRamon y Perchita') return PORTRAITS.left;
   return PORTRAITS.right;
 }
 
@@ -1008,6 +1197,57 @@ CUT.hijackAction = () => {
 
 }
 
+  function portraitsOpen2(script){
+  PORTRAITS.active = true;
+  PORTRAITS.script = script.slice();
+  PORTRAITS.idx = 0;
+  PORTRAITS.blurK = 0;
+  PORTRAITS.stage = 'entering';
+
+  PORTRAITS.left  = _makeSide(IMG_FUMAOS,  'left',  'DonRamon y Perchita');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
+
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
+
+  PORTRAITS.left.yBottom  -= 40;
+    
+  PORTRAITS.left.inX += 60;
+  PORTRAITS.left.x   += 60;
+
+  const line0 = PORTRAITS.script[PORTRAITS.idx];
+  const node0 = _nodeForSpeaker(line0.speaker);
+  _startSlide(node0, node0.inX, ()=>{
+    PORTRAITS.stage = 'speaking';
+    openDialog([line0], true);
+  });
+
+CUT.hijackAction = () => {
+  if (!PORTRAITS.active) return;
+  if (!dialogOpen) return;
+
+  // 1) si está escribiendo, completar
+  if (isTyping){ advanceDialog(); return; }
+
+  // 2) ¿hay siguiente línea?
+  const next = PORTRAITS.script[PORTRAITS.idx+1];
+  const cur  = dialogScript[dialogIndex]; // la línea actual mostrada
+
+  if (next && cur && next.speaker === cur.speaker){
+    // MISMO SPEAKER -> NO cerrar ni animar retratos, solo cambiar texto
+    PORTRAITS.idx++;
+    dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
+    dialogScript = [ next ]; dialogIndex = 0;
+    renderCurrentLine(true);
+    return;
+  }
+
+  // 3) cambio de speaker -> flujo normal (cierra y anima)
+  closeDialog();
+  _nextPortraitLine();
+};
+
+}
 
 function _nextPortraitLine(){
   PORTRAITS.idx++;
@@ -1022,7 +1262,6 @@ function _nextPortraitLine(){
   const prevNode = _nodeForSpeaker(prev.speaker);
   const nextNode = _nodeForSpeaker(next.speaker);
 
-  // ✨ Si el speaker NO cambia, no deslizamos nada: solo mostramos el texto
   if (prev.speaker === next.speaker){
     PORTRAITS.stage = 'speaking';
     openDialog([next], true);
@@ -1086,6 +1325,7 @@ node.alpha = node.aFrom + (node.aTo - node.aFrom) * kA;
   upd(PORTRAITS.left);
   upd(PORTRAITS.right);
 }
+  
 // ——— BLUR SUPPORT + FALLBACK ———
 function supportsCanvasFilter(){
   try{
@@ -1428,7 +1668,7 @@ function openSoloGandalfEpic(script){
 
   // zoom épico progresivo mientras habla (hasta tope)
   const maxScaleBoost = 1.20; // ~+10%
-  const growMs = 10000;
+  const growMs = 4000;
   (function epicZoom(t0 = performance.now()){
     if (!PORTRAITS.active || !PORTRAITS.soloEpic) return;
     const k = Math.min(1, (performance.now()-t0)/growMs);
@@ -2041,7 +2281,7 @@ function unfreezeIdle(){
   ];
 
   PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
-  const gPortrait = IMG_GANDALF_WHITE_P || IMG_GANDALF; // fallback
+  const gPortrait = IMG_GANDALF_WHITE_P; // fallback
   PORTRAITS.active = true;
   PORTRAITS.script = script.slice();
   PORTRAITS.idx = 0;
@@ -2050,7 +2290,7 @@ function unfreezeIdle(){
   PORTRAITS.soloEpic = false;
 
   // Lados
-  PORTRAITS.left  = _makeSide(gPortrait,    'left',  'Gandalf');
+  PORTRAITS.left  = _makeSide(gPortrait,    'left',  'GandalfW');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
@@ -2257,11 +2497,10 @@ function phaseQuestionThenWalk(){
   CUT.phase = 'question';
   openDialog([{ speaker:'Juan', text:'...?' }], true);
 
-  // Acción: cerrar "?" y arrancar caminata YA
   CUT.hijackAction = ()=>{
     if (dialogOpen) closeDialog();
     CUT.hijackAction = null;
-    phaseJuanAutoWalk();   // ← empieza a caminar al instante
+    phaseJuanAutoWalk();
   };
 }
 
@@ -2272,9 +2511,9 @@ function phaseFogFill(){
   const g = NPCS.find(n => n.id === 'gandalf_temp');
   const anchorWorld = g
     ? { x: g.x, y: g.y - 45 }
-    : { x: player.x, y: cam.y + cam.h*0.25 };  // coords de mundo
+    : { x: player.x, y: cam.y + cam.h*0.25 };
 
-  fogUseWorld(anchorWorld);   // <<<<< NIEBLA EN MUNDO (no se mueve con cámara)
+  fogUseWorld(anchorWorld); 
 
   fogBeginFill({
     dur: 3000,
@@ -2287,10 +2526,9 @@ function phaseFogFill(){
   if (FOG.filling){
     requestAnimationFrame(check);
   } else {
-    // Espera 1s antes del paneo
     CUT.phase = 'prePanDelay';
     setTimeout(()=>{
-      if (CUT.active && CUT.id==='cine1'){  // por si se canceló la cine
+      if (CUT.active && CUT.id==='cine1'){ 
         phaseCameraPan();
       }
     }, 3700);
@@ -2322,22 +2560,20 @@ function phaseCameraPan(){
 
 function spawnTempGandalfAhead(targetCamY){
   const gx = player.x;
-  const gy = targetCamY + cam.h/2 - 35; // más cerca del centro → seguro en pantalla
+  const gy = targetCamY + cam.h/2 - 35; 
   const iw = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalWidth  : 32;
   const ih = IMG_GANDALF_SMALL ? IMG_GANDALF_SMALL.naturalHeight : 32;
 
   const npc = {
     id:'gandalf_temp', type:'gandalf_temp', img: IMG_GANDALF_SMALL,
     x: gx, y: gy, iw, ih,
-    scale: 0.5,                   // más visible
+    scale: 0.5,           
     depthBand: DEPTH_BAND, depthAnchorY: 1,
-    _debug: true                // flag para overlay de depuración
+    _debug: true             
   };
 
   NPCS.push(npc);
 }
-
-
 
   function phaseJuanAutoWalk(){
   CUT.phase='autowalk';
@@ -2356,8 +2592,7 @@ function spawnTempGandalfAhead(targetCamY){
     else phaseWorldDialogue();
   })();
 }
-
-
+  
   function phaseWorldDialogue(){
   CUT.phase='worldTalk';
   const script = [
@@ -2365,15 +2600,13 @@ function spawnTempGandalfAhead(targetCamY){
     {speaker:'Juan', text:'¡Yias! Pero si tu eres...'},
     {speaker:'???', text:'En efecto.'}
   ];
-  // Abre TODAS las líneas
-  openDialog(script, true);
 
+  openDialog(script, true);
   onDialogClosed = ()=>{
     CUT.hijackAction = null;
     phasePortraits();
   };
 
-  // mientras esté abierto, el botón Acción sólo avanza
   CUT.hijackAction = ()=>{
     if (dialogOpen){
       advanceDialog();
@@ -2381,25 +2614,93 @@ function spawnTempGandalfAhead(targetCamY){
   };
 }
 
-
   function phasePortraits(){
   CUT.phase='cineOverlay';
   const cineScript = [
-    { speaker:'Gandalf', text:'Gandalf el Gris.' },
-    { speaker:'Juan',    text:'Wow.' }
+    { speaker:'Gandalf', text:'Soy Gandalf el Gris, enviado para oponerme a la Sombra.' },
+    { speaker:'Juan',    text:'¡La pinga!' },
+    { speaker:'Gandalf',    text:'Chico, traigo malas noticias. La sombra crece.' },
+    { speaker:'Gandalf',    text:'Los malvados han crucado desde el norte y han traído corrupción a la ciudad.' },
+    { speaker:'Gandalf',    text:'El pueblo ya no es seguro.' },
+    { speaker:'Gandalf',    text:'Su base se oculta en el supermercado.' },
+    { speaker:'Gandalf',    text:'Necesito tu ayuda para detenerlos.' },
+    { speaker:'Juan',    text:'¿La mía? ¿Por qué yo?' },
+    { speaker:'Gandalf',    text:'Lo siento no hay tiempo para más preguntas. Los primeros ya están aquí.' },
+    { speaker:'Gandalf',    text:'Te estaré observando de cerca. Tal vez hoy la suerte nos mire… o tal vez no.' }
   ];
   portraitsOpen(cineScript);
-  CUT.onEnd = ()=>{ fadeOutFogThenEnd(); }; // lo que ya tenías
+    CUT.onEnd = ()=>{ continueCine1_WithFumaos_Portraits(); };
 }
 
-  function fadeOutFogThenEnd(){
+  // ====== Fumaos solo con PORTRAITS (sin spawns en el mundo) ======
+function continueCine1_WithFumaos_Portraits(doneCb){
+  if (!CUT.active || CUT.id!=='cine1') { if (typeof doneCb==='function') doneCb(); return; }
+
+  // 1) conversación breve con portraits
+  const fumaosScript = [
+    { speaker:'DonRamon y Perchita', text:'Hermano... ¿tú también lo ves brillando o soy yo?' },
+    { speaker:'DonRamon y Perchita', text:'Shh... el brillo te mira de vuelta.' },
+    { speaker:'Juan',    text:'Muchachos, ¿están bien?' },
+    { speaker:'DonRamon y Perchita', text:'Estamos... elevadísimos.' }
+  ];
+  fadeOutFogThenEnd();
+  portraitsOpen2(fumaosScript);
+  
+  // al terminar esta tanda de portraits…
+  CUT.onEnd = ()=>{
+    // 2) “modo combate”: intenta usar tu UI real; si no existe, activa un fallback simple
+    _cine1_startFakeFightUI(); // no pasa enemigos: no hay NPCs en mundo
+
+    // 3) mensaje de autoderrrota (portraits también)
+    const koScript = [
+      { speaker:'Narrador', text:'Los Fumaos se han AUTODERROTADO de lo fumaos que estaban.' }
+    ];
+    portraitsOpen(koScript);
+
+    // al cerrar el mensaje KO…
+    CUT.onEnd = ()=>{
+      _cine1_stopFakeFightUI();
+      endCine();
+      if (typeof doneCb === 'function') doneCb();
+    };
+  };
+}
+
+// ====== UI combate: intenta reutilizar la tuya; si no, fallback ======
+function _cine1_startFakeFightUI(){
+  if (typeof _cine2_startFightUI === 'function'){
+    try { _cine2_startFightUI({ enemies: [] }); return; } catch(e){}
+  }
+  if (typeof startFightUI === 'function'){
+    try { startFightUI({ enemies: [] }); return; } catch(e){}
+  }
+  // Fallback: una banderita por si tu HUD pinta barras cuando esto está activo
+  window.HUD = window.HUD || {};
+  HUD.showHPBars = true;
+  HUD.tempEnemies = []; // vacío: no hay spawns, solo efecto visual
+}
+
+function _cine1_stopFakeFightUI(){
+  if (typeof _cine2_stopFightUI === 'function'){
+    try { _cine2_stopFightUI(); return; } catch(e){}
+  }
+  if (typeof stopFightUI === 'function'){
+    try { stopFightUI(); return; } catch(e){}
+  }
+  if (window.HUD){
+    HUD.showHPBars = false;
+    delete HUD.tempEnemies;
+  }
+}
+
+
+function fadeOutFogThenEnd(){
   CUT.phase='fadeFog';
   let t0 = performance.now(), dur=800;
   function tick(){
     if (!CUT.active || CUT.id!=='cine1') return;
     const k = Math.min(1, (performance.now()-t0)/dur);
 
-    // ✅ usar tFill (existe), no fillT
     FOG.tFill = (1 - k) * FOG.tFill;
 
     for (const p of FOG.parts) {}
@@ -2408,7 +2709,7 @@ function spawnTempGandalfAhead(targetCamY){
       fogStop();
       const i = NPCS.findIndex(n=>n.id==='gandalf_temp');
       if (i>=0) NPCS.splice(i,1);
-      endCine();
+      
     }
   }
   requestAnimationFrame(tick);
@@ -2423,6 +2724,524 @@ function endCine3(){
   ambientLock=false;
 }
 
+  // **************************** CINEMATICA 2
+function startCinematic2(){
+  CUT.active = true; CUT.id='cine2'; CUT.phase='lock';
+  ambientLock = true; player.moving=false;
+
+  setTimeout(() => {
+    openDialog([{speaker:'???', text:'Acércate, chico.'}], true);
+    CUT.hijackAction = step2;
+  }, 1000);
+  
+function step2() {
+  if (!dialogOpen) return;             
+  if (isTyping) { advanceDialog(); return; }
+
+  closeDialog();
+  CUT.hijackAction = null;
+
+  const v  = _cine2_getVold();
+  const tx = v ? (v.x - 25) : player.x;
+  const ty = v ?  v.y  - 14    : player.y;
+
+  cine2AutoWalkTo(tx, ty, 700, () => {
+    if (v) player.dir = (player.x < v.x) ? 'right' : 'left';
+    step3();
+  });
+}
+
+   function step3() {
+      openDialog([{ speaker: 'Juan', text: '¿Quién eres?' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+
+        openDialog([{ speaker: '???', text: 'Adivina.' }], true);
+        CUT.hijackAction = () => {
+          if (isTyping) return advanceDialog();
+          closeDialog();
+
+          openDialog([{ speaker: 'Juan', text: 'No tengo tiempo.' }], true);
+          CUT.hijackAction = () => {
+            if (isTyping) return advanceDialog();
+            closeDialog();
+            CUT.hijackAction = null;
+            setTimeout(step4, 1000);
+          };
+        };
+      };
+    }
+  
+  function step4() {
+      _cine2_swapVoldProfileToFront();
+      openDialog([{ speaker: 'Voldemort', text: '¡SOY LORD VOLDEMORT!' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+
+        openDialog([{ speaker: 'Juan', text: 'Buena, va.' }], true);
+      CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+        step5();
+      };
+      };
+    }
+
+      function step5() {
+        _cine2_openPortraits();
+        
+}
+  
+}
+
+
+  function _cine2_startFightUI(){
+
+    PORTRAITS.right.img = IMG_JUAN_FIGHT;
+    HPBARS.leftName  = 'Voldemort';
+    HPBARS.rightName  = 'Juan';
+    HPBARS.alpha  = 0; 
+    HPBARS.show(100, 100);
+
+    const t0 = performance.now();
+    const dur = 400;
+    function step(t){
+      const k = Math.min(1, (t - t0) / dur);
+      HPBARS.alpha = k;
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+
+openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
+
+CUT.hijackAction = () => {
+  if (isTyping) return advanceDialog();
+
+  _cine2_openMenu();
+
+  CUT.hijackAction = () => {
+    const choice = _cine2_menuConfirm();
+    if (choice < 0) return;
+    closeDialog();
+    _cine2_closeMenu();
+
+    const R = PORTRAITS.right;
+    const L = PORTRAITS.left;
+    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+    const back = R.inX;
+
+    R.sFrom = 1.00; R.sTo = 1.06;
+    _startSlide(R, mid, () => {
+      R.sFrom = 1.06; R.sTo = 1.00;
+      _startSlide(R, back, () => {
+_startSlide(R, R.outX, () => {
+        
+      L.x = L.outX; 
+    _startSlide(L, L.inX, () => {
+      const orig = L.inX;
+      const kick = orig + Math.round(screenRect.dw * 0.02);
+    
+      L.sFrom = 1.00; L.sTo = 0.96;
+      _startSlide(L, kick, () => {
+        HPBARS.setTargets(100, 50);
+        L.sFrom = 0.96; L.sTo = 1.00;
+_startSlide(L, orig, () => {
+  openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
+CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+venganzaVoldemort();
+};
+    });
+
+      });
+    });
+        });
+      }); 
+    });
+  };
+};
+}
+
+
+  function _cine2_closePortraitsAndOverlay(done){
+
+  const L = PORTRAITS.left, R = PORTRAITS.right;
+  let pending = 0;
+  const next = ()=>{ if (--pending<=0){ PORTRAITS.active=false; if (typeof done==='function') done(); } };
+
+  if (L){ pending++; _startSlide(L, L.outX, next); }
+  if (R){ pending++; _startSlide(R, R.outX, next); }
+
+  if (pending===0) { if (typeof done==='function') done(); }
+  HPBARS.hide(); 
+  try{
+    const ov = document.getElementById('portrait-overlay') || document.querySelector('.portrait-overlay');
+    if (ov){ ov.style.opacity = '0'; setTimeout(()=>{ ov.style.display='none'; }, 220); }
+    if (PORTRAITS.overlayAlpha !== undefined) PORTRAITS.overlayAlpha = 0;
+  }catch(e){}
+}
+
+  function venganzaVoldemort(){
+    const v = NPCS.find(n => n?.id === 'voldemort_perfil');
+    v.img = IMG_VOLD_PERFIL; 
+    _cine2_closePortraitsAndOverlay(() => {
+      const vold = _cine2_getVold();
+      setTimeout(() => {
+          playVoldemortRayFx(vold);
+          openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
+      }, 1000);
+
+      
+          let handled = false;
+    CUT.hijackAction = () => {
+      if (isTyping) return advanceDialog();
+      if (handled) return;
+      handled = true;
+
+      closeDialog();
+      CUT.hijackAction = null;
+      _cine2_continueFight(); 
+    };
+    });   
+  }
+  
+ function _cine2_continueFight(){
+
+  PORTRAITS.active = true;
+  PORTRAITS.stage  = 'entering';
+  PORTRAITS.idx    = 0;
+  PORTRAITS.blurK  = 0;
+  PORTRAITS.script = Array.isArray(PORTRAITS.script) ? PORTRAITS.script : [];
+
+  PORTRAITS.left  = _makeSide(IMG_VOLD_P,  'left',  'Voldemort');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,'right', 'Juan');
+
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
+
+  // Pequeño offset que tú añadías
+  PORTRAITS.left.inX += 60;
+  PORTRAITS.left.x   += 60;
+
+  // --- Barras de vida ---
+  HPBARS.leftName  = 'Voldemort';
+  HPBARS.rightName = 'Juan';
+  HPBARS.alpha = 0;
+  HPBARS.show(100, 50);
+
+  {
+    const t0 = performance.now();
+    const dur = 400;
+    function step(t){
+      const k = Math.min(1, (t - t0) / dur);
+      HPBARS.alpha = k;
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  const R = PORTRAITS.right; // Juan
+  R.x = R.outX;
+
+  _startSlide(R, R.inX, () => {
+    const orig = R.inX;
+    const kick = orig + Math.round(screenRect.dw * 0.02);
+
+    R.sFrom = 1.00; R.sTo = 0.96;
+    _startSlide(R, kick, () => {
+      HPBARS.setTargets(10, 50); // ← Ajusta orden si tu implementación es al revés
+      R.sFrom = 0.96; R.sTo = 1.00;
+
+        _startSlide(R, orig, () => {
+        openDialog([{ speaker:'', text:'Ha sido un golpe duro. Remata esto.' }], true);
+
+        CUT.hijackAction = () => {
+          if (isTyping){ advanceDialog(); return; }
+          closeDialog();
+          openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
+  CUT.hijackAction = () => {
+    if (isTyping){ advanceDialog(); return; }
+    
+          _cine2_openMenu();
+
+          CUT.hijackAction = () => {
+            const choice = _cine2_menuConfirm();
+            if (choice < 0) return; // no elegido aún
+
+            closeDialog();
+            _cine2_closeMenu();
+
+            const L = PORTRAITS.left; // Voldemort
+            const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+            const back = R.inX;
+
+            // Anim de "carga" de Juan antes de atacar
+            R.sFrom = 1.00; R.sTo = 1.06;
+            _startSlide(R, mid, () => {
+              R.sFrom = 1.06; R.sTo = 1.00;
+              _startSlide(R, back, () => {
+
+                _startSlide(R, R.outX, () => {
+                  L.x = L.outX;
+                  _startSlide(L, L.inX, () => {
+                    const origL = L.inX;
+                    const kickL = origL + Math.round(screenRect.dw * 0.02);
+
+                    L.sFrom = 1.00; L.sTo = 0.96;
+                    _startSlide(L, kickL, () => {
+                      HPBARS.setTargets(10, 0); // ← Voldemort pierde 50; ajusta si tu orden difiere
+                      L.sFrom = 0.96; L.sTo = 1.00;
+
+                      _startSlide(L, origL, () => {
+                        // -- REEMPLAZA desde aquí --
+openDialog([{ speaker:'Voldemort', text:'No puede ser.' }], true);
+_cine3_removeVoldFromMap();
+CUT.hijackAction = () => {
+  if (isTyping){ advanceDialog(); return; }
+  closeDialog();
+
+const L = PORTRAITS.left;
+const startY = (L.y ?? 0);
+const endY   = startY + Math.round(screenRect.dh * 0.8); // resbala ~80% de alto
+const t0 = performance.now();
+const dur = 550;
+
+function fallStep(t){
+  const k = Math.min(1, (t - t0) / dur);
+  L.y = startY + (endY - startY) * k;
+  if (k < 1){
+    requestAnimationFrame(fallStep);
+  }else{
+    endCine2(); // ← cuando termina la caída, cerramos cine2
+  }
+}
+requestAnimationFrame(fallStep);
+};
+                      });
+                    });
+                  });
+                });
+              });
+            });
+          };
+  };
+        };
+      });
+    });
+  });
+}
+
+
+function endCine2(){ 
+  CUT.active=false; 
+  CUT.id=null; 
+  CUT.phase=null; 
+  CUT.hijackAction=null; 
+  CUT.onEnd=null; 
+  ambientLock=false; 
+      _cine2_closePortraitsAndOverlay(() => {
+openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true); 
+  CUT.hijackAction = () => { 
+    if (isTyping){ advanceDialog(); 
+                  return; } 
+    closeDialog(); 
+    CUT.hijackAction = null;
+  }; 
+    });   
+}
+
+  
+
+// ========== FX rayo verde desde Voldemort hacia la izquierda ==========
+function playVoldemortRayFx(fromNpc){
+  const ray = document.getElementById('rayFx'); if(!ray) return;
+
+  const px = screenRect.dx + (fromNpc.x - cam.x) * mapScaleX;
+  const py = screenRect.dy + (fromNpc.y - cam.y) * mapScaleY - 30; // altura aprox manos
+  const len = 15;
+  ray.style.left = (px|0) + 'px';
+  ray.style.top  = (py|0) + 'px';
+  ray.style.transform = `translateX(0) rotate(0deg) scaleX(0)`;
+  ray.style.width = len + 'px';
+  ray.style.display = 'block';
+
+  ray.animate([{ transform:`translateX(0) scaleX(0)` }, { transform:`translateX(-${len}px) scaleX(1)` }], { duration: 320, easing:'ease-out' });
+  setTimeout(()=>{ ray.style.display='none'; }, 360);
+}
+
+
+
+  function _cine2_openMenu(){
+  const el = document.getElementById('attackMenu');
+  if (!el) return;
+  el.style.display = 'block';
+  CUT.c2 = CUT.c2 || {};
+  CUT.c2.menu = { idx: 0, on: true };
+  _cine2_menuRender();
+}
+
+function _cine2_closeMenu(){
+  const el = document.getElementById('attackMenu');
+  if (el) el.style.display = 'none';
+  if (CUT.c2 && CUT.c2.menu){ CUT.c2.menu.on = false; }
+}
+
+function _cine2_menuUp(){ if (CUT.c2?.menu?.on){ CUT.c2.menu.idx = (CUT.c2.menu.idx + 1) % 2; _cine2_menuRender(); } }
+function _cine2_menuDown(){ if (CUT.c2?.menu?.on){ CUT.c2.menu.idx = (CUT.c2.menu.idx + 1) % 2; _cine2_menuRender(); } }
+function _cine2_menuConfirm(){ return CUT.c2?.menu?.on ? CUT.c2.menu.idx : -1; }
+
+function _cine2_menuRender(){
+  const idx = CUT.c2.menu.idx|0;
+  const o0 = document.getElementById('atkOpt0'), o1 = document.getElementById('atkOpt1');
+  const mark = (el, sel)=> { if(!el) return; el.textContent = (sel?'► ':'  ') + el.textContent.replace(/^. /,''); };
+  if (o0 && o1){
+    o0.textContent = '  Bola de energía';
+    o1.textContent = '  Puñetazo';
+    mark(o0, idx===0); mark(o1, idx===1);
+  }
+}
+
+  
+  function fightSetBars({leftName, rightName, leftHP=100, rightHP=100, leftColor, rightColor}={}){
+  if(leftName  != null) HPBARS.leftName  = leftName;
+  if(rightName != null) HPBARS.rightName = rightName;
+  if(leftColor != null) HPBARS.leftColor = leftColor;
+  if(rightColor!= null) HPBARS.rightColor= rightColor;
+  HPBARS.ssj  = leftHP;
+  HPBARS.juan = rightHP;
+}
+  
+function _cine2_openPortraits(){ 
+const script = [ 
+{ speaker:'Voldemort', text:'Sorpresa.' }, 
+{ speaker:'Juan', text:'Omaigos.' }, 
+{ speaker:'Voldemort', text:'¿Luchamos?' }, 
+{ speaker:'Juan', text:'Ok.' } ]; 
+
+PORTRAITS.active = true; 
+PORTRAITS.script = script.slice(); 
+PORTRAITS.idx = 0; PORTRAITS.blurK = 0; 
+PORTRAITS.stage = 'entering'; 
+PORTRAITS.left = _makeSide(IMG_VOLD_P, 'left', 'Voldemort'); 
+PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan'); 
+PORTRAITS.left.x = PORTRAITS.left.outX;
+PORTRAITS.right.x = PORTRAITS.right.outX; 
+PORTRAITS.left.inX += 60;
+PORTRAITS.left.x   += 60;
+
+const line0 = PORTRAITS.script[PORTRAITS.idx]; 
+const node0 = _nodeForSpeaker(line0.speaker); 
+
+_startSlide(node0, node0.inX, ()=>{ PORTRAITS.stage = 'speaking'; 
+
+openDialog([line0], true); }); 
+
+CUT.hijackAction = () => { if (!PORTRAITS.active) return; 
+
+if (!dialogOpen) return; 
+if (isTyping){ advanceDialog(); return; } 
+
+const next = PORTRAITS.script[PORTRAITS.idx+1]; 
+const cur = dialogScript[dialogIndex]; 
+
+if (next && cur && next.speaker === cur.speaker){ 
+
+PORTRAITS.idx++; dialogEl.classList.remove('ready'); 
+
+dialogHintEl.style.opacity = 0; dialogScript = [ next ]; 
+dialogIndex = 0; renderCurrentLine(true); return; } 
+
+                          
+  if (next){
+    closeDialog();
+    _nextPortraitLine();
+  }else{
+    // Fin del guion: pasar a la lucha
+    if (dialogOpen) closeDialog();
+
+    CUT.hijackAction = null;      // ya no secuestramos el botón
+    _cine2_startFightUI();
+  }
+                         
+}; 
+
+
+}
+  
+function _cine2_swapVoldProfileToFront(){
+  const npc = NPCS.find(n => n?.id === 'voldemort_perfil');
+  if (npc && IMG_VOLD_FRONT){
+    npc.img = IMG_VOLD_FRONT;                  // usar el nuevo Image
+    npc.iw  = IMG_VOLD_FRONT.naturalWidth;     // ancho real
+    npc.ih  = IMG_VOLD_FRONT.naturalHeight;    // alto real
+  }
+}
+
+  function _npc_swapDenethorCaido(){
+  const npc = NPCS.find(n => n?.id === 'denethor');
+  if (npc && IMG_DENETHOR_CAIDO){
+    npc.img = IMG_DENETHOR_CAIDO;                  // usar el nuevo Image
+    npc.iw  = IMG_DENETHOR_CAIDO.naturalWidth;     // ancho real
+    npc.ih  = IMG_DENETHOR_CAIDO.naturalHeight;    // alto real
+  }
+}
+
+
+function _cine2_getVold(){
+  let v = NPCS.find(n => n?.id === 'voldemort_perfil');
+  return v || null;
+}
+
+  
+
+function cine2AutoWalkTo(targetX, targetY, ms, onDone, { followCam = true, stepPeriodMs = 120 } = {}){
+  CUT.phase = 'autowalk';
+  const sx = player.x, sy = player.y;
+  const t0 = performance.now();
+  const dur = Math.max(200, ms|0);
+
+  if (!Number.isFinite(player.frameTime)) player.frameTime = 0;
+  if (!Number.isFinite(player.frame)) player.frame = 0;
+
+  const face = ()=>{
+    const dx = targetX - player.x, dy = targetY - player.y;
+    player.dir = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+  };
+
+  (function step(){
+    const k = Math.min(1, (performance.now() - t0) / dur);
+    player.x = sx + (targetX - sx) * k;
+    player.y = sy + (targetY - sy) * k;
+    face();
+
+    // anim mientras camina
+    player.moving = true;
+    player.frameTime += 1/60;
+    if (player.frameTime >= (stepPeriodMs/1000)){
+      player.frame = (player.frame + 1) % 2;
+      player.frameTime = 0;
+    }
+
+    if (followCam) centerCameraOnPlayer?.();
+
+    if (k < 1){
+      requestAnimationFrame(step);
+    } else {
+      // <<< PARAR AQUÍ >>> 
+      CUT.phase = 'postwalk';       // <- deja de ser 'autowalk'
+      player.moving = false;
+      player.frame = 0;
+      player.frameTime = 0;
+
+      onDone && onDone();
+    }
+  })();
+}
+
+  
 
 // **************************** CINEMATICA 3
 
@@ -2445,7 +3264,7 @@ async function applyOtherJuanSSJ({boostHalo=true} = {}){
   return other;
 }
 
-// ——— reemplazo completo ———
+    
 function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepPeriodMs = 120 } = {}){
   CUT.phase = 'autowalk';
   const sx = player.x, sy = player.y;
@@ -2520,19 +3339,13 @@ async function startCinematic3(){
             const targetX1 = other.x;
             const targetY1 = player.y;
 
-            cineAutoWalkTo(targetX1, targetY1, 500, () => {
-              // tramo 2: subir hasta quedar frente al SSJ (idle up y pies parados al final)
-              const targetX2 = other.x;
-              const targetY2 = other.y + 30;
+            const v  = _cine3_getSSJ();
+            const tx = v ? (v.x ) : player.x;
+            const ty = v ?  v.y  + 35    : player.y;
 
-              cineAutoWalkTo(targetX2, targetY2, 700, () => {
-                CUT.phase = 'idle';
-                player.dir = 'up';
-                player.moving = false;
-                player.frame = 0; player.frameTime = 0;
-
-                // un mini beat y seguimos con “Grr” → retratos
-                setTimeout(() => {
+  cine2AutoWalkTo(tx, ty, 700, () => {
+    player.dir = 'up';
+                    setTimeout(() => {
                   openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'Grr' }], true);
                   CUT.hijackAction = () => {
                     if (dialogOpen){
@@ -2542,8 +3355,7 @@ async function startCinematic3(){
                     }
                   };
                 }, 200);
-              }, { followCam:true, stepPeriodMs: 500 });
-            }, { followCam:true });
+  });       
           };
         }, 1000);
       })();
@@ -2551,7 +3363,10 @@ async function startCinematic3(){
   }, 1000);
 }
 
-
+function _cine3_getSSJ(){
+  let v = NPCS.find(n => n?.id === 'juansin_other');
+  return v || null;
+}
 
 function cine3_beginPortraits(){
   // Activa layout/estado
@@ -2562,16 +3377,27 @@ function cine3_beginPortraits(){
   PORTRAITS.stage = 'entering';
 
   // Construcción de retratos (letterbox interno)
-  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ',  'top');
-  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan', 'bottom');
+  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
+  PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan');
   PORTRAITS.left.flipX = true;
 
   // Parten fuera
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Barras de vida
-  HPBARS.show(10, 100);
+    HPBARS.leftName  = 'SSJ';
+    HPBARS.rightName  = 'Juan';
+    HPBARS.alpha  = 0; 
+    HPBARS.show(10, 100);
+
+    const t0 = performance.now();
+    const dur = 400;
+    function step(t){
+      const k = Math.min(1, (t - t0) / dur);
+      HPBARS.alpha = k;
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
 
   // Entra primero SSJ por la izquierda
   _startSlide(PORTRAITS.left, PORTRAITS.left.inX, ()=>{
@@ -2702,6 +3528,49 @@ if (!GAME_FLAGS.juansin_other_halo){
   endCine3();
 }
 
+function _cine3_removeVoldFromMap(){
+  // 1) quitar del array de NPCs
+  const idx = NPCS.findIndex(n => n?.id === 'voldemort_perfil');
+  let removedNpc = null;
+  if (idx >= 0) removedNpc = NPCS.splice(idx, 1)[0];
+
+  // 2) quitar colliders (si existen)
+  if (typeof COLLIDERS !== 'undefined' && Array.isArray(COLLIDERS)){
+    for (let i = COLLIDERS.length - 1; i >= 0; i--){
+      const c = COLLIDERS[i];
+      if (c?.id === 'voldemort_perfil' || c?.ref?.id === 'voldemort_perfil'){
+        COLLIDERS.splice(i, 1);
+      }
+    }
+  }
+
+  // 3) quitar de OBSTACLES (aquí es donde realmente lo guardaste)
+  if (typeof OBSTACLES !== 'undefined' && Array.isArray(OBSTACLES)){
+    for (let i = OBSTACLES.length - 1; i >= 0; i--){
+      const o = OBSTACLES[i];
+      const isNpcObstacle = o?.name === 'npc:voldemort_perfil';
+      const nearRemoved = removedNpc
+        ? Math.abs((o.x||0) - (removedNpc.x||0)) < 2 && Math.abs((o.y||0) - (removedNpc.y||0)) < 20
+        : false;
+      if (isNpcObstacle || nearRemoved) {
+        OBSTACLES.splice(i, 1);
+      }
+    }
+  }
+
+  // 4) quitar interact zones
+  if (typeof INTERACTS !== 'undefined' && Array.isArray(INTERACTS)){
+    for (let i = INTERACTS.length - 1; i >= 0; i--){
+      const it = INTERACTS[i];
+      if (it?.id === 'voldemort_perfil' || it?.ref?.id === 'voldemort_perfil'){
+        INTERACTS.splice(i, 1);
+      }
+    }
+  }
+}
+
+
+
 function endCine3(){
   // Cierre limpio de la cinematica 3 (sin arrancar el latido aquí)
   CUT.active = false;
@@ -2714,7 +3583,225 @@ function endCine3(){
   ambientLock = false;
 }
 
-  
+
+ 
+/* ---------- Fin ordenado de retratos y barras ---------- */
+function _cine4_endPortraitsAndBars(next){
+  HPBARS.hide();
+  _endPortraits?.(); // si tienes este helper; si no, retirar retratos manualmente:
+  if (!_endPortraits){
+    PORTRAITS.active = false;
+    PORTRAITS.left = PORTRAITS.right = null;
+  }
+  if (typeof next === 'function') next();
+}
+
+
+function _cine4_removeSSJFromMap(){
+  // 1) quitar del array de NPCs
+  const idx = NPCS.findIndex(n => n?.id === 'juansin_other');
+  let removedNpc = null;
+  if (idx >= 0) removedNpc = NPCS.splice(idx, 1)[0];
+
+  // 2) quitar colliders antiguos (si usas COLLIDERS en algún sitio)
+  if (typeof COLLIDERS !== 'undefined' && Array.isArray(COLLIDERS)){
+    for (let i = COLLIDERS.length - 1; i >= 0; i--){
+      const c = COLLIDERS[i];
+      if (c?.id === 'juansin_other' || c?.ref?.id === 'juansin_other'){
+        COLLIDERS.splice(i, 1);
+      }
+    }
+  }
+
+  // 3) quitar de OBSTACLES, que es donde realmente metiste el collider
+  if (typeof OBSTACLES !== 'undefined' && Array.isArray(OBSTACLES)){
+    for (let i = OBSTACLES.length - 1; i >= 0; i--){
+      const o = OBSTACLES[i];
+      // por name del tipo
+      const isNpcObstacle = o?.name === 'npc:juansin_idle';
+      // o por cercanía a la posición del NPC eliminado (si lo teníamos)
+      const nearRemoved = removedNpc
+        ? Math.abs((o.x||0) - (removedNpc.x||0)) < 2 && Math.abs((o.y||0) - (removedNpc.y||0)) < 20
+        : false;
+
+      if (isNpcObstacle || nearRemoved) {
+        OBSTACLES.splice(i, 1);
+      }
+    }
+  }
+
+  // 4) quitar interact zones
+  if (typeof INTERACTS !== 'undefined' && Array.isArray(INTERACTS)){
+    for (let i = INTERACTS.length - 1; i >= 0; i--){
+      const it = INTERACTS[i];
+      if (it?.id === 'juansin_other' || it?.ref?.id === 'juansin_other'){
+        INTERACTS.splice(i, 1);
+      }
+    }
+  }
+}
+
+
+// ========================= CINEMÁTICA 4 =========================
+function startCinematic4(){ 
+  CUT.active = true; CUT.id='cine4'; CUT.phase='lock';
+  ambientLock = true; player.moving=false; player.vx=player.vy=0;
+
+  // 1) Diálogo inicial
+  openDialog([{ speaker:'Juan Super Saiyan Legendario', text:'¿No has tenido suficiente?' }], true); 
+  CUT.hijackAction = () => {
+        if (isTyping) return advanceDialog();
+        closeDialog();
+    
+        _cine4_step1();
+      };
+      }
+
+function _cine4_step1(){
+
+  // --- Setup portraits/UI ---
+  PORTRAITS.active = true;
+  PORTRAITS.stage  = 'entering';
+  PORTRAITS.idx    = 0;
+  PORTRAITS.blurK  = 0;
+  PORTRAITS.script = Array.isArray(PORTRAITS.script) ? PORTRAITS.script : [];
+
+  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ,  'left',  'SSJ');
+  PORTRAITS.right = _makeSide(IMG_JUAN_FIGHT,'right', 'Juan');
+  PORTRAITS.left.flipX = true;
+
+  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  PORTRAITS.right.x = PORTRAITS.right.outX;
+
+  // --- Barras de vida ---
+  HPBARS.leftName  = 'SSJ';
+  HPBARS.rightName = 'Juan';
+  HPBARS.alpha = 0;
+  HPBARS.show(150, 100);
+
+  { // fade-in de barras
+    const t0 = performance.now(), dur = 400;
+    const step = (t)=>{ const k = Math.min(1,(t-t0)/dur); HPBARS.alpha=k; if(k<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+
+  const L = PORTRAITS.left;   // SSJ
+  const R = PORTRAITS.right;  // Juan
+
+  // 1) Entra SSJ
+  _startSlide(L, L.inX, ()=>{
+    // SSJ habla
+    openDialog([{ speaker:'SSJ', text:'¡Te voy a hacer polvo!' }], true);
+    CUT.hijackAction = ()=>{
+      if (isTyping) return advanceDialog();
+      closeDialog();
+
+      // 2) Anim de ataque SSJ
+      console.log('[cine4] SSJ attack sequence');
+      cine3_attackSequence(()=>{
+
+        // 3) SSJ sale
+        _startSlide(L, L.outX, ()=>{
+
+          // 4) Entra Juan (ANTES del mensaje del ataque)
+          _startSlide(R, R.inX, ()=>{
+
+            // Ahora mostramos el mensaje del ataque del SSJ
+            openDialog([{ speaker:'', text:'Juan Super Saiyan Legendario te ataca con una bola de energía.' }], true);
+            CUT.hijackAction = ()=>{
+              if (isTyping) return advanceDialog();
+              closeDialog();
+
+              // Mensaje: no tuvo efecto
+              openDialog([{ speaker:'', text:'No ha tenido efecto…' }], true);
+              CUT.hijackAction = ()=>{
+                if (isTyping) return advanceDialog();
+                closeDialog();
+
+                // 5) Pregunta por el ataque y abre menú
+                openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
+                CUT.hijackAction = ()=>{
+                  if (isTyping){ advanceDialog(); return; }
+
+                  // Reutilizamos el menú de cine2
+                  _cine2_openMenu();
+
+                  CUT.hijackAction = ()=>{
+
+                    const choice = _cine2_menuConfirm();
+                    if (choice < 0) return; // no elegido aún
+
+                    closeDialog();
+                    _cine2_closeMenu();
+
+                    // 6) Anim de Juan atacando
+                    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+                    const back = R.inX;
+
+                    R.sFrom = 1.00; R.sTo = 1.06;
+                    _startSlide(R, mid, ()=>{
+                      R.sFrom = 1.06; R.sTo = 1.00;
+                      _startSlide(R, back, ()=>{
+                        // Juan sale para “cargar” o rematar (igual que en cine2)
+                        _startSlide(R, R.outX, ()=>{
+                          // 7) SSJ entra para recibir el golpe
+                          _startSlide(L, L.inX, ()=>{
+                            const orig = L.inX;
+                            const kick = orig + Math.round(screenRect.dw * 0.02);
+
+                            L.sFrom = 1.00; L.sTo = 0.96;
+                            _startSlide(L, kick, ()=>{
+                              // Baja vida del SSJ (ajusta orden/valores según tu HPBARS)
+                              if (typeof HPBARS.setTargets === 'function') HPBARS.setTargets(150, 0);
+
+                              L.sFrom = 0.96; L.sTo = 1.00;
+                              _startSlide(L, orig, ()=>{
+                                // Fin de esta secuencia -> fin o siguiente paso
+                                openDialog([{ speaker:'SSJ', text:'¡Argh!' }], true);
+                                _cine4_removeSSJFromMap();
+                                CUT.hijackAction = ()=>{
+                                  if (isTyping) return advanceDialog();
+                                  closeDialog();
+                                  _cine4_end(); 
+                                };
+                              });
+                            });
+                          });
+                        });
+                      });
+                    });
+                  };
+                };
+              };
+            };
+          });
+        });
+      });
+    };
+  });
+}
+
+
+  function _cine4_end(){ 
+  CUT.active=false; 
+  CUT.id=null; 
+  CUT.phase=null; 
+  CUT.hijackAction=null; 
+  CUT.onEnd=null; 
+  ambientLock=false; 
+      _cine2_closePortraitsAndOverlay(() => {
+openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true); 
+  CUT.hijackAction = () => { 
+    if (isTyping){ advanceDialog(); 
+                  return; } 
+    closeDialog(); 
+    CUT.hijackAction = null;
+  }; 
+    });   
+}
+
+
+
 /* ========== MOVIMIENTO / MEGAUPDATE ========== */
 function cornerSlide(targetX, targetY, vx, vy){
   const SLIDE = 3;
@@ -2766,12 +3853,13 @@ function update(dt){
 
     if (AMBIENT.k >= 1 && !initialDialogShown){
   initialDialogShown = true;
-  setTimeout(()=>{
-    initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
-    interactBlocked = true;     // ← bloquea interacciones
-    openDialog([{speaker:'Juan', text:'Se está haciendo tarde...'}], true);
-    introActive = false;
-  }, 300);
+setTimeout(()=>{
+  initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
+  interactBlocked = true;     // ← bloquea interacciones
+  openDialog([{speaker:'Juan', text:'¡Chuuuus! Qué pelete.'}], true);
+  introActive = false;
+}, 300);
+
 }
 
     return;
@@ -2783,7 +3871,9 @@ function update(dt){
     if (cz){
       cz._done = true;
       if (cz.id === 'cine1'){ startCinematic1(); return; }
+      if (cz.id === 'cine2'){ startCinematic2(); return; }
       if (cz.id === 'cine3'){ startCinematic3(); return; }
+      if (cz.id === 'cine3'){ startCinematic4(); return; }
     }
   }
 
@@ -2868,7 +3958,6 @@ function update(dt){
   const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
   if (canCenterCam) centerCameraOnPlayer();
 
-  // La niebla debe actualizar SIEMPRE (incluida la cinemática)
   fogUpdate(dt);
 
   // ---------------- Zonas de ambiente ----------------
@@ -3086,17 +4175,31 @@ for (const n of NPCS){
     draw(){
       // sombra
       const sh = (n.shadow || DEFAULT_SHADOW);
-      const footX = Math.round(px);
-      const footY = Math.round(py);
-      const shadowW = Math.max(6, Math.round(dw * sh.scaleX));
-      const shadowH = Math.max(3, Math.round(dh * sh.scaleY));
-      ctx.save();
-      ctx.globalAlpha = sh.alpha;
-      ctx.fillStyle = 'black';
-      ctx.beginPath();
-      ctx.ellipse(footX, footY + sh.offsetY, shadowW, shadowH, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+const footX = Math.round(px);
+const footY = Math.round(py);
+
+// si tiene offsetX lo usamos, si no, 0
+const offsetX = (typeof sh.offsetX !== 'undefined') ? sh.offsetX : 0;
+const offsetY = (typeof sh.offsetY !== 'undefined') ? sh.offsetY : 0;
+
+const shadowW = Math.max(6, Math.round(dw * sh.scaleX));
+const shadowH = Math.max(3, Math.round(dh * sh.scaleY));
+
+ctx.save();
+ctx.globalAlpha = sh.alpha;
+ctx.fillStyle = 'black';
+ctx.beginPath();
+ctx.ellipse(
+  footX + offsetX,   // aquí aplicamos el offsetX opcional
+  footY + offsetY,
+  shadowW,
+  shadowH,
+  0,
+  0,
+  Math.PI * 2
+);
+ctx.fill();
+ctx.restore();
 
 if (n.halo) {
   const halo = {
@@ -3121,26 +4224,33 @@ if (n.halo) {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(cx, cy, Rp, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, Rp, 0, Math.PI*2);
+  ctx.fill();
   ctx.restore();
 }
 
-
-// (después del halo, justo antes del sprite)
+// === sprite (una sola vez, con flipX y fadeAlpha) ===
 ctx.save();
-if (typeof n._fadeAlpha === 'number'){
+
+// aplica fade si existe
+if (typeof n._fadeAlpha === 'number') {
   ctx.globalAlpha *= Math.max(0, Math.min(1, n._fadeAlpha));
 }
 
-if (!n.img) { ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh); }
-else { ctx.drawImage(n.img,0,0,n.iw,n.ih,dx,dy,dw,dh); }
+if (!n.img) {
+  // placeholder si no hay imagen
+  ctx.fillStyle = '#999';
+  ctx.fillRect(dx, dy, dw, dh);
+} else if (n.flipX) {
+  // espejo horizontal (mismo patrón que en PROPS)
+  ctx.scale(-1, 1);
+  ctx.drawImage(n.img, 0, 0, n.iw, n.ih, -dx - dw, dy, dw, dh);
+} else {
+  ctx.drawImage(n.img, 0, 0, n.iw, n.ih, dx, dy, dw, dh);
+}
 
 ctx.restore();
-
-
-// (después de esto, dibujas el sprite como ya haces)
-if (!n.img) { ctx.fillStyle='#999'; ctx.fillRect(dx,dy,dw,dh); }
-else { ctx.drawImage(n.img,0,0,n.iw,n.ih,dx,dy,dw,dh); }
 
       // FX disparo (igual que antes)
      if (isNPCFxActive(n)) {
