@@ -833,7 +833,6 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
   if (!window._audioUnlocked) {
     window._audioUnlocked = true;
     const p1 = townMusic.play();    if (p1 && p1.then) p1.then(()=>townMusic.pause()).catch(()=>{});
-    const p2 = combatMusic.play();  if (p2 && p2.then) p2.then(()=>combatMusic.pause()).catch(()=>{});
   }
 
   // Si una cinemática ha secuestrado la acción
