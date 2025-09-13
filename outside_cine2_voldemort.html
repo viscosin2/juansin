@@ -826,17 +826,20 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
     return;
   }
 
-  // si hay diálogo abierto: avanzar SIEMPRE
+// si hay diálogo abierto: avanzar SIEMPRE
 if (dialogOpen){
   const wasLast = (dialogIndex >= dialogScript.length - 1);
   advanceDialog();
-  // si acabas de cerrar el primer diálogo de intro, arranca la música
+
+  // si acabas de cerrar el primer diálogo de intro, arranca la música de pueblo
   if (wasLast && !initialDialogLock) {
-    try { townMusic.play().then(()=>{ townMusic.pause(); }).catch(()=>{});
- }
+    // ¡sin try/catch suelto! y, sobre todo, sin pausar después:
+    const p = townMusic.play();
+    if (p && typeof p.catch === 'function') p.catch(()=>{});
   }
   return;
 }
+
 
 
   // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
