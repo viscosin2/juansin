@@ -183,6 +183,19 @@ function playCombatMusic() {
   combat.play().catch(()=>{});
 }
 
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+
+  const town = document.getElementById("bgTown");
+  const combat = document.getElementById("bgCombat");
+  town.play().then(()=>town.pause()).catch(()=>{});
+  combat.play().then(()=>combat.pause()).catch(()=>{});
+
+  console.log("Audio desbloqueado por interacción del usuario");
+}
+
   
 // ******************************* SMOKE SUPER
 
@@ -814,6 +827,8 @@ function advanceDialog(){
 }
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
+  unlockAudio();
+
 
 
   if (CUT.active && typeof CUT.hijackAction === 'function'){
