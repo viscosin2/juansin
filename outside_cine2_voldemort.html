@@ -169,6 +169,11 @@ const FOG = {
 let townMusic = new Audio("assets/sounds/ambientepueblo.mp3");
 townMusic.loop = true;
 townMusic.volume = 0.5;
+  townMusic.addEventListener('ended', () => {
+  townMusic.currentTime = 0;
+  townMusic.play().catch(()=>{});
+});
+
 
 let combatMusic = new Audio("assets/sounds/combate.mp3");
 combatMusic.loop = true;
@@ -809,8 +814,7 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
   if (!window._audioUnlocked) {
     window._audioUnlocked = true;
     try {
-      townMusic.play().then(()=>townMusic.pause()).catch(()=>{});
-      combatMusic.play().then(()=>combatMusic.pause()).catch(()=>{});
+      townMusic.play().then(()=>{ townMusic.pause(); }).catch(()=>{});
       console.log("Audio desbloqueado por interacción del usuario");
     } catch(e) {
       console.warn("No se pudo desbloquear audio:", e);
