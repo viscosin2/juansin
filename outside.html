@@ -2730,7 +2730,7 @@ function startCinematic2(){
   ambientLock = true; player.moving=false;
 
   setTimeout(() => {
-    openDialog([{speaker:'???', text:'Acércate, chico.'}], true);
+    openDialog([{speaker:'???', text:'¿Quién osa interrumpir mi eterno silencio?'}], true);
     CUT.hijackAction = step2;
   }, 1000);
   
@@ -2752,7 +2752,7 @@ function step2() {
 }
 
    function step3() {
-      openDialog([{ speaker: 'Juan', text: '¿Quién eres?' }], true);
+      openDialog([{ speaker: 'Juan', text: '¿Y tú quién eres?' }], true);
       CUT.hijackAction = () => {
         if (isTyping) return advanceDialog();
         closeDialog();
@@ -3061,7 +3061,7 @@ function playVoldemortRayFx(fromNpc){
 
   const px = screenRect.dx + (fromNpc.x - cam.x) * mapScaleX;
   const py = screenRect.dy + (fromNpc.y - cam.y) * mapScaleY - 30; // altura aprox manos
-  const len = 15;
+  const len = 40;
   ray.style.left = (px|0) + 'px';
   ray.style.top  = (py|0) + 'px';
   ray.style.transform = `translateX(0) rotate(0deg) scaleX(0)`;
@@ -3116,10 +3116,10 @@ function _cine2_menuRender(){
   
 function _cine2_openPortraits(){ 
 const script = [ 
-{ speaker:'Voldemort', text:'Sorpresa.' }, 
-{ speaker:'Juan', text:'Omaigos.' }, 
-{ speaker:'Voldemort', text:'¿Luchamos?' }, 
-{ speaker:'Juan', text:'Ok.' } ]; 
+{ speaker:'Voldemort', text:'No entiendes la magnitud de tu error al cruzarte conmigo.' }, 
+{ speaker:'Juan', text:'Hermano, no me cuentes rollos. Yo voy al super.' }, 
+{ speaker:'Voldemort', text:'No sin antes recibir tu sentencia de muerte.' }, 
+{ speaker:'Juan', text:'Omaigos...' } ]; 
 
 PORTRAITS.active = true; 
 PORTRAITS.script = script.slice(); 
