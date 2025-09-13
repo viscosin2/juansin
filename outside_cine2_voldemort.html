@@ -71,6 +71,9 @@
 </style>
 </head>
 <body>
+  <audio id="bgTown" src="assets/sounds/ambientepueblo.mp3" loop preload="auto" playsinline></audio>
+<audio id="bgCombat" src="assets/sounds/combate.mp3" loop preload="auto" playsinline></audio>
+
 <div class="gameboy">
   <div class="screen-container">
     <div class="screen">
@@ -166,18 +169,19 @@ const FOG = {
 };
 
 
-let townMusic = new Audio("assets/sounds/ambientepueblo.mp3");
-townMusic.loop = true;
+const townMusic   = document.getElementById('bgTown');
+const combatMusic = document.getElementById('bgCombat');
 townMusic.volume = 0.5;
-  townMusic.addEventListener('ended', () => {
-  townMusic.currentTime = 0;
-  townMusic.play().catch(()=>{});
-});
-
-
-let combatMusic = new Audio("assets/sounds/combate.mp3");
-combatMusic.loop = true;
 combatMusic.volume = 0.5;
+
+// “cinturón y tirantes” por si algún navegador ignora loop:
+townMusic.addEventListener('ended', () => { townMusic.currentTime = 0; townMusic.play().catch(()=>{}); });
+combatMusic.addEventListener('ended', () => { combatMusic.currentTime = 0; combatMusic.play().catch(()=>{}); });
+
+// log para detectar rutas mal puestas
+townMusic.addEventListener('error', () => console.warn('No carga ambientepueblo.mp3'));
+combatMusic.addEventListener('error', () => console.warn('No carga combate.mp3'));
+
 
 // ******************************* SMOKE SUPER
 
@@ -789,6 +793,16 @@ function startTypingEffect(text){
     }
   }, typingSpeed);
 }
+  function playTownMusic(){
+  combatMusic.pause(); combatMusic.currentTime = 0;
+  const p = townMusic.play(); if (p && p.catch) p.catch(()=>{});
+}
+function playCombatMusic(){
+  townMusic.pause(); townMusic.currentTime = 0;
+  const p = combatMusic.play(); if (p && p.catch) p.catch(()=>{});
+}
+
+  
 function advanceDialog(){
   if(!dialogOpen) return;
   const full = dialogScript[dialogIndex]?.text ?? '';
@@ -809,37 +823,32 @@ function advanceDialog(){
 }
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
+// --- Desbloqueo de audio en la primera pulsación ---
+if (!window._audioUnlocked) {
+  window._audioUnlocked = true;
+  // primar los <audio> para que el navegador permita reproducir después
+  const p1 = townMusic.play();  if (p1 && p1.then) p1.then(()=>townMusic.pause()).catch(()=>{});
+  const p2 = combatMusic.play();if (p2 && p2.then) p2.then(()=>combatMusic.pause()).catch(()=>{});
+}
 
-  // --- Desbloqueo de audio en la primera pulsación ---
-  if (!window._audioUnlocked) {
-    window._audioUnlocked = true;
-    try {
-      townMusic.play().then(()=>{ townMusic.pause(); }).catch(()=>{});
-      console.log("Audio desbloqueado por interacción del usuario");
-    } catch(e) {
-      console.warn("No se pudo desbloquear audio:", e);
-    }
-  }
 
   if (CUT.active && typeof CUT.hijackAction === 'function'){
     CUT.hijackAction();
     return;
   }
 
-// si hay diálogo abierto: avanzar SIEMPRE
 if (dialogOpen){
   const wasLast = (dialogIndex >= dialogScript.length - 1);
   advanceDialog();
 
-  // si acabas de cerrar el primer diálogo de intro, arranca la música de pueblo
   if (wasLast && !initialDialogLock) {
-    // ¡sin try/catch suelto! y, sobre todo, sin pausar después:
+    combatMusic.pause();
+    combatMusic.currentTime = 0;
     const p = townMusic.play();
-    if (p && typeof p.catch === 'function') p.catch(()=>{});
+    if (p && p.catch) p.catch(()=>{});
   }
   return;
 }
-
 
 
   // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
