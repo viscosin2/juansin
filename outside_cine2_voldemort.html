@@ -823,10 +823,15 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
   }
 
   // si hay diálogo abierto: avanzar SIEMPRE
-  if (dialogOpen){
-    advanceDialog();
-    return;
+if (dialogOpen){
+  const wasLast = (dialogIndex >= dialogScript.length - 1);
+  advanceDialog();
+  // si acabas de cerrar el primer diálogo de intro, arranca la música
+  if (wasLast && !initialDialogLock) {
+    try { townMusic.play(); } catch(e) { console.warn("no se pudo reproducir", e); }
   }
+  return;
+}
 
 
   // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
