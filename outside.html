@@ -3059,9 +3059,9 @@ openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true);
 function playVoldemortRayFx(fromNpc){
   const ray = document.getElementById('rayFx'); if(!ray) return;
 
-  const px = screenRect.dx + (fromNpc.x - cam.x) * mapScaleX;
-  const py = screenRect.dy + (fromNpc.y - cam.y) * mapScaleY - 10; // altura aprox manos
-  const len = 40;
+  const px = screenRect.dx + (fromNpc.x - cam.x) * mapScaleX + 4;
+  const py = screenRect.dy + (fromNpc.y - cam.y) * mapScaleY - 14; // altura aprox manos
+  const len = 44;
   ray.style.left = (px|0) + 'px';
   ray.style.top  = (py|0) + 'px';
   ray.style.transform = `translateX(0) rotate(0deg) scaleX(0)`;
