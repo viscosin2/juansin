@@ -96,8 +96,7 @@
       <canvas id="game"></canvas>
     </div>
   </div>
-<audio id="bgTown" src="assets/sounds/ambientepueblo.mp3" loop preload="auto"></audio>
-<audio id="bgCombat" src="assets/sounds/combate.mp3" loop preload="auto"></audio>
+
 
   <div class="controls">
     <div class="dpad">
@@ -167,36 +166,14 @@ const FOG = {
 };
 
 
-  function playTownMusic() {
-  const town = document.getElementById("bgTown");
-  const combat = document.getElementById("bgCombat");
-  combat.pause();
-  combat.currentTime = 0;
-  town.play().catch(()=>{});
-}
+let townMusic = new Audio("assets/sounds/ambientepueblo.mp3");
+townMusic.loop = true;
+townMusic.volume = 0.5;
 
-function playCombatMusic() {
-  const town = document.getElementById("bgTown");
-  const combat = document.getElementById("bgCombat");
-  town.pause();
-  town.currentTime = 0;
-  combat.play().catch(()=>{});
-}
+let combatMusic = new Audio("assets/sounds/combate.mp3");
+combatMusic.loop = true;
+combatMusic.volume = 0.5;
 
-let audioUnlocked = false;
-function unlockAudio() {
-  if (audioUnlocked) return;
-  audioUnlocked = true;
-
-  const town = document.getElementById("bgTown");
-  const combat = document.getElementById("bgCombat");
-  town.play().then(()=>town.pause()).catch(()=>{});
-  combat.play().then(()=>combat.pause()).catch(()=>{});
-
-  console.log("Audio desbloqueado por interacción del usuario");
-}
-
-  
 // ******************************* SMOKE SUPER
 
   const SMOKE = {
@@ -827,9 +804,18 @@ function advanceDialog(){
 }
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
-  unlockAudio();
 
-
+  // --- Desbloqueo de audio en la primera pulsación ---
+  if (!window._audioUnlocked) {
+    window._audioUnlocked = true;
+    try {
+      townMusic.play().then(()=>townMusic.pause()).catch(()=>{});
+      combatMusic.play().then(()=>combatMusic.pause()).catch(()=>{});
+      console.log("Audio desbloqueado por interacción del usuario");
+    } catch(e) {
+      console.warn("No se pudo desbloquear audio:", e);
+    }
+  }
 
   if (CUT.active && typeof CUT.hijackAction === 'function'){
     CUT.hijackAction();
@@ -841,6 +827,7 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
     advanceDialog();
     return;
   }
+
 
   // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
   if (interactBlocked) return;
@@ -3851,13 +3838,21 @@ function update(dt){
 
     if (AMBIENT.k >= 1 && !initialDialogShown){
   initialDialogShown = true;
-  setTimeout(()=>{
-    initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
-    interactBlocked = true;     // ← bloquea interacciones
-    openDialog([{speaker:'Juan', text:'¡Chuuuus! Qué pelete.'}], true);
-    playTownMusic();
-    introActive = false;
-  }, 300);
+setTimeout(()=>{
+  initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
+  interactBlocked = true;     // ← bloquea interacciones
+  openDialog([{speaker:'Juan', text:'¡Chuuuus! Qué pelete.'}], true);
+  introActive = false;
+
+  onDialogClosed = () => {
+    try {
+      townMusic.play();
+    } catch(e) {
+      console.warn("No se pudo reproducir la música del pueblo:", e);
+    }
+  };
+}, 300);
+
 }
 
     return;
