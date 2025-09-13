@@ -832,7 +832,8 @@ if (dialogOpen){
   advanceDialog();
   // si acabas de cerrar el primer diálogo de intro, arranca la música
   if (wasLast && !initialDialogLock) {
-    try { townMusic.play(); } catch(e) { console.warn("no se pudo reproducir", e); }
+    try { townMusic.play().then(()=>{ townMusic.pause(); }).catch(()=>{});
+ }
   }
   return;
 }
@@ -3852,14 +3853,6 @@ setTimeout(()=>{
   interactBlocked = true;     // ← bloquea interacciones
   openDialog([{speaker:'Juan', text:'¡Chuuuus! Qué pelete.'}], true);
   introActive = false;
-
-  onDialogClosed = () => {
-    try {
-      townMusic.play();
-    } catch(e) {
-      console.warn("No se pudo reproducir la música del pueblo:", e);
-    }
-  };
 }, 300);
 
 }
