@@ -836,19 +836,22 @@ if (!window._audioUnlocked) {
     CUT.hijackAction();
     return;
   }
-
+// si hay diálogo abierto: avanzar SIEMPRE
 if (dialogOpen){
-  const wasLast = (dialogIndex >= dialogScript.length - 1);
-  advanceDialog();
+  const wasLast  = (dialogIndex >= dialogScript.length - 1);
+  const wasIntro = initialDialogLock === true; // estaba en modo "intro"
 
-  if (wasLast && !initialDialogLock) {
-    combatMusic.pause();
-    combatMusic.currentTime = 0;
-    const p = townMusic.play();
-    if (p && p.catch) p.catch(()=>{});
+  advanceDialog(); // esto acaba llamando a closeDialog()
+
+  // Si acabas de cerrar el diálogo de intro, arranca la música en este MISMO gesto
+  if (wasLast && wasIntro) {
+    // evitamos depender de onDialogClosed por si alguna vez se reasigna
+    combatMusic.pause(); combatMusic.currentTime = 0;
+    const p = townMusic.play(); if (p && p.catch) p.catch(()=>{});
   }
   return;
 }
+
 
 
   // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
