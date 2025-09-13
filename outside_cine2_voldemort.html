@@ -96,6 +96,8 @@
       <canvas id="game"></canvas>
     </div>
   </div>
+<audio id="bgTown" src="assets/sounds/ambientepueblo.mp3" loop preload="auto"></audio>
+<audio id="bgCombat" src="assets/sounds/combate.mp3" loop preload="auto"></audio>
 
   <div class="controls">
     <div class="dpad">
@@ -164,6 +166,24 @@ const FOG = {
   areaH: 140
 };
 
+
+  function playTownMusic() {
+  const town = document.getElementById("bgTown");
+  const combat = document.getElementById("bgCombat");
+  combat.pause();
+  combat.currentTime = 0;
+  town.play().catch(()=>{});
+}
+
+function playCombatMusic() {
+  const town = document.getElementById("bgTown");
+  const combat = document.getElementById("bgCombat");
+  town.pause();
+  town.currentTime = 0;
+  combat.play().catch(()=>{});
+}
+
+  
 // ******************************* SMOKE SUPER
 
   const SMOKE = {
@@ -3820,6 +3840,7 @@ function update(dt){
     initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
     interactBlocked = true;     // ← bloquea interacciones
     openDialog([{speaker:'Juan', text:'¡Chuuuus! Qué pelete.'}], true);
+    playTownMusic();
     introActive = false;
   }, 300);
 }
