@@ -1053,7 +1053,7 @@ if (dialogOpen){
     if (npc.dialog && npc.dialog.length){ openDialog(npc.dialog, true); }
 
     if (npc.onFire){
-      setTimeout(() => { SFX.play("shot"); triggerNPCShot(npc); }, 1500);
+      setTimeout(() => {  triggerNPCShot(npc); }, 1500);
       GAME_FLAGS.talked_gunner = true;
     }
     if (npc.id === 'patata1') {
@@ -2875,7 +2875,7 @@ function step2() {
   
   function step4() {
       _cine2_swapVoldProfileToFront();
-      SFX.play("risa");
+      SFX.play("risa",{start: 0.5, duration: 2});
       openDialog([{ speaker: 'Voldemort', text: '¡SOY LORD VOLDEMORT!' }], true);
       CUT.hijackAction = () => {
         if (isTyping) return advanceDialog();
