@@ -1053,7 +1053,7 @@ if (dialogOpen){
     if (npc.dialog && npc.dialog.length){ openDialog(npc.dialog, true); }
 
     if (npc.onFire){
-      setTimeout(() => { triggerNPCShot(npc); }, 1500);
+      setTimeout(() => { SFX.play("shot"); triggerNPCShot(npc); }, 1500);
       GAME_FLAGS.talked_gunner = true;
     }
     if (npc.id === 'patata1') {
@@ -2934,6 +2934,7 @@ CUT.hijackAction = () => {
     const back = R.inX;
 
     R.sFrom = 1.00; R.sTo = 1.06;
+    SFX.play("ataque");
     _startSlide(R, mid, () => {
       R.sFrom = 1.06; R.sTo = 1.00;
       _startSlide(R, back, () => {
