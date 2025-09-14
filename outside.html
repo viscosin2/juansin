@@ -810,17 +810,117 @@ function startTypingEffect(text){
   }, typingSpeed);
 }
 function playTownMusic(){
-  combatMusic.pause(); 
-  combatMusic.currentTime = 0;
-  const p = townMusic.play(); 
-  if (p && p.catch) p.catch(()=>{});
+  Music.play("town", { volume: 0.5, fadeMs: 400 });
 }
+
 function playCombatMusic(){
-  townMusic.pause(); 
-  townMusic.currentTime = 0;
-  const p = combatMusic.play(); 
-  if (p && p.catch) p.catch(()=>{});
+  Music.play("combat", { volume: 0.5, fadeMs: 400 });
 }
+
+function stopTownMusic(){
+  Music.stop({ fadeMs: 400 }); // o sin fadeMs si quieres corte seco
+}
+
+/* ========= MINI AUDIO MANAGER ========= */
+const SFX = (() => {
+  const _cache = new Map();
+
+  function _get(path) {
+    // Clonamos para evitar solapar .currentTime/volume entre instancias
+    if (!_cache.has(path)) _cache.set(path, new Audio(path));
+    const base = _cache.get(path);
+    const a = base.cloneNode(true);
+    a.preload = 'auto';
+    a.playsInline = true;
+    return a;
+  }
+
+  // Reproducir un sonido por nombre: SFX.play('miau') -> assets/sounds/miau.mp3
+  async function play(name, { volume = 1, start = 0, duration = null, folder = 'assets/sounds' } = {}) {
+    const a = _get(`${folder}/${name}.mp3`);
+    a.volume = volume;
+
+    const startWhenReady = () => {
+      if (start > 0) a.currentTime = Math.max(0, start);
+      a.play().catch(()=>{});
+      if (duration && duration > 0) {
+        setTimeout(() => { try { a.pause(); a.currentTime = 0; } catch(e){} }, duration * 1000);
+      }
+    };
+
+    if (a.readyState >= 2) startWhenReady();
+    else a.addEventListener('loadedmetadata', startWhenReady, { once:true });
+
+    return a;
+  }
+
+  // Reproducir un archivo arbitrario (ruta completa)
+  function playFile(path, opts={}) {
+    const name = path.replace(/^.*[\\/]/, '').replace(/\.\w+$/, '');
+    return play(name, { ...opts, folder: path.replace(/\/[^/]+$/, '') });
+  }
+
+  return { play, playFile };
+})();
+
+const Music = (() => {
+  const elements = {
+    town:   document.getElementById('bgTown'),
+    combat: document.getElementById('bgCombat')
+  };
+  let current = null, _fadeReq = null;
+
+  // Asegura loop infinito (atributo loop + fallback 'ended')
+  Object.values(elements).forEach(el => {
+    if (!el) return;
+    el.loop = true;
+    el.addEventListener('ended', () => { el.currentTime = 0; el.play().catch(()=>{}); });
+  });
+
+  function _fade(fromEl, toEl, ms = 0, targetVol = 0.5) {
+    if (_fadeReq) cancelAnimationFrame(_fadeReq);
+    const t0 = performance.now();
+    const fromStart = fromEl ? fromEl.volume : 0;
+    const toStart = toEl ? toEl.volume : 0;
+    toEl && (toEl.volume = toStart, toEl.play().catch(()=>{}));
+
+    const step = (now) => {
+      const k = ms ? Math.min(1, (now - t0) / ms) : 1;
+      if (fromEl) fromEl.volume = Math.max(0, fromStart * (1 - k));
+      if (toEl)   toEl.volume   = Math.min(targetVol, toStart + (targetVol - toStart) * k);
+
+      if (k < 1) { _fadeReq = requestAnimationFrame(step); }
+      else {
+        if (fromEl) { fromEl.pause(); fromEl.currentTime = 0; }
+        _fadeReq = null;
+      }
+    };
+    _fadeReq = requestAnimationFrame(step);
+  }
+
+  function play(name, { volume = 0.5, fadeMs = 0 } = {}) {
+    const next = elements[name];
+    if (!next) return;
+    const prev = current && current !== next ? current : null;
+    next.volume = (fadeMs ? 0 : volume);
+    if (!fadeMs) {
+      prev && (prev.pause(), prev.currentTime = 0);
+      next.play().catch(()=>{});
+    } else {
+      _fade(prev, next, fadeMs, volume);
+    }
+    current = next;
+  }
+
+  function stop({ fadeMs = 0 } = {}) {
+    if (!current) return;
+    if (!fadeMs) { current.pause(); current.currentTime = 0; }
+    else _fade(current, null, fadeMs, 0);
+    current = null;
+  }
+
+  return { play, stop, get current(){ return current; } };
+})();
 
   
 function advanceDialog(){
