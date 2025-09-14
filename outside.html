@@ -2875,6 +2875,7 @@ function step2() {
   
   function step4() {
       _cine2_swapVoldProfileToFront();
+      SFX.play("risa");
       openDialog([{ speaker: 'Voldemort', text: '¡SOY LORD VOLDEMORT!' }], true);
       CUT.hijackAction = () => {
         if (isTyping) return advanceDialog();
