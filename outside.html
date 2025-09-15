@@ -3692,22 +3692,7 @@ function endCine3(){
   ambientLock = false;
 }
 
-
- 
-/* ---------- Fin ordenado de retratos y barras ---------- */
-function _cine4_endPortraitsAndBars(next){
-  HPBARS.hide();
-  _endPortraits?.(); // si tienes este helper; si no, retirar retratos manualmente:
-  if (!_endPortraits){
-    PORTRAITS.active = false;
-    PORTRAITS.left = PORTRAITS.right = null;
-  }
-  if (typeof next === 'function') next();
-}
-
-
 function _cine4_removeSSJFromMap(){
-  // 1) quitar del array de NPCs
   const idx = NPCS.findIndex(n => n?.id === 'juansin_other');
   let removedNpc = null;
   if (idx >= 0) removedNpc = NPCS.splice(idx, 1)[0];
@@ -3722,7 +3707,6 @@ function _cine4_removeSSJFromMap(){
     }
   }
 
-  // 3) quitar de OBSTACLES, que es donde realmente metiste el collider
   if (typeof OBSTACLES !== 'undefined' && Array.isArray(OBSTACLES)){
     for (let i = OBSTACLES.length - 1; i >= 0; i--){
       const o = OBSTACLES[i];
@@ -3937,6 +3921,45 @@ function _cine4_step1(){
   });
 }
 
+  function irisCloseAndGo(url, {cx, cy, dur=900} = {}){
+  // Overlay canvas a pantalla completa
+  const cv = document.createElement('canvas');
+  Object.assign(cv.style, {position:'fixed', inset:'0', zIndex: 9999, pointerEvents:'none'});
+  document.body.appendChild(cv);
+  const ct = cv.getContext('2d'); ct.imageSmoothingEnabled = false;
+
+  const fit = ()=>{ cv.width = innerWidth; cv.height = innerHeight; };
+  fit(); addEventListener('resize', fit, {once:true});
+
+  // Centro del “ojo”: por defecto el centro de la pantalla
+  const XC = (typeof cx === 'number') ? cx : cv.width/2;
+  const YC = (typeof cy === 'number') ? cy : cv.height/2;
+  const R0 = Math.hypot(cv.width, cv.height); // radio inicial para cubrir
+
+  let t0 = 0;
+  function easeInOutQuad(x){ return x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2; }
+
+  function frame(t){
+    if(!t0) t0 = t;
+    const p = Math.min(1, (t - t0) / dur);
+    const e = easeInOutQuad(p);
+    const r = R0 * (1 - e); // de grande → a 0
+
+    // Pintar: negro total + “agujero” circular recortado
+    ct.clearRect(0,0,cv.width,cv.height);
+    ct.globalCompositeOperation = 'source-over';
+    ct.fillStyle = '#000';
+    ct.fillRect(0,0,cv.width,cv.height);
+    ct.globalCompositeOperation = 'destination-out';
+    ct.beginPath(); ct.arc(XC, YC, r, 0, Math.PI*2); ct.fill();
+    ct.globalCompositeOperation = 'source-over';
+
+    if (p < 1) requestAnimationFrame(frame);
+    else { window.location.href = url; }
+  }
+  requestAnimationFrame(frame);
+}
+
 
 function _cine4_end(){ 
   // 1) Apaga la niebla y coloca los NPCs alrededor de Juansin ANTES de quitar overlays
@@ -3972,13 +3995,7 @@ function _cine4_end(){
           if (dialogIndex < dialogScript.length - 1){ advanceDialog(); return; }
           closeDialog();
 
-          // 5) AHORA SÍ: desbloquea todo
-          CUT.active=false; 
-          CUT.id=null; 
-          CUT.phase=null; 
-          CUT.hijackAction=null; 
-          CUT.onEnd=null; 
-          ambientLock=false; 
+          irisCloseAndGo('end.html', { cx: innerWidth/2, cy: innerHeight/2, dur: 1000 });
         };
       })();
     }; 
