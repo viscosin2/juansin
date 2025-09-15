@@ -832,7 +832,7 @@ function playCombatMusic(){
 }
 
 function stopTownMusic(){
-  Music.stop({ fadeMs: 400 }); // o sin fadeMs si quieres corte seco
+  Music.stop({ fadeMs: 400 });
 }
 
 /* ========= MINI AUDIO MANAGER ========= */
@@ -1099,7 +1099,6 @@ if (dialogOpen){
 
 let JUAN_HALO = { active:false, permanent:false, until:0, color:'80,160,255' };
 
-// arrancar halo (temporal o permanente)
 function startJuanBlueHalo(ms=1000, { permanent=false } = {}){
   JUAN_HALO.active = true;
   JUAN_HALO.permanent = permanent;
@@ -1107,10 +1106,8 @@ function startJuanBlueHalo(ms=1000, { permanent=false } = {}){
 }
 
   function spawnPotionWithHalo(){
-  // Escoge una zona “random maja” o fija (ejemplo fijo en % del mundo)
-  const spot = percentToWorld({ x: 46.3, y: 4.3 });  // ajústalo si quieres
+  const spot = percentToWorld({ x: 46.3, y: 4.3 }); 
 
-  // Crea el prop a mano (sin pasar por PLACED) y añádelo a PROPS
   const img = PROP_IMAGES['potion'];
   if (!img){
     console.warn('pocima img no cargada aún; reintento en 200ms');
@@ -2018,28 +2015,22 @@ function fogStop(){
 }
 
 function fogBeginFill(opts = FOG.fillDur){
-  // Compatibilidad: si te pasan un número, es la duración
   if (typeof opts === 'number'){
     FOG.fillDur = opts;
   } else if (opts && typeof opts === 'object'){
     FOG.fillDur = opts.dur ?? FOG.fillDur;
-    // ancla opcional (en coordenadas de pantalla porque las partículas son "screen-space")
     if (opts.anchor){
       // anchor {x,y} en pantalla
       FOG.anchor = { x: opts.anchor.x, y: opts.anchor.y };
     } else {
-      // por defecto, ancla al centro-alto de la pantalla útil
       FOG.anchor = {
         x: screenRect.dx + screenRect.dw * 0.5,
         y: screenRect.dy + screenRect.dh * 0.25
       };
     }
-    // ancho/alto del área del velo
     if (opts.areaW) FOG.areaW = opts.areaW;
     if (opts.areaH) FOG.areaH = opts.areaH;
-    // densidad "lógica" (escala la targetDensity si quieres)
     if (opts.density != null){
-      // ejemplo: 1.0 = igual, 0.5 = mitad, 2.0 = doble
       FOG._densityScale = opts.density;
     }
   }
@@ -2060,14 +2051,12 @@ function spawnFogParticle(side){
     const halfW = (FOG.areaW || 360) * 0.5;
     const halfH = (FOG.areaH || 140) * 0.5;
 
-    // banda vertical centrada en el anchorWorld (puedes estrechar si quieres)
     yMin = FOG.anchorWorld.y - halfH;
     yMax = FOG.anchorWorld.y + halfH;
 
     // emite a izquierda/derecha del área (en mundo)
     x = fromLeft ? (FOG.anchorWorld.x - halfW - 40) : (FOG.anchorWorld.x + halfW + 40);
 
-    // “atractor” = el propio anchorWorld (desplazable con aheadBias si quieres)
     cx = FOG.anchorWorld.x;
     cy = FOG.anchorWorld.y - (FOG.aheadBias||0) * halfH; // empuja un poco hacia arriba
 
@@ -3078,15 +3067,19 @@ venganzaVoldemort();
           if (isTyping){ advanceDialog(); return; }
           closeDialog();
           openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
+          let _c4_started = false;
+          
   CUT.hijackAction = () => {
     if (isTyping){ advanceDialog(); return; }
     
           _cine2_openMenu();
 
           CUT.hijackAction = () => {
+            if (_c4_started) return;
             const choice = _cine2_menuConfirm();
             if (choice < 0) return; // no elegido aún
-
+            _c4_started = true;
+            
             closeDialog();
             _cine2_closeMenu();
 
