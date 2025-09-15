@@ -29,14 +29,20 @@
   /* Fondo de fin */
   .end-bg {
     position: absolute; inset: 0;
-    background: #000 url("assets/ui/end_bg.png") center center / contain no-repeat;
+    background: #000 url("assets/ui/end_bg.PNG") center center / contain no-repeat;
     z-index: 1;
   }
-  /* Cortinilla negra para futuros efectos si se quiere */
+  /* Confeti */
+  #confettiCanvas {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    z-index: 2; pointer-events: none; image-rendering: pixelated; background: transparent;
+  }
+
+  /* Cortinilla negra opcional (no usada por defecto aquí) */
   .curtain { position: absolute; inset: 0; background:#000; opacity:0; transition: opacity .6s ease; z-index: 10; pointer-events:none; }
   .opaque { opacity: 1; }
 
-  /* ===== CONTROLES (PNG como en room) ===== */
+  /* ===== CONTROLES (decorativos) ===== */
   .controls {
     height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr;
     gap: 14px; padding: 14px; box-sizing: border-box;
@@ -51,7 +57,6 @@
     margin-left: 12px;
     overflow: visible;
   }
-
   .img-btn{
     width: 64px; height: 64px;
     border: none; outline: none; padding: 0;
@@ -95,6 +100,7 @@
     <div class="screen-container">
       <div class="screen">
         <div class="end-bg"></div>
+        <canvas id="confettiCanvas"></canvas>
         <div id="curtain" class="curtain"></div>
       </div>
     </div>
@@ -103,7 +109,7 @@
     <div class="controls">
       <div class="dpad">
         <div></div>
-        <button class="img-btn arrow btn-up"    aria-label="Arriba"   disabled></button>
+        <button class="img-btn arrow btn-up"    aria-label="Arriba"    disabled></button>
         <div></div>
         <button class="img-btn arrow btn-left"  aria-label="Izquierda" disabled></button>
         <div></div>
@@ -116,6 +122,34 @@
     </div>
   </div>
 
-<!-- Sin scripts: los botones NO hacen nada -->
+<script>
+/* ===== Confeti pixelado (auto) ===== */
+const cvs = document.getElementById('confettiCanvas');
+const ctx = cvs.getContext('2d'); ctx.imageSmoothingEnabled = false;
+let pieces=[], raf=null;
+const COLORS=['#FDE74C','#FF9F1C','#E71D36','#7BDFF2','#B2F7EF','#CDB4DB','#80ED99','#FFD166'];
+
+function resize(){ cvs.width = cvs.clientWidth||300; cvs.height = cvs.clientHeight||300; }
+function makePiece(x,y,g=true){
+  const s=(Math.random()<0.5?3:4);
+  return {x,y,w:s,h:s,color:COLORS[(Math.random()*COLORS.length)|0],vx:(Math.random()*0.6-0.3),vy:g?(0.25+Math.random()*0.5):(1.5+Math.random()*1.2),alpha:.8,life:g?9999:900+(Math.random()*500|0),mode:g?'float':'burst'};
+}
+function seed(n=90){ pieces=[]; for(let i=0;i<n;i++) pieces.push(makePiece(Math.random()*cvs.width, Math.random()*cvs.height, true)); }
+function update(dt){
+  for(const p of pieces){
+    p.alpha = 0.55 + 0.45*Math.abs(Math.sin(Date.now()/200));
+    p.x += p.vx*dt*60; p.y += p.vy*dt*60;
+    if(p.mode==='float'){ if(p.y>cvs.height+6){ p.y=-6; p.vy=0.25+Math.random()*0.5; } }
+    else { p.life -= dt*1000; if(p.life<=0 || p.y>cvs.height+12){ Object.assign(p, makePiece(Math.random()*cvs.width, -10, true)); } }
+    if(p.x<-10) p.x=cvs.width+10; if(p.x>cvs.width+10) p.x=-10;
+  }
+}
+function draw(){ ctx.clearRect(0,0,cvs.width,cvs.height); for(const p of pieces){ ctx.globalAlpha=p.alpha; ctx.fillStyle=p.color; ctx.fillRect(p.x|0,p.y|0,p.w,p.h);} ctx.globalAlpha=1; }
+function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/30,(t-loop.last)/1000); loop.last=t; update(dt); draw(); raf=requestAnimationFrame(loop); }
+function startConfetti(){ cancelAnimationFrame(raf); loop.last=0; raf=requestAnimationFrame(loop); }
+
+window.addEventListener('load', ()=>{ resize(); seed(90); startConfetti(); });
+window.addEventListener('resize', ()=>{ resize(); });
+</script>
 </body>
 </html>
