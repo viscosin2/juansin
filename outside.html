@@ -3938,25 +3938,51 @@ function _cine4_step1(){
 }
 
 
-  function _cine4_end(){ 
-  smokeStart(null);
+function _cine4_end(){ 
+  // 1) Apaga la niebla y coloca los NPCs alrededor de Juansin ANTES de quitar overlays
+  try{ smokeStart(null); }catch(e){}
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
-  CUT.active=false; 
-  CUT.id=null; 
-  CUT.phase=null; 
-  CUT.hijackAction=null; 
-  CUT.onEnd=null; 
-  ambientLock=false; 
-      _cine2_closePortraitsAndOverlay(() => {
-openDialog(Array.isArray(CINE4_OUTRO_SCRIPT) ? CINE4_OUTRO_SCRIPT : [{ speaker:'Juan', text:'Pues ya estaría.' }], true);
-  CUT.hijackAction = () => { 
-    if (isTyping){ advanceDialog(); 
-                  return; } 
-    closeDialog(); 
-    CUT.hijackAction = null;
-  }; 
-    });   
+  // 2) Cierra portraits/overlays y abre el diálogo de salida
+  _cine2_closePortraitsAndOverlay(() => {
+    openDialog(Array.isArray(CINE4_OUTRO_SCRIPT) && CINE4_OUTRO_SCRIPT.length
+      ? CINE4_OUTRO_SCRIPT
+      : [{ speaker:'Juan', text:'Pues ya estaría.' }], true);
+
+    CUT.hijackAction = () => { 
+      if (isTyping) return advanceDialog();
+
+      // 3) Fin del primer bloque de diálogo → cerrar y spawnear TESORO delante de Juansin
+      closeDialog();
+      CUT.hijackAction = null;
+
+      (async ()=>{
+        const aheadX = player.x + (player.dir==='right'? 8 : player.dir==='left' ? -8 : 0);
+        const aheadY = player.y + (player.dir==='down' ? 0 : -6);
+        try{ await spawnTresorShinyAt(aheadX, aheadY); }catch(e){ console.warn('tresor spawn fail', e); }
+
+        // 4) Continúa el diálogo (puedes cambiar estas líneas)
+        openDialog([
+          { speaker:'Juan', text:'¿Eso… brilla?' },
+          { speaker:'Juan', text:'¡Un tesorito!' }
+        ], true);
+
+        CUT.hijackAction = ()=>{
+          if (isTyping) return advanceDialog();
+          if (dialogIndex < dialogScript.length - 1){ advanceDialog(); return; }
+          closeDialog();
+
+          // 5) AHORA SÍ: desbloquea todo
+          CUT.active=false; 
+          CUT.id=null; 
+          CUT.phase=null; 
+          CUT.hijackAction=null; 
+          CUT.onEnd=null; 
+          ambientLock=false; 
+        };
+      })();
+    }; 
+  });
 }
 
 
@@ -4037,8 +4063,6 @@ setTimeout(()=>{
   }
 
 
-  // Si hay diálogo Y NO estamos en cinemática, paramos aquí (como antes).
-  // En cinemática NO hacemos return para que sigan fog/cámara/retratos.
   if (!CUT.active && dialogOpen){
     player.moving = false; player.frame = 0;
     const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
@@ -4046,7 +4070,6 @@ setTimeout(()=>{
     return;
   }
 
-  // Si hay ambientLock, congelamos animación de Juan (pero seguimos actualizando resto)
   if (ambientLock){
     player.moving = false; player.frame = 0;
     const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
@@ -4054,7 +4077,6 @@ setTimeout(()=>{
   }
   HPBARS.update(dt);
 
-  // Retratos y tween de cámara siguen siempre
   portraitsUpdate(dt);
   if (CAM_TWEEN.on){
     CAM_TWEEN.t = Math.min(1, CAM_TWEEN.t + dt*1000 / CAM_TWEEN.dur);
@@ -4065,7 +4087,6 @@ setTimeout(()=>{
     if (CAM_TWEEN.t>=1) CAM_TWEEN.on=false;
   }
 
-  // ---------------- Movimiento (bloqueado completamente si CUT.active) ----------------
   if (CUT.active){
   if (CUT.phase === 'autowalk'){
     // animar como si estuviera andando
@@ -4160,7 +4181,6 @@ setTimeout(()=>{
       }
     }
 
-    // Objetivos de paleta (crossfade sin saltos)
     const targetPal = newZone ? newZone.palette : 'peach';
     AMBIENT.targets.peach    = (targetPal === 'peach')    ? 1 : 0;
     AMBIENT.targets.bluehour = (targetPal === 'bluehour') ? 1 : 0;
@@ -4169,7 +4189,6 @@ setTimeout(()=>{
     _ambientCurrentZone = newZone;
   }
 
-  // Sube la intensidad global durante la intro (si lo mantienes así)
   AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
 
   // Interpolar alphas hacia sus objetivos (crossfade continuo)
@@ -4184,23 +4203,19 @@ setTimeout(()=>{
   updateBushScene(dt);
 
   updateBushPulse(dt);
-  // === NUEVO: pickup de pócima si existe y todavía no la tenemos ===
 if (GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
   const feet = feetWorld();
   const pot = PROPS.find(p => p._isPotion);
   if (pot){
-    // comprobar solapado de pies con un pequeño radio alrededor de la base del prop
     const rx = 10, ry = 8; // radios “pie” para pickup
     const rect = { x: pot.x - rx, y: pot.y - ry, w: rx*2, h: ry*2 };
     if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, rect)){
-      // recoger
       const idx = PROPS.indexOf(pot);
       if (idx >= 0) PROPS.splice(idx, 1);
 
       GAME_FLAGS.has_potion = true;
       GAME_FLAGS.need_potion = false;
 
-      // bloquear un segundo con halo azul en Juan
       ambientLock = true;
       ambientLockOwner = 'potion_pick'; // opcional, por consistencia
       startJuanBlueHalo(0, { permanent:true });
@@ -4214,7 +4229,26 @@ if (GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
 
 }
 
+async function spawnTresorShinyAt(x, y){
+  if (!spawnTresorShinyAt._img){
+    spawnTresorShinyAt._img = await loadImage('assets/objects/tresor.png');
+  }
+  const img = spawnTresorShinyAt._img;
+  if (!img) { console.warn('tresor.png no cargó'); return null; }
 
+  const prop = {
+    id: 'tresor_' + Math.random().toString(36).slice(2,7),
+    type: 'tresor',
+    img, x, y,
+    iw: img.naturalWidth, ih: img.naturalHeight,
+    scale: 0.12,
+    _halo: { color:'255,255,160', radius:30, alpha:0.75, pulse:0.08, offsetY:0.62 } // 🔆 brillo
+  };
+  PROPS.push(prop);
+  return prop;
+}
+
+  
 /* ========== MEGADRAW ========== */
 function draw(){
   if(!bgImg) return;
