@@ -3921,43 +3921,15 @@ function _cine4_step1(){
   });
 }
 
-  function irisCloseAndGo(url, {cx, cy, dur=900} = {}){
-  // Overlay canvas a pantalla completa
-  const cv = document.createElement('canvas');
-  Object.assign(cv.style, {position:'fixed', inset:'0', zIndex: 9999, pointerEvents:'none'});
-  document.body.appendChild(cv);
-  const ct = cv.getContext('2d'); ct.imageSmoothingEnabled = false;
+const curtain = document.getElementById('curtain');
+function goToRoom(){
+  if (goToRoom.lock) return;
+  goToRoom.lock = true;
 
-  const fit = ()=>{ cv.width = innerWidth; cv.height = innerHeight; };
-  fit(); addEventListener('resize', fit, {once:true});
-
-  // Centro del “ojo”: por defecto el centro de la pantalla
-  const XC = (typeof cx === 'number') ? cx : cv.width/2;
-  const YC = (typeof cy === 'number') ? cy : cv.height/2;
-  const R0 = Math.hypot(cv.width, cv.height); // radio inicial para cubrir
-
-  let t0 = 0;
-  function easeInOutQuad(x){ return x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2; }
-
-  function frame(t){
-    if(!t0) t0 = t;
-    const p = Math.min(1, (t - t0) / dur);
-    const e = easeInOutQuad(p);
-    const r = R0 * (1 - e); // de grande → a 0
-
-    // Pintar: negro total + “agujero” circular recortado
-    ct.clearRect(0,0,cv.width,cv.height);
-    ct.globalCompositeOperation = 'source-over';
-    ct.fillStyle = '#000';
-    ct.fillRect(0,0,cv.width,cv.height);
-    ct.globalCompositeOperation = 'destination-out';
-    ct.beginPath(); ct.arc(XC, YC, r, 0, Math.PI*2); ct.fill();
-    ct.globalCompositeOperation = 'source-over';
-
-    if (p < 1) requestAnimationFrame(frame);
-    else { window.location.href = url; }
-  }
-  requestAnimationFrame(frame);
+  if (actBtn) actBtn.classList.add('pressed');
+  burstFromAction();                // 💥 desde el botón (o centro)
+  curtain.classList.add('opaque');  // fade
+  setTimeout(()=>{ window.location.href = 'room.html'; }, 650);
 }
 
 
@@ -3995,7 +3967,7 @@ function _cine4_end(){
           if (dialogIndex < dialogScript.length - 1){ advanceDialog(); return; }
           closeDialog();
 
-          irisCloseAndGo('end.html', { cx: innerWidth/2, cy: innerHeight/2, dur: 1000 });
+          goToRoom();
         };
       })();
     }; 
