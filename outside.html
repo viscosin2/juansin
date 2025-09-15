@@ -3934,11 +3934,11 @@ function goToEnd(){
 
 
 function _cine4_end(){ 
-  // 1) Apaga la niebla y coloca los NPCs alrededor de Juansin ANTES de quitar overlays
+  player.dir = 'down';
+  
   try{ smokeStart(null); }catch(e){}
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
-  // 2) Cierra portraits/overlays y abre el diálogo de salida
   _cine2_closePortraitsAndOverlay(() => {
     openDialog(Array.isArray(CINE4_OUTRO_SCRIPT) && CINE4_OUTRO_SCRIPT.length
       ? CINE4_OUTRO_SCRIPT
