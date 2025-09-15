@@ -2996,13 +2996,14 @@ venganzaVoldemort();
     _cine2_closePortraitsAndOverlay(() => {
       const vold = _cine2_getVold();
       setTimeout(() => {
+          if (handled) return;
           playVoldemortRayFx(vold);
           openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
       }, 1000);
           
     CUT.hijackAction = () => {
-      if (isTyping) return advanceDialog();
       if (handled) return;
+      if (isTyping) return advanceDialog();
       handled = true;
 
       closeDialog();
