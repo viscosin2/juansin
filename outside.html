@@ -2990,6 +2990,7 @@ venganzaVoldemort();
 }
 
   function venganzaVoldemort(){
+    let handled = false;
     const v = NPCS.find(n => n?.id === 'voldemort_perfil');
     v.img = IMG_VOLD_PERFIL; 
     _cine2_closePortraitsAndOverlay(() => {
@@ -2998,9 +2999,7 @@ venganzaVoldemort();
           playVoldemortRayFx(vold);
           openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
       }, 1000);
-
-      
-          let handled = false;
+          
     CUT.hijackAction = () => {
       if (isTyping) return advanceDialog();
       if (handled) return;
