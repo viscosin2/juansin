@@ -483,6 +483,18 @@ const NPC_PLACED = {
   }],
 };
 
+const CINE4_AROUND = [
+   { type:'abuela', dx:+15, dy:  0, flipX:false, id:'abuela_c4' },
+   { type:'soldado2', dx:-10, dy:+14, flipX:true,  id:'soldado_c4' },
+   { type:'patata1',  dx:+10, dy:+10 },
+];
+
+const CINE4_OUTRO_SCRIPT = [
+  { speaker:'Juan', text:'Pues ya estaría.' },
+ { speaker:'Juan', text:'Venga, al súper.' },
+   { speaker:'Juan', text:'(respira) Ya pasó.' },
+];
+
 
 /* ========== CATALOGO / PLACEMENT ========== */
 const CATALOG = {
@@ -3759,6 +3771,53 @@ function startCinematic4(){
       };
       }
 
+  // ===== Helpers spawn NPCs desde catálogo =====
+function spawnNPCFromCatalog(type, x, y, opts = {}){
+  const spec = NPC_CATALOG[type];
+  const img  = NPC_IMAGES[type];
+  if (!spec || !img) return null;
+
+  const s = spec.scale || 1;
+  const npc = {
+    id: opts.id || `${type}_${Math.random().toString(36).slice(2,7)}`,
+    type, img,
+    x, y,
+    iw: img.naturalWidth || 32,
+    ih: img.naturalHeight || 32,
+    scale: s,
+    depthBand: spec.depthBand ?? DEPTH_BAND,
+    depthAnchorY: spec.depthAnchorY ?? 0,
+    flipX: (typeof opts.flipX === 'boolean') ? opts.flipX : !!spec.flipX,
+    shadow: { ...DEFAULT_SHADOW, ...(spec.shadow||{}) }
+  };
+
+  // collider opcional (si el tipo lo define)
+  if (spec.collider){
+    const c = spec.collider;
+    const col = { x: npc.x + c.x*s, y: npc.y + (c.y*s) - (c.h*s), w: c.w*s, h: c.h*s };
+    npc.collider = col;
+    OBSTACLES.push({ ...col, name:`npc:${type}` });
+  }
+
+  // heredar halo si el tipo lo trae
+  if (spec.halo){
+    npc.halo = { ...(spec.halo) };
+  }
+
+  NPCS.push(npc);
+  return npc;
+}
+
+function spawnAroundJuanFromList(list){
+  if (!Array.isArray(list) || list.length===0) return;
+  const baseX = player.x, baseY = player.y;
+  for (const e of list){
+    const dx = (e?.dx|0), dy = (e?.dy|0);
+    spawnNPCFromCatalog(e.type, baseX + dx, baseY + dy, e);
+  }
+}
+
+
 function _cine4_step1(){
 
   // --- Setup portraits/UI ---
@@ -3885,6 +3944,9 @@ function _cine4_step1(){
 
 
   function _cine4_end(){ 
+  smokeStart(null);
+  try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
+
   CUT.active=false; 
   CUT.id=null; 
   CUT.phase=null; 
@@ -3892,7 +3954,7 @@ function _cine4_step1(){
   CUT.onEnd=null; 
   ambientLock=false; 
       _cine2_closePortraitsAndOverlay(() => {
-openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true); 
+openDialog(Array.isArray(CINE4_OUTRO_SCRIPT) ? CINE4_OUTRO_SCRIPT : [{ speaker:'Juan', text:'Pues ya estaría.' }], true);
   CUT.hijackAction = () => { 
     if (isTyping){ advanceDialog(); 
                   return; } 
