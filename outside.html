@@ -487,8 +487,8 @@ const CINE4_AROUND = [
    { type:'patata2',  dx:-70, dy:0 },
   { type:'faramir',  dx:-30, dy:+14,flipX:false},
   { type:'denethor',  dx:-53, dy:+50,flipX:true },
-  { type:'abuela1',  dx:+28, dy:-22,flipX:true },
-  { type:'gato1',  dx:+32, dy:-13,flipX:false },
+  { type:'abuela1',  dx:+30, dy:-22,flipX:true },
+  { type:'gato1',  dx:+34, dy:-13,flipX:false },
 ];
 
 const CINE4_OUTRO_SCRIPT = [
@@ -3922,11 +3922,9 @@ function _cine4_step1(){
 }
 
 function goToEnd(){
-  // fade simple sin depender de otros nodos
   const cv = document.createElement('div');
   Object.assign(cv.style, {position:'fixed', inset:'0', background:'#000', opacity:'0', transition:'opacity .6s ease', zIndex:'9999', pointerEvents:'none'});
   document.body.appendChild(cv);
-  // forzar reflow y activar fade
   requestAnimationFrame(()=>{ cv.style.opacity = '1'; });
   setTimeout(()=>{ window.location.href = 'end.html'; }, 650);
 }
@@ -3940,14 +3938,14 @@ function _cine4_end(){
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
   _cine2_closePortraitsAndOverlay(() => {
-    openDialog(Array.isArray(CINE4_OUTRO_SCRIPT) && CINE4_OUTRO_SCRIPT.length
-      ? CINE4_OUTRO_SCRIPT
-      : [{ speaker:'Juan', text:'Pues ya estaría.' }], true);
+    openDialog([
+          { speaker:'Pueblo', text:'OLÉ' },
+          { speaker:'Juan', text:'Yujuu' }
+        ], true);
 
     CUT.hijackAction = () => { 
       if (isTyping) return advanceDialog();
 
-      // 3) Fin del primer bloque de diálogo → cerrar y spawnear TESORO delante de Juansin
       closeDialog();
       CUT.hijackAction = null;
 
@@ -3956,7 +3954,6 @@ function _cine4_end(){
         const aheadY = player.y + (player.dir==='down' ? 0 : -6);
         try{ await spawnTresorShinyAt(aheadX, aheadY); }catch(e){ console.warn('tresor spawn fail', e); }
 
-        // 4) Continúa el diálogo (puedes cambiar estas líneas)
         openDialog([
           { speaker:'Juan', text:'¿Eso… brilla?' },
           { speaker:'Juan', text:'¡Un tesorito!' }
