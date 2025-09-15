@@ -3921,16 +3921,16 @@ function _cine4_step1(){
   });
 }
 
-const curtain = document.getElementById('curtain');
-function goToRoom(){
-  if (goToRoom.lock) return;
-  goToRoom.lock = true;
-
-  if (actBtn) actBtn.classList.add('pressed');
-  burstFromAction();                // 💥 desde el botón (o centro)
-  curtain.classList.add('opaque');  // fade
-  setTimeout(()=>{ window.location.href = 'room.html'; }, 650);
+function goToEnd(){
+  // fade simple sin depender de otros nodos
+  const cv = document.createElement('div');
+  Object.assign(cv.style, {position:'fixed', inset:'0', background:'#000', opacity:'0', transition:'opacity .6s ease', zIndex:'9999', pointerEvents:'none'});
+  document.body.appendChild(cv);
+  // forzar reflow y activar fade
+  requestAnimationFrame(()=>{ cv.style.opacity = '1'; });
+  setTimeout(()=>{ window.location.href = 'end.html'; }, 650);
 }
+
 
 
 function _cine4_end(){ 
@@ -3967,7 +3967,7 @@ function _cine4_end(){
           if (dialogIndex < dialogScript.length - 1){ advanceDialog(); return; }
           closeDialog();
 
-          goToRoom();
+          goToEnd();
         };
       })();
     }; 
