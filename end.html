@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Juansin 30th – Fin</title>
+<style>
+  html, body {
+    height: 100%; margin: 0; background: #111;
+    display: flex; justify-content: center; align-items: center;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  }
+  .gameboy {
+    width: 100%; max-width: 500px; height: 100%;
+    background: #000; display: flex; flex-direction: column;
+    padding: 12px; box-sizing: border-box; border-radius: 20px;
+    box-shadow: 0 0 40px rgba(0,0,0,.6);
+  }
+  .screen-container {
+    flex: 1; display: flex; justify-content: center; align-items: center;
+    background: #0B0A21; border-radius: 12px; padding: 10px;
+  }
+  .screen {
+    aspect-ratio: 1/1; width: 100%; background: #0B0A21;
+    border-radius: 8px; overflow: hidden; position: relative;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+  }
+
+  /* Fondo de fin */
+  .end-bg {
+    position: absolute; inset: 0;
+    background: #000 url("assets/ui/end_bg.png") center center / contain no-repeat;
+    z-index: 1;
+  }
+  /* Cortinilla negra para futuros efectos si se quiere */
+  .curtain { position: absolute; inset: 0; background:#000; opacity:0; transition: opacity .6s ease; z-index: 10; pointer-events:none; }
+  .opaque { opacity: 1; }
+
+  /* ===== CONTROLES (PNG como en room) ===== */
+  .controls {
+    height: 40%; background: #0B0A21; display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px; padding: 14px; box-sizing: border-box;
+  }
+  .dpad{
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-template-rows: repeat(3, 64px);
+    gap: 0;
+    justify-content: center;
+    align-content: center;
+    margin-left: 12px;
+    overflow: visible;
+  }
+
+  .img-btn{
+    width: 64px; height: 64px;
+    border: none; outline: none; padding: 0;
+    background: transparent;
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.85));
+    -webkit-tap-highlight-color: transparent;
+  }
+  .img-btn.arrow::before{
+    content: ""; display: block; width: 100%; height: 100%;
+    background: url("assets/ui/arrow.PNG") center/contain no-repeat;
+    image-rendering: pixelated;
+    transform: rotate(var(--rot, 0deg)) scale(1.28);
+    transform-origin: center center;
+    opacity: 0.5;
+  }
+  .btn-up    { --rot: 180deg; }
+  .btn-left  { --rot:  90deg; }
+  .btn-right { --rot: -90deg; }
+  .btn-down  { --rot:   0deg; }
+
+  .img-act{
+    width: 120px; height: 120px;
+    border: none; outline: none; padding: 0;
+    background: transparent;
+    filter: drop-shadow(0 5px 6px rgba(0,0,0,0.85));
+    margin-top: 45px;
+    justify-self: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .img-act::before{
+    content: ""; display: block; width: 100%; height: 100%;
+    background: url("assets/ui/action_btn.PNG") center/contain no-repeat;
+    image-rendering: pixelated;
+    transform: scale(1.02);
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+  <div class="gameboy">
+    <div class="screen-container">
+      <div class="screen">
+        <div class="end-bg"></div>
+        <div id="curtain" class="curtain"></div>
+      </div>
+    </div>
+
+    <!-- Controles con PNG (decorativos, sin comportamiento) -->
+    <div class="controls">
+      <div class="dpad">
+        <div></div>
+        <button class="img-btn arrow btn-up"    aria-label="Arriba"   disabled></button>
+        <div></div>
+        <button class="img-btn arrow btn-left"  aria-label="Izquierda" disabled></button>
+        <div></div>
+        <button class="img-btn arrow btn-right" aria-label="Derecha"   disabled></button>
+        <div></div>
+        <button class="img-btn arrow btn-down"  aria-label="Abajo"     disabled></button>
+        <div></div>
+      </div>
+      <button class="img-act" aria-label="Acción" disabled></button>
+    </div>
+  </div>
+
+<!-- Sin scripts: los botones NO hacen nada -->
+</body>
+</html>
