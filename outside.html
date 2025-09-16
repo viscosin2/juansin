@@ -973,6 +973,11 @@ const Music = (() => {
   }
 
   async function play(name, { volume = 0.5, fadeMs = 0 } = {}) {
+
+    if (performance.now() < musicLockUntil && musicLockOnly && name !== musicLockOnly) {
+      return;
+    }
+    
     await AudioGate.ready();
      if (window.__lockToTown && name !== 'town') {
     name = 'town';
@@ -1036,19 +1041,32 @@ function advanceDialog(){
     closeDialog();
   }
 }
-document.getElementById('btn-act').addEventListener('touchstart', e=>{
+document.getElementById('btn-act').addEventListener('touchstart', e => {
   e.preventDefault();
 
   if (!window._audioUnlocked) {
     window._audioUnlocked = true;
-    if (!window._audioUnlocked) {
-  window._audioUnlocked = true;
-  Music.play('town', { volume: 0.5, fadeMs: 0 });
-}
 
+    const town = document.getElementById('bgTown');
+    const blue = document.getElementById('bgBluehour');
+    const comb = document.getElementById('bgCombat');
+
+    const p = town.play();
+    if (p && p.then) {
+      p.then(() => { try { town.pause(); town.currentTime = 0; } catch(_) {} })
+       .catch(() => { try { town.pause(); town.currentTime = 0; } catch(_) {} });
+    }
+
+    try { blue.pause(); blue.currentTime = 0; } catch(_) {}
+    try { comb.pause(); comb.currentTime = 0; } catch(_) {}
+
+    musicLockOnly  = 'town';
+    musicLockUntil = performance.now() + 800;
+
+    Music.play('town', { volume: 0.5, fadeMs: 0 });
   }
 
-  if (CUT.active && typeof CUT.hijackAction === 'function'){
+  if (CUT.active && typeof CUT.hijackAction === 'function') {
     CUT.hijackAction();
     return;
   }
@@ -1062,6 +1080,7 @@ if (dialogOpen){
 
   if (willFinishNow && wasIntro) {
     window.__lockToTown = false;
+    musicLockUntil = performance.now() + 800;
     Music.play('town', { volume: 0.5, fadeMs: 400 });
   }
   return;
@@ -2828,7 +2847,8 @@ function portraitsAppendAndContinue(extra){
   }
   CUT.hijackAction && CUT.hijackAction();
 }
-
+let musicLockUntil = 0;       // timestamp ms
+let musicLockOnly  = null;    // p.ej. 'town'
   
 function continueCine1_WithFumaos_Portraits(doneCb){
   if (!CUT.active || CUT.id!=='cine1') { if (typeof doneCb==='function') doneCb(); return; }
