@@ -849,11 +849,12 @@ function stopTownMusic(){
 }
 
 /* ========= MINI AUDIO MANAGER ========= */
+/* ========= MINI AUDIO MANAGER ========= */
 const SFX = (() => {
   const _cache = new Map();
+  const _lastByName = new Map();
 
   function _get(path) {
-    // Clonamos para evitar solapar .currentTime/volume entre instancias
     if (!_cache.has(path)) _cache.set(path, new Audio(path));
     const base = _cache.get(path);
     const a = base.cloneNode(true);
@@ -862,8 +863,10 @@ const SFX = (() => {
     return a;
   }
 
-  // Reproducir un sonido por nombre: SFX.play('miau') -> assets/sounds/miau.mp3
-  async function play(name, { volume = 1, start = 0, duration = null, folder = 'assets/sounds' } = {}) {
+  async function play(
+    name,
+    { volume = 1, start = 0, duration = null, folder = 'assets/sounds' } = {}
+  ) {
     const a = _get(`${folder}/${name}.mp3`);
     a.volume = volume;
 
@@ -878,17 +881,41 @@ const SFX = (() => {
     if (a.readyState >= 2) startWhenReady();
     else a.addEventListener('loadedmetadata', startWhenReady, { once:true });
 
+    _lastByName.set(name, a); // guarda la última instancia por nombre
     return a;
   }
 
-  // Reproducir un archivo arbitrario (ruta completa)
-  function playFile(path, opts={}) {
-    const name = path.replace(/^.*[\\/]/, '').replace(/\.\w+$/, '');
-    return play(name, { ...opts, folder: path.replace(/\/[^/]+$/, '') });
+  function playFile(path, opts = {}) {
+    const name   = path.replace(/^.*[\\/]/, '').replace(/\.\w+$/, '');
+    const folder = path.replace(/\/[^/]+$/, '');
+    return play(name, { ...opts, folder });
   }
 
-  return { play, playFile };
+  // Parar por nombre (sin variable)
+  function stop(name) {
+    const a = _lastByName.get(name);
+    if (!a) return;
+    a.pause();
+    a.currentTime = 0;
+  }
+
+  // Fade out por nombre y parar
+  function fadeOut(name, ms = 400) {
+    const a = _lastByName.get(name);
+    if (!a) return;
+    const startVol = a.volume;
+    const t0 = performance.now();
+    (function step(now){
+      const k = Math.min(1, (now - t0) / ms);
+      a.volume = Math.max(0, startVol * (1 - k));
+      if (k < 1) requestAnimationFrame(step);
+      else { a.pause(); a.currentTime = 0; a.volume = startVol; }
+    })(performance.now());
+  }
+
+  return { play, playFile, stop, fadeOut };
 })();
+
 
 const Music = (() => {
   const elements = {
@@ -2739,7 +2766,10 @@ function spawnTempGandalfAhead(targetCamY){
     { speaker:'Gandalf',    text:'Te estaré observando de cerca. Tal vez hoy la suerte nos mire… o tal vez no.' }
   ];
   portraitsOpen(cineScript);
-    CUT.onEnd = ()=>{ nieblaAudio.pause(); nieblaAudio.currentTime = 0; continueCine1_WithFumaos_Portraits(); };
+    CUT.onEnd = () => {
+  SFX.fadeOut("niebla", 400); // 
+  continueCine1_WithFumaos_Portraits();
+};
 }
 
 function continueCine1_WithFumaos_Portraits(doneCb){
