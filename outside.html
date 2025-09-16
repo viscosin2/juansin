@@ -1061,7 +1061,7 @@ document.getElementById('btn-act').addEventListener('touchstart', e => {
     try { comb.pause(); comb.currentTime = 0; } catch(_) {}
 
     musicLockOnly  = 'town';
-    musicLockUntil = performance.now() + 800;
+    musicLockUntil = performance.now() + 5000;
 
     Music.play('town', { volume: 0.5, fadeMs: 0 });
   }
@@ -1080,7 +1080,7 @@ if (dialogOpen){
 
   if (willFinishNow && wasIntro) {
     window.__lockToTown = false;
-    musicLockUntil = performance.now() + 800;
+    musicLockUntil = performance.now() + 5000;
     Music.play('town', { volume: 0.5, fadeMs: 400 });
   }
   return;
