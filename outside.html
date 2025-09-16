@@ -70,8 +70,11 @@
 </style>
 </head>
 <body>
-<audio id="bgTown"   src="assets/sounds/ambientepueblo.mp3" loop preload="auto" playsinline></audio>
-<audio id="bgCombat" src="assets/sounds/combate.mp3"        loop preload="auto" playsinline></audio>
+
+<audio id="bgTown"     src="assets/sounds/ambientepueblo.mp3" loop preload="auto" playsinline></audio>
+<audio id="bgBluehour" src="assets/sounds/combate.mp3"      loop preload="auto" playsinline></audio>
+<audio id="bgCombat"   src="assets/sounds/combate.mp3"        loop preload="auto" playsinline></audio>
+
 
 <div class="gameboy">
   <div class="screen-container">
@@ -414,16 +417,25 @@ const AMBIENT = {
 const AMBIENT_ZONES = [
   {
     name:'Bluehour zone', palette:'bluehour',
+    music: 'bluehour',
+    // musicFadeMs: 900,          // ← opcional: fuerza duración (si no, usa AMBIENT.fadeMs)
     dialogOnEnter:[
       { speaker:'Juan', text:'...' },
-      { speaker:'Juan', text:'Fuerte biruje.' }
+      { speaker:'Juan', text:'Tengo un mal presentimiento...' },
+      { speaker:'Juan', text:'Hay un olor extraño.' },
+      { speaker:'Juan', text:'Huele...' },
+      { speaker:'Juan', text:'Huele a Champions.' }
     ],
-    dialogDelayMs: 500, lockMs: 1000,rect:{type:'percent', x:24, y:0, w:100, h:35}
+    dialogDelayMs: 500, lockMs: 1000,
+    rect:{type:'percent', x:24, y:0, w:100, h:35}
   },
   {
-    name:'Infierno super', palette:'hell',rect:{type:'percent', x:60, y:35, w:50, h:100}
+    name:'Infierno super', palette:'hell',
+    music: 'combat',
+    rect:{type:'percent', x:60, y:35, w:50, h:100}
   }
 ];
+
 
 let ambientLock = false;
 let ambientLockOwner = null;
@@ -881,6 +893,7 @@ const SFX = (() => {
 const Music = (() => {
   const elements = {
     town:   document.getElementById('bgTown'),
+    bluehour: document.getElementById('bgBluehour'),
     combat: document.getElementById('bgCombat')
   };
   let current = null, _fadeReq = null;
@@ -4016,8 +4029,8 @@ function update(dt){
 
   if (!dialogOpen && ambientLock && !ambientLockOwner) ambientLock = false;
 
-  // Intro: sube intensidad global y lanza primer diálogo
-  if (introActive){
+
+if (introActive){
     AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
     player.moving = false; player.frame = 0;
     const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
@@ -4172,6 +4185,21 @@ setTimeout(()=>{
     AMBIENT.targets.peach    = (targetPal === 'peach')    ? 1 : 0;
     AMBIENT.targets.bluehour = (targetPal === 'bluehour') ? 1 : 0;
     AMBIENT.targets.hell     = (targetPal === 'hell')     ? 1 : 0;
+
+
+ try {
+    const fadeMs =
+      (newZone && typeof newZone.musicFadeMs === 'number' && newZone.musicFadeMs >= 0)
+        ? newZone.musicFadeMs
+        : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 650);
+
+    if (newZone && newZone.music && window.MUSIC && typeof MUSIC.fadeTo === 'function') {
+      MUSIC.fadeTo(newZone.music, fadeMs);
+    } else if (!newZone && window.MUSIC && typeof MUSIC.fadeTo === 'function') {
+      // si sales a “neutral/peach”, pon música por defecto si quieres
+      if (MUSIC.tracks && MUSIC.tracks['town']) MUSIC.fadeTo('town', fadeMs);
+    }
+  } catch (e) { console.warn('Music fade error:', e); }
 
     _ambientCurrentZone = newZone;
   }
@@ -4510,12 +4538,10 @@ zlist.push({
   }
 });
 
-// pinta TODO junto segun y
 zlist.sort((a,b)=>a.y - b.y).forEach(it=>it.draw());
 
-  ctx.restore();                                               // (salimos del clip para overlays)
+  ctx.restore();                                  
 
-  // Overlays de ambiente y linterna (quedarán por DEBAJO de la niebla)
   if (AMBIENT.k > 0.001){
     const order = ['peach','bluehour','hell'];
     for (const pal of order){
@@ -4694,12 +4720,10 @@ async function init(){
 
   centerCameraOnPlayer();
 
-  // Arranque del ambiente base desde 0 con fade
   AMBIENT.k = 0;
 AMBIENT.alphas  = { peach:1, bluehour:0, hell:0 };
 AMBIENT.targets = { peach:1, bluehour:0, hell:0 };
   requestAnimationFrame(loop);
-  // fade negro inicial
 setTimeout(()=> document.getElementById('blackfade').classList.add('hide'), 50);
 
 }
