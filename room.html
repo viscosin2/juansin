@@ -251,7 +251,7 @@ function showToast(msg,ms=2000){const t=document.getElementById('toast'); t.text
 /* ===== DIÁLOGO ===== */
 const dialogEl=document.getElementById('dialog'), dialogName=document.getElementById('dialogName'), dialogText=document.getElementById('dialogText'), dialogHint=document.getElementById('dialogHint');
 let isTyping=false, typingTimer=null, typingSpeed=22, dialogOpen=false, dialogIndex=0;
-const dialogScript=[{speaker:'Juan',text:'...'},{speaker:'Juan',text:'¡Toma combo!'},{speaker:'Juan',text:'...'},{speaker:'Juan',text:'...'},{speaker:'Juan',text:'Qué hambre tengo...'},{speaker:'Juan',text:'Me apetecen unos Tresor.'},{speaker:'Juan',text:'Voy al super.'}];
+const dialogScript=[{speaker:'Juan',text:'...'},{speaker:'Juan',text:'¡Toma combo!'},{speaker:'Juan',text:'...'},{speaker:'Juan',text:'...'},{speaker:'Juan',text:'Chos, qué hambre tengo...'},{speaker:'Juan',text:'Me mandaba unos Tresor.'},{speaker:'Juan',text:'A la mierda, voy al super.'}];
 function openDialog(){dialogEl.classList.add('show'); dialogEl.classList.remove('ready'); dialogOpen=true; dialogIndex=0; renderCurrentLine(true);}
 function closeDialog(){dialogEl.classList.remove('show','ready'); dialogOpen=false; preDialogLock=false;}
 function renderCurrentLine(startTyping=false){const line=dialogScript[dialogIndex]||{speaker:'',text:''}; dialogName.textContent=line.speaker||''; dialogText.textContent=''; dialogHint.style.opacity=0; startTyping?startTypingEffect(line.text):(dialogText.textContent=line.text,dialogEl.classList.add('ready'));}
