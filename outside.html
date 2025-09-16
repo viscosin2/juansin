@@ -295,8 +295,8 @@ function drawHPBars(){
   const padSide   = Math.round(screenRect.dw * 0.02);  // margen lateral
   const gapCenter = Math.round(screenRect.dw * 0.04);  // hueco central
   const barW      = Math.round(screenRect.dw * 0.46);  // ancho de cada barra
-  const barH      = 14;                                // alto barra
-  const nameGap   = 10;                                // espacio entre nombre y barra
+  const barH      = 9;                                // alto barra
+  const nameGap   = 5;                                // espacio entre nombre y barra
   const yTop      = Math.round(screenRect.dy + 16);    // todo pegado arriba
 
   const leftX  = Math.round(screenRect.dx + padSide);
@@ -305,11 +305,9 @@ function drawHPBars(){
   const bgStyle   = 'rgba(255,255,255,0.18)';
   const frameStyle= 'rgba(255,255,255,0.35)';
 
-  // Fuentes/nombres (rollo retro)
   const nameFont  = '12px "Press Start 2P", system-ui, sans-serif';
   const nameColor = '#E6F6FF';
 
-  // Escalas de relleno
   const wSSJ  = Math.round(barW * (HPBARS.ssj/100));
   const wJuan = Math.round(barW * (HPBARS.juan/100));
 
@@ -319,7 +317,6 @@ function drawHPBars(){
   ctx.save();
   ctx.globalAlpha = a;
 
-  // Nombres encima
   ctx.font = nameFont;
   ctx.fillStyle = nameColor;
   ctx.textBaseline = 'bottom';
@@ -327,8 +324,6 @@ function drawHPBars(){
   ctx.fillText(leftName,  leftX,  yTop - 2);
   ctx.fillText(rightName, rightX + barW - ctx.measureText(rightName).width, yTop - 2);
 
-  // Barras: fondo + relleno + marco
-  // -- SSJ (izquierda)
   ctx.fillStyle = bgStyle;
   ctx.fillRect(leftX, yTop + nameGap, barW, barH);
   ctx.fillStyle = '#e03232'; // rojo SSJ
@@ -336,7 +331,6 @@ function drawHPBars(){
   ctx.strokeStyle = frameStyle;
   ctx.strokeRect(leftX + 0.5, yTop + nameGap + 0.5, barW - 1, barH - 1);
 
-  // -- Juan (derecha)
   ctx.fillStyle = bgStyle;
   ctx.fillRect(rightX, yTop + nameGap, barW, barH);
   ctx.fillStyle = '#3c88ff'; // azul Juan
@@ -2809,17 +2803,15 @@ function continueCine1_WithFumaos_Portraits(doneCb){
     { speaker:'DonRamon y Perchita', text:'¿Tú qué eres? ¿El sheriff del barrio?' },
     { speaker:'Juan', text:'Fuertes gilipollas...' },
     { speaker:'DonRamon y Perchita', text:'¿A quién llamas tú gilipollas?' },
-    { speaker:'DonRamon y Perchita', text:'Acércate que te vamos a dar una que vas a viajar en el tiempo.' },
   ];
   fadeOutFogThenEnd();
+  portraitsOpen2(fumaosScript);
 
-    portraitsOpen2(fumaosScript);
-
-  
   
   CUT.onEnd = ()=>{
     _cine1_startFakeFightUI(); 
     const koScript = [
+      { speaker:'DonRamon y Perchita', text:'Acércate que te vamos a dar una que vas a viajar en el tiempo.' },
       { speaker:'', text:'No te da tiempo a realizar ningún ataque.' },
       { speaker:'', text:'Van tan volados que se han autoderrotado.' }
     ];
