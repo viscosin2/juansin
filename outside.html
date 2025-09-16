@@ -2673,7 +2673,11 @@ function phaseFogFill(){
 
   fogUseWorld(anchorWorld); 
 
-  SFX.play("niebla", { volume: 0.08 });
+  if (Music.current) {
+  Music.current.volume = 0.25;
+}
+  
+  SFX.play("niebla", { volume: 0.35 });
   fogBeginFill({
     dur: 3000,
     areaW: 360,
@@ -2822,17 +2826,26 @@ function continueCine1_WithFumaos_Portraits(doneCb){
 }
 
 function _cine1_startFakeFightUI(){
-  if (typeof _cine2_startFightUI === 'function'){
-    try { _cine2_startFightUI({ enemies: [] }); return; } catch(e){}
-  }
-  if (typeof startFightUI === 'function'){
-    try { startFightUI({ enemies: [] }); return; } catch(e){}
-  }
 
-  window.HUD = window.HUD || {};
-  HUD.showHPBars = true;
-  HUD.tempEnemies = []; 
+    PORTRAITS.right.img = IMG_JUAN_FIGHT;
+    HPBARS.leftName  = 'DonRamon y Perchita';
+    HPBARS.rightName  = 'Juan';
+    HPBARS.alpha  = 0; 
+    HPBARS.show(100, 100);
+
+    const t0 = performance.now();
+    const dur = 400;
+    function step(t){
+      const k = Math.min(1, (t - t0) / dur);
+      HPBARS.alpha = k;
+      if (k < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+
+openDialog([{ speaker: '', text: 'No te da tiempo a atacar.' },{ speaker: '', text: 'Están tan volados que se autodestruyen a sí mismos.' }], true);
+
 }
+
 
 function _cine1_stopFakeFightUI(){
   if (typeof _cine2_stopFightUI === 'function'){
