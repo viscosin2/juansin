@@ -2866,50 +2866,115 @@ let musicLockOnly  = null;    // p.ej. 'town'
 function continueCine1_WithFumaos_Portraits(doneCb){
   if (!CUT.active || CUT.id!=='cine1') { if (typeof doneCb==='function') doneCb(); return; }
 
-  const fumaosScript = [
+  // 1) Guion en 3 bloques
+  const pre = [
     { speaker:'DonRamon y Perchita', text:'Hermano... ¿no ves mogollón de pitufitos volando por todas partes?' },
     { speaker:'DonRamon y Perchita', text:'Shh...' },
     { speaker:'Juan',  text:'¿Están bien?' },
     { speaker:'DonRamon y Perchita', text:'¿Pero quién es este payaso?' },
     { speaker:'DonRamon y Perchita', text:'¿Tú qué eres? ¿El sheriff del barrio?' },
     { speaker:'Juan', text:'Fuertes gilipollas...' },
-    { speaker:'DonRamon y Perchita', text:'¿A quién llamas tú gilipollas?' },
+    { speaker:'DonRamon y Perchita', text:'¿A quién llamas tú gilipollas?' }
   ];
 
+  const ko1 = [
+    { speaker:'DonRamon y Perchita', text:'Acércate que te vamos a dar una que vas a viajar en el tiempo.' },
+    { speaker:'', text:'No te da tiempo a realizar ningún ataque.' }
+  ];
+
+  const ko2 = [
+    { speaker:'', text:'Van tan volados que se han autoderrotado.' }
+  ];
+
+  // 2) Preparativos de escena
   fadeOutFogThenEnd();
-  portraitsOpen2(fumaosScript);
+  portraitsOpen2(pre);
 
+  let phase = 'pre';          // 'pre' -> 'ko1' -> 'ko1b' -> 'ko2' -> 'end'
+  let finished = false;
 
-  CUT.onEnd = ()=>{
+  const _prevHijack = CUT.hijackAction;
 
-    _cine1_startFakeFightUI();
+  // 5) Avance controlado
+  CUT.hijackAction = () => {
+    if (finished) return;
+    if (!dialogOpen) return;
+    if (isTyping){ advanceDialog(); return; }
 
-      const koScript_1 = [
-        { speaker:'DonRamon y Perchita', text:'Acércate que te vamos a dar una que vas a viajar en el tiempo.' },
-        { speaker:'', text:'No te da tiempo a realizar ningún ataque.' }
-      ];
-      portraitsAppendAndContinue(koScript_1);
+    const inlineAdvanceToNext = () => {
+      const next = PORTRAITS.script[PORTRAITS.idx + 1];
+      if (!next) return false;
+      PORTRAITS.idx++;
+      dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
+      dialogScript = [ next ]; dialogIndex = 0;
+      renderCurrentLine(true);
+      return true;
+    };
 
+    if (phase === 'pre'){
+      if (PORTRAITS.idx >= pre.length - 1){
+        _cine1_startFakeFightUI(); 
 
-      CUT.onEnd = ()=>{
+        portraitsAppendAndContinue(ko1);
+        PORTRAITS.idx++; 
+        dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
+        dialogScript = [ PORTRAITS.script[PORTRAITS.idx] ]; dialogIndex = 0;
+        renderCurrentLine(true);
 
-        HPBARS.setTargets(100, 0);  
+        phase = 'ko1';
+        return;
+      }
 
-          const koScript_2 = [
-            { speaker:'', text:'Van tan volados que se han autoderrotado.' }
-          ];
-          portraitsAppendAndContinue(koScript_2);
+      const next = PORTRAITS.script[PORTRAITS.idx+1];
+      const cur  = dialogScript[dialogIndex];
+      if (next && cur && next.speaker === cur.speaker){
+        inlineAdvanceToNext();
+      } else {
+        closeDialog();
+        _nextPortraitLine();
+      }
+      return;
+    }
 
-          // 5) Cierre UI, fin de cine, callback
-          CUT.onEnd = ()=>{
-            _cine1_stopFakeFightUI();
-            endCine();
-            if (typeof doneCb === 'function') doneCb();
-          };
+    if (phase === 'ko1'){
+      const next = PORTRAITS.script[PORTRAITS.idx + 1];
+      if (next && next.text === 'No te da tiempo a realizar ningún ataque.'){
+        inlineAdvanceToNext();     
+        phase = 'ko1b';     
+        return;
+      }
 
-      };
+      if (inlineAdvanceToNext()) return;
+    }
+
+    if (phase === 'ko1b'){
+      // Ahora bajan barras y añadimos ko2
+      HPBARS.setTargets(100, 0);
+      portraitsAppendAndContinue(ko2);
+
+      PORTRAITS.idx++; 
+      dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
+      dialogScript = [ PORTRAITS.script[PORTRAITS.idx] ]; dialogIndex = 0;
+      renderCurrentLine(true);
+
+      phase = 'ko2';
+      return;
+    }
+
+    if (phase === 'ko2'){
+      closeDialog();
+      _cine1_stopFakeFightUI(); 
+      endCine();
+      finished = true;
+      CUT.hijackAction = null;
+      if (typeof doneCb === 'function') doneCb();
+      return;
+    }
+
+    if (typeof _prevHijack === 'function') _prevHijack();
   };
 }
+
 
 function _cine1_startFakeFightUI(){
   HPBARS.leftName  = 'Drogadictos';
