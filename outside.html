@@ -982,7 +982,7 @@ const Music = (() => {
     _fadeReq = requestAnimationFrame(step);
   }
 
-  function play(name, { volume = 0.5, fadeMs = 0 } = {}) {
+  async function play(name, { volume = 0.5, fadeMs = 0 } = {}) {
     await AudioGate.ready();
     const next = elements[name];
     if (!next) return;
