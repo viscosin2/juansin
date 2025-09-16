@@ -894,8 +894,35 @@ const SFX = (() => {
     }
   }
 
-  return { play, playFile, stop };
+  function fadeIn(name, targetVol = 1, duration = 2000) {
+    const a = _lastByName.get(name);
+    if (!a) return;
+    a.volume = 0;
+    a.play().catch(()=>{});
+    const step = targetVol / (duration / 50);
+    const fade = setInterval(() => {
+      a.volume = Math.min(targetVol, a.volume + step);
+      if (a.volume >= targetVol) clearInterval(fade);
+    }, 50);
+  }
+
+  function fadeOut(name, duration = 2000) {
+    const a = _lastByName.get(name);
+    if (!a) return;
+    const step = a.volume / (duration / 50);
+    const fade = setInterval(() => {
+      a.volume = Math.max(0, a.volume - step);
+      if (a.volume <= 0) {
+        clearInterval(fade);
+        a.pause();
+        a.currentTime = 0;
+      }
+    }, 50);
+  }
+
+  return { play, playFile, stop, fadeIn, fadeOut };
 })();
+
 
 
 const Music = (() => {
@@ -2631,7 +2658,7 @@ function phaseFogFill(){
 
   fogUseWorld(anchorWorld); 
 
-  SFX.play("niebla", { volume: 0.08 });
+ 
   fogBeginFill({
     dur: 3000,
     areaW: 360,
@@ -2646,6 +2673,8 @@ function phaseFogFill(){
     CUT.phase = 'prePanDelay';
     setTimeout(()=>{
       if (CUT.active && CUT.id==='cine1'){ 
+         await SFX.play("niebla", { volume: 0 }); 
+         SFX.fadeIn("niebla", 0.01, 3000);
         phaseCameraPan();
       }
     }, 3700);
@@ -2747,7 +2776,7 @@ function spawnTempGandalfAhead(targetCamY){
   ];
   portraitsOpen(cineScript);
     CUT.onEnd = () => {
-  SFX.stop("niebla");
+    SFX.fadeOut("niebla", 2000);
   continueCine1_WithFumaos_Portraits();
 };
 }
