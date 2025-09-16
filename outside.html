@@ -1385,7 +1385,7 @@ CUT.hijackAction = () => {
   if (isTyping){ advanceDialog(); return; }
 
   const next = PORTRAITS.script[PORTRAITS.idx+1];
-  const cur  = dialogScript[dialogIndex]; // la línea actual mostrada
+  const cur  = dialogScript[dialogIndex]; 
 
   if (next && cur && next.speaker === cur.speaker){
     PORTRAITS.idx++;
@@ -1395,7 +1395,6 @@ CUT.hijackAction = () => {
     return;
   }
 
-  // 3) cambio de speaker -> flujo normal (cierra y anima)
   closeDialog();
   _nextPortraitLine();
 };
@@ -1474,7 +1473,6 @@ function _nextPortraitLine(){
     return;
   }
 
-  // Cambio de speaker -> animación normal
   PORTRAITS.stage = 'exiting';
   _startSlide(prevNode, prevNode.outX, ()=>{
     PORTRAITS.stage = 'entering';
@@ -2835,7 +2833,20 @@ function spawnTempGandalfAhead(targetCamY){
 }
 
 function portraitsAppendAndContinue(extra){
-  if (!PORTRAITS.active || !Array.isArray(extra) || !extra.length) return;
+  if (!Array.isArray(extra) || !extra.length) return;
+
+  if (!PORTRAITS.active){
+    PORTRAITS.active = true;
+    PORTRAITS.script = extra.slice();
+    PORTRAITS.idx = 0;
+    PORTRAITS.stage = 'speaking';
+    if (PORTRAITS.left)  PORTRAITS.left.x  = PORTRAITS.left.inX;
+    if (PORTRAITS.right) PORTRAITS.right.x = PORTRAITS.right.inX;
+    openDialog([ PORTRAITS.script[0] ], true);
+    CUT.hijackAction = _defaultPortraitAdvance;
+    return;
+  }
+
   PORTRAITS.script.push(...extra);
   if (!dialogOpen){
     const next = PORTRAITS.script[PORTRAITS.idx+1];
@@ -2847,6 +2858,8 @@ function portraitsAppendAndContinue(extra){
   }
   CUT.hijackAction && CUT.hijackAction();
 }
+
+  
 let musicLockUntil = 0;       // timestamp ms
 let musicLockOnly  = null;    // p.ej. 'town'
   
@@ -2885,7 +2898,7 @@ function continueCine1_WithFumaos_Portraits(doneCb){
           const koScript_2 = [
             { speaker:'', text:'Van tan volados que se han autoderrotado.' }
           ];
-          portraitsAppendAndContinue(koScript_1);
+          portraitsAppendAndContinue(koScript_2);
 
           // 5) Cierre UI, fin de cine, callback
           CUT.onEnd = ()=>{
