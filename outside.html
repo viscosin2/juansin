@@ -2861,7 +2861,7 @@ function _cine1_stopFakeFightUI(){
 
 function fadeOutFogThenEnd(){
   CUT.phase='fadeFog';
-  let t0 = performance.now(), dur=800;
+  let t0 = performance.now(), dur=3000;
   function tick(){
     if (!CUT.active || CUT.id!=='cine1') return;
     const k = Math.min(1, (performance.now()-t0)/dur);
