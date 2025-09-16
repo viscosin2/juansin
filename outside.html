@@ -187,6 +187,8 @@ const AudioGate = (() => {
     unlocked = true;
     primeAll();
   }
+
+  window.__lockToTown = true;
   
 function primeAll(){
   if (primed || primingPromise) return primingPromise || Promise.resolve();
@@ -195,8 +197,9 @@ function primeAll(){
     if (!a) return;
     const prevMuted=a.muted, prevLoop=a.loop;
     a.muted=true; a.loop=false;
+    a.volume = 0;
     const p=a.play();
-    const stop=()=>{ try{ a.pause(); a.currentTime=0; }catch(_){} a.muted=prevMuted; a.loop=prevLoop; };
+    const stop=()=>{ try{ a.pause(); a.currentTime=0; }catch(_){} a.muted=prevMuted; a.loop=prevLoop; a.volume = 0; };
     return p && p.then ? p.then(stop).catch(stop) : stop();
   })).then(()=>{ primed=true; });
   return primingPromise;
@@ -970,6 +973,9 @@ const Music = (() => {
 
   async function play(name, { volume = 0.5, fadeMs = 0 } = {}) {
     await AudioGate.ready();
+     if (window.__lockToTown && name !== 'town') {
+    name = 'town';
+  }
     const next = elements[name];
     if (!next) return;
 
@@ -1034,7 +1040,11 @@ document.getElementById('btn-act').addEventListener('touchstart', e=>{
 
   if (!window._audioUnlocked) {
     window._audioUnlocked = true;
-    const p1 = townMusic.play();    if (p1 && p1.then) p1.then(()=>townMusic.pause()).catch(()=>{});
+    if (!window._audioUnlocked) {
+  window._audioUnlocked = true;
+  Music.play('town', { volume: 0.5, fadeMs: 0 });
+}
+
   }
 
   if (CUT.active && typeof CUT.hijackAction === 'function'){
@@ -1050,6 +1060,7 @@ if (dialogOpen){
   advanceDialog(); 
 
   if (willFinishNow && wasIntro) {
+    window.__lockToTown = false;
     Music.play('town', { volume: 0.5, fadeMs: 400 });
   }
   return;
