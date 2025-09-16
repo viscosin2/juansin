@@ -851,9 +851,9 @@ function stopTownMusic(){
 /* ========= MINI AUDIO MANAGER ========= */
 const SFX = (() => {
   const _cache = new Map();
+  const _lastByName = new Map();
 
   function _get(path) {
-    // Clonamos para evitar solapar .currentTime/volume entre instancias
     if (!_cache.has(path)) _cache.set(path, new Audio(path));
     const base = _cache.get(path);
     const a = base.cloneNode(true);
@@ -862,7 +862,6 @@ const SFX = (() => {
     return a;
   }
 
-  // Reproducir un sonido por nombre: SFX.play('miau') -> assets/sounds/miau.mp3
   async function play(name, { volume = 1, start = 0, duration = null, folder = 'assets/sounds' } = {}) {
     const a = _get(`${folder}/${name}.mp3`);
     a.volume = volume;
@@ -878,17 +877,26 @@ const SFX = (() => {
     if (a.readyState >= 2) startWhenReady();
     else a.addEventListener('loadedmetadata', startWhenReady, { once:true });
 
+    _lastByName.set(name, a);
     return a;
   }
 
-  // Reproducir un archivo arbitrario (ruta completa)
   function playFile(path, opts={}) {
     const name = path.replace(/^.*[\\/]/, '').replace(/\.\w+$/, '');
     return play(name, { ...opts, folder: path.replace(/\/[^/]+$/, '') });
   }
 
-  return { play, playFile };
+  function stop(name) {
+    const a = _lastByName.get(name);
+    if (a) {
+      a.pause();
+      a.currentTime = 0;
+    }
+  }
+
+  return { play, playFile, stop };
 })();
+
 
 const Music = (() => {
   const elements = {
@@ -1848,7 +1856,6 @@ function spawnGandalfWhiteAtPlayer(){
   BUSH_SCENE.yStart = yStart;
   BUSH_SCENE.yEnd = yEnd;
 
-  // Nube de niebla
   fogUseWorld({ x, y: yStart });
   fogStart();
   FOG.color = '255,255,255';
@@ -2739,7 +2746,10 @@ function spawnTempGandalfAhead(targetCamY){
     { speaker:'Gandalf',    text:'Te estaré observando de cerca. Tal vez hoy la suerte nos mire… o tal vez no.' }
   ];
   portraitsOpen(cineScript);
-    CUT.onEnd = ()=>{ nieblaAudio.pause(); nieblaAudio.currentTime = 0; continueCine1_WithFumaos_Portraits(); };
+    CUT.onEnd = () => {
+  SFX.stop("niebla");
+  continueCine1_WithFumaos_Portraits();
+};
 }
 
 function continueCine1_WithFumaos_Portraits(doneCb){
@@ -4168,17 +4178,17 @@ setTimeout(()=>{
 
 
  try {
-    const fadeMs =
-      (newZone && typeof newZone.musicFadeMs === 'number' && newZone.musicFadeMs >= 0)
-        ? newZone.musicFadeMs
-        : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 650);
+const fadeMs =
+  (newZone && typeof newZone.musicFadeMs === 'number' && newZone.musicFadeMs >= 0)
+    ? newZone.musicFadeMs
+    : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 650);
 
-    if (newZone && newZone.music && window.MUSIC && typeof MUSIC.fadeTo === 'function') {
-      MUSIC.fadeTo(newZone.music, fadeMs);
-    } else if (!newZone && window.MUSIC && typeof MUSIC.fadeTo === 'function') {
-      // si sales a “neutral/peach”, pon música por defecto si quieres
-      if (MUSIC.tracks && MUSIC.tracks['town']) MUSIC.fadeTo('town', fadeMs);
-    }
+if (newZone && newZone.music) {
+  Music.play(newZone.music, { fadeMs: fadeMs });
+} else {
+  Music.play('town', { fadeMs: fadeMs });
+}
+
   } catch (e) { console.warn('Music fade error:', e); }
 
     _ambientCurrentZone = newZone;
