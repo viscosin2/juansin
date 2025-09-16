@@ -1338,15 +1338,12 @@ CUT.hijackAction = () => {
   if (!PORTRAITS.active) return;
   if (!dialogOpen) return;
 
-  // 1) si está escribiendo, completar
   if (isTyping){ advanceDialog(); return; }
 
-  // 2) ¿hay siguiente línea?
   const next = PORTRAITS.script[PORTRAITS.idx+1];
   const cur  = dialogScript[dialogIndex]; // la línea actual mostrada
 
   if (next && cur && next.speaker === cur.speaker){
-    // MISMO SPEAKER -> NO cerrar ni animar retratos, solo cambiar texto
     PORTRAITS.idx++;
     dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
     dialogScript = [ next ]; dialogIndex = 0;
@@ -1360,6 +1357,7 @@ CUT.hijackAction = () => {
 };
 
 }
+
 
   function portraitsOpen2(script){
   PORTRAITS.active = true;
@@ -2816,7 +2814,7 @@ function continueCine1_WithFumaos_Portraits(doneCb){
       { speaker:'', text:'Van tan volados que se han autoderrotado.' }
     ];
 
-    portraitsOpen(koScript);
+    portraitsOpen2(koScript);
 
     CUT.onEnd = ()=>{
       _cine1_stopFakeFightUI();
@@ -2828,7 +2826,6 @@ function continueCine1_WithFumaos_Portraits(doneCb){
 
 function _cine1_startFakeFightUI(){
 
-    PORTRAITS.right.img = IMG_JUAN_FIGHT;
     HPBARS.leftName  = 'Drogadictos';
     HPBARS.rightName  = 'Juan';
     HPBARS.alpha  = 0; 
