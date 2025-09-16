@@ -2632,6 +2632,7 @@ function phaseFogFill(){
 
   fogUseWorld(anchorWorld); 
 
+  SFX.play("niebla", { volume: 0.3 });
   fogBeginFill({
     dur: 3000,
     areaW: 360,
@@ -2746,7 +2747,7 @@ function spawnTempGandalfAhead(targetCamY){
     { speaker:'Gandalf',    text:'Te estaré observando de cerca. Tal vez hoy la suerte nos mire… o tal vez no.' }
   ];
   portraitsOpen(cineScript);
-    CUT.onEnd = ()=>{ continueCine1_WithFumaos_Portraits(); };
+    CUT.onEnd = ()=>{ nieblaAudio.pause(); nieblaAudio.currentTime = 0; continueCine1_WithFumaos_Portraits(); };
 }
 
   // ====== Fumaos solo con PORTRAITS (sin spawns en el mundo) ======
@@ -2763,7 +2764,6 @@ function continueCine1_WithFumaos_Portraits(doneCb){
   fadeOutFogThenEnd();
   portraitsOpen2(fumaosScript);
   
-  // al terminar esta tanda de portraits…
   CUT.onEnd = ()=>{
     // 2) “modo combate”: intenta usar tu UI real; si no existe, activa un fallback simple
     _cine1_startFakeFightUI(); // no pasa enemigos: no hay NPCs en mundo
