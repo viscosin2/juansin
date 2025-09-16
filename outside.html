@@ -2674,7 +2674,7 @@ function phaseFogFill(){
   fogUseWorld(anchorWorld); 
 
   if (Music.current) {
-  Music.current.volume = 0.25;
+  Music.current.volume = 0.1;
 }
   
   SFX.play("niebla", { volume: 0.35 });
@@ -2793,7 +2793,7 @@ function spawnTempGandalfAhead(targetCamY){
   ];
   portraitsOpen(cineScript);
     CUT.onEnd = () => {
-  SFX.fadeOut("niebla", 400); // 
+  SFX.fadeOut("niebla", 1000);  
   continueCine1_WithFumaos_Portraits();
 };
 }
@@ -2813,7 +2813,8 @@ function continueCine1_WithFumaos_Portraits(doneCb){
   CUT.onEnd = ()=>{
     _cine1_startFakeFightUI(); 
     const koScript = [
-      { speaker:'Narrador', text:'Los Fumaos se han AUTODERROTADO de lo fumaos que estaban.' }
+      { speaker:'', text:'No te da tiempo realizar ningún ataque.' },
+      { speaker:'', text:'Estaban tan volados que se han autoderrotado.' }
     ];
     portraitsOpen(koScript);
 
@@ -2828,7 +2829,7 @@ function continueCine1_WithFumaos_Portraits(doneCb){
 function _cine1_startFakeFightUI(){
 
     PORTRAITS.right.img = IMG_JUAN_FIGHT;
-    HPBARS.leftName  = 'DonRamon y Perchita';
+    HPBARS.leftName  = 'Drogadictos';
     HPBARS.rightName  = 'Juan';
     HPBARS.alpha  = 0; 
     HPBARS.show(100, 100);
@@ -2841,9 +2842,6 @@ function _cine1_startFakeFightUI(){
       if (k < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
-
-openDialog([{ speaker: '', text: 'No te da tiempo a atacar.' },{ speaker: '', text: 'Están tan volados que se autodestruyen a sí mismos.' }], true);
-
 }
 
 
