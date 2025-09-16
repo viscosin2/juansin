@@ -972,13 +972,11 @@ function advanceDialog(){
 document.getElementById('btn-act').addEventListener('touchstart', e=>{
   e.preventDefault();
 
-  // --- Desbloqueo de audio en la primera pulsación ---
   if (!window._audioUnlocked) {
     window._audioUnlocked = true;
     const p1 = townMusic.play();    if (p1 && p1.then) p1.then(()=>townMusic.pause()).catch(()=>{});
   }
 
-  // Si una cinemática ha secuestrado la acción
   if (CUT.active && typeof CUT.hijackAction === 'function'){
     CUT.hijackAction();
     return;
@@ -1000,11 +998,8 @@ if (dialogOpen){
   return;
 }
 
-
-  // si el sistema de interacciones está bloqueado (p. ej. al inicio), no hagas nada
   if (interactBlocked) return;
 
-  // --- Handler de interacción con NPC (tu lógica tal cual) ---
   const npcHit = getNPCInteractHit();
   if (npcHit){
     const npc = NPCS.find(n => n.id === npcHit.npcRefId) || null;
@@ -1922,16 +1917,13 @@ function updateBushScene(dt){
   const k = _ease(BUSH_SCENE.t);
   BUSH_SCENE.gandalf.y = BUSH_SCENE.yStart + (BUSH_SCENE.yEnd - BUSH_SCENE.yStart)*k;
 
-  // La nube de niebla sigue al Gandalf que baja
   if (FOG.space === 'world' && FOG.anchorWorld){
     FOG.anchorWorld = { x: BUSH_SCENE.gandalf.x, y: BUSH_SCENE.gandalf.y };
   }
 
   if (BUSH_SCENE.t >= 1){
-    // Detén el “llenado” (deja niebla suave persistente)
     FOG.filling = false;
     BUSH_SCENE.active = false;
-// lanza el callback de "he aterrizado"
 if (typeof BUSH_SCENE._onLanded === 'function'){
   const fn = BUSH_SCENE._onLanded; BUSH_SCENE._onLanded = null;
   fn();
@@ -2461,8 +2453,8 @@ function fadeOutFogAndGandalf(done){
 
   function tick(){
     const k = Math.min(1, (performance.now()-t0)/dur);
-    FOG.tFill = (1 - k) * FOG.tFill; // “apaga” la niebla
-    if (npc) npc._fadeAlpha = 1 - k; // desvanece Gandalf
+    FOG.tFill = (1 - k) * FOG.tFill; 
+    if (npc) npc._fadeAlpha = 1 - k; 
 
     if (k < 1){
       requestAnimationFrame(tick);
@@ -2599,7 +2591,7 @@ function startCinematic1(){
   }, 1000);
   
 
-  // Acción → cerrar y pasar a F2 (niebla)
+
   CUT.hijackAction = ()=>{
     closeCurrentDialogNow();
     CUT.hijackAction = null;
@@ -2632,7 +2624,7 @@ function phaseFogFill(){
 
   fogUseWorld(anchorWorld); 
 
-  SFX.play("niebla", { volume: 0.3 });
+  SFX.play("niebla", { volume: 0.08 });
   fogBeginFill({
     dur: 3000,
     areaW: 360,
@@ -2750,11 +2742,9 @@ function spawnTempGandalfAhead(targetCamY){
     CUT.onEnd = ()=>{ nieblaAudio.pause(); nieblaAudio.currentTime = 0; continueCine1_WithFumaos_Portraits(); };
 }
 
-  // ====== Fumaos solo con PORTRAITS (sin spawns en el mundo) ======
 function continueCine1_WithFumaos_Portraits(doneCb){
   if (!CUT.active || CUT.id!=='cine1') { if (typeof doneCb==='function') doneCb(); return; }
 
-  // 1) conversación breve con portraits
   const fumaosScript = [
     { speaker:'DonRamon y Perchita', text:'Hermano... ¿tú también lo ves brillando o soy yo?' },
     { speaker:'DonRamon y Perchita', text:'Shh... el brillo te mira de vuelta.' },
@@ -2765,16 +2755,12 @@ function continueCine1_WithFumaos_Portraits(doneCb){
   portraitsOpen2(fumaosScript);
   
   CUT.onEnd = ()=>{
-    // 2) “modo combate”: intenta usar tu UI real; si no existe, activa un fallback simple
-    _cine1_startFakeFightUI(); // no pasa enemigos: no hay NPCs en mundo
-
-    // 3) mensaje de autoderrrota (portraits también)
+    _cine1_startFakeFightUI(); 
     const koScript = [
       { speaker:'Narrador', text:'Los Fumaos se han AUTODERROTADO de lo fumaos que estaban.' }
     ];
     portraitsOpen(koScript);
 
-    // al cerrar el mensaje KO…
     CUT.onEnd = ()=>{
       _cine1_stopFakeFightUI();
       endCine();
@@ -2783,7 +2769,6 @@ function continueCine1_WithFumaos_Portraits(doneCb){
   };
 }
 
-// ====== UI combate: intenta reutilizar la tuya; si no, fallback ======
 function _cine1_startFakeFightUI(){
   if (typeof _cine2_startFightUI === 'function'){
     try { _cine2_startFightUI({ enemies: [] }); return; } catch(e){}
@@ -2832,6 +2817,7 @@ function fadeOutFogThenEnd(){
   requestAnimationFrame(tick);
 }
 function endCine(){
+  HPBARS.hide();
   CUT.active=false; CUT.id=null; CUT.phase=null; CUT.hijackAction=null; CUT.onEnd=null;
   ambientLock=false;
 }
@@ -3423,7 +3409,6 @@ function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepP
 }
 
 
-// ——— reemplazo completo ———
 async function startCinematic3(){
   CUT.active = true; CUT.id='cine3'; CUT.phase='start';
   ambientLock = true; player.moving = false;
@@ -3582,20 +3567,15 @@ function cine3_hitReaction(node){
 }
 
 function cine3_openNarrator(){
-// 3) Acción ahora avanza bien las dos líneas y, al final, cierra y dispara el fin de la cine
 CUT.hijackAction = ()=> {
   if (!dialogOpen) return;
 
-  // A) si está escribiendo, completar
   if (isTyping){ advanceDialog(); return; }
 
-  // B) si NO estamos aún en la última línea (i.e., estamos en "Estás muy debilitado.")
   if (dialogIndex < dialogScript.length - 1){
     advanceDialog();  // -> muestra "¡Rápido! Escóndete en algún sitio."
     return;
   }
-
-  // C) ya estamos en la última -> cerrar y continuar
   closeDialog();
   CUT.hijackAction = null;
 
