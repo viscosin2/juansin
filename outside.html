@@ -2802,44 +2802,62 @@ function continueCine1_WithFumaos_Portraits(doneCb){
     { speaker:'Juan', text:'Fuertes gilipollas...' },
     { speaker:'DonRamon y Perchita', text:'¿A quién llamas tú gilipollas?' },
   ];
+
   fadeOutFogThenEnd();
   portraitsOpen2(fumaosScript);
 
-  
+
   CUT.onEnd = ()=>{
-    _cine1_startFakeFightUI(); 
-    const koScript = [
-      { speaker:'DonRamon y Perchita', text:'Acércate que te vamos a dar una que vas a viajar en el tiempo.' },
-      { speaker:'', text:'No te da tiempo a realizar ningún ataque.' },
-      { speaker:'', text:'Van tan volados que se han autoderrotado.' }
-    ];
 
-    portraitsOpen2(koScript);
+    _cine1_startFakeFightUI();
 
-    CUT.onEnd = ()=>{
-      _cine1_stopFakeFightUI();
-      endCine();
-      if (typeof doneCb === 'function') doneCb();
-    };
+
+    setTimeout(()=>{
+
+      const koScript_1 = [
+        { speaker:'DonRamon y Perchita', text:'Acércate que te vamos a dar una que vas a viajar en el tiempo.' },
+        { speaker:'', text:'No te da tiempo a realizar ningún ataque.' }
+      ];
+      portraitsOpen2(koScript_1);
+
+
+      CUT.onEnd = ()=>{
+
+        HPBARS.setTargets(100, 0);  
+        setTimeout(()=>{
+          const koScript_2 = [
+            { speaker:'', text:'Van tan volados que se han autoderrotado.' }
+          ];
+          portraitsOpen2(koScript_2);
+
+          // 5) Cierre UI, fin de cine, callback
+          CUT.onEnd = ()=>{
+            _cine1_stopFakeFightUI();
+            endCine();
+            if (typeof doneCb === 'function') doneCb();
+          };
+        }, 200); 
+      };
+    }, 420); 
   };
 }
 
 function _cine1_startFakeFightUI(){
+  HPBARS.leftName  = 'Drogadictos';
+  HPBARS.rightName = 'Juan';
+  HPBARS.alpha = 0;
+  HPBARS.show(100, 100);
 
-    HPBARS.leftName  = 'Drogadictos';
-    HPBARS.rightName  = 'Juan';
-    HPBARS.alpha  = 0; 
-    HPBARS.show(100, 100);
-
-    const t0 = performance.now();
-    const dur = 400;
-    function step(t){
-      const k = Math.min(1, (t - t0) / dur);
-      HPBARS.alpha = k;
-      if (k < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
+  const t0 = performance.now();
+  const dur = 400;
+  function step(t){
+    const k = Math.min(1, (t - t0) / dur);
+    HPBARS.alpha = k;
+    if (k < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
+
 
 
 function _cine1_stopFakeFightUI(){
