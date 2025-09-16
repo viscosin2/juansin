@@ -173,15 +173,41 @@ const combatMusic = document.getElementById('bgCombat');
 townMusic.volume = 0.5;
 combatMusic.volume = 0.5;
 
-// Fallback por si algún navegador ignora loop
 townMusic.addEventListener('ended',  () => { townMusic.currentTime = 0; townMusic.play().catch(()=>{}); });
 combatMusic.addEventListener('ended',() => { combatMusic.currentTime = 0; combatMusic.play().catch(()=>{}); });
 
-// Log útil si la ruta está mal
-townMusic.addEventListener('error',  () => console.warn('No carga ambientepueblo.mp3'));
-combatMusic.addEventListener('error',() => console.warn('No carga combate.mp3'));
+/* ====== AUDIO GATE GLOBAL ====== */
+const AudioGate = (() => {
+  let unlocked = false, primed = false, primingPromise = null;
+  const ids = ['bgTown','bgBluehour','bgCombat'];
+  const getAll = ()=> ids.map(id=>document.getElementById(id)).filter(Boolean);
 
-  
+  function unlock(){
+    if (unlocked) return;
+    unlocked = true;
+    primeAll();
+  }
+  function primeAll(){
+    if (primed || primingPromise) return primingPromise || Promise.resolve();
+    const audios = getAll();
+    primingPromise = Promise.all(audios.map(a=>{
+      if (!a) return;
+      const prevMuted=a.muted; a.muted=true;
+      const p=a.play();
+      if(p&&p.then){
+        return p.then(()=>{a.pause();a.currentTime=0;a.muted=prevMuted;})
+                 .catch(()=>{a.muted=prevMuted;});
+      } else {
+        try{a.pause();a.currentTime=0;}catch(e){}
+        a.muted=prevMuted;
+      }
+    })).then(()=>{primed=true;});
+    return primingPromise;
+  }
+  async function ready(){ if(!unlocked) unlock(); await primeAll(); }
+  return {unlock,ready};
+})();
+
 
 
 // ******************************* SMOKE SUPER
@@ -601,6 +627,8 @@ const OBSTACLE_DEFS = [
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
 
+  window.addEventListener('touchstart', ()=>AudioGate.unlock(), {once:true, passive:true});
+
 let bgImg=null, sprites=null, world={w:0,h:0};
 let PROP_IMAGES={}, PROPS=[], OBSTACLES=[];
 let cam={x:0,y:0,w:ROOM.w/ZOOM|0,h:ROOM.h/ZOOM|0};
@@ -611,12 +639,13 @@ const player={x:0,y:0,dir:'down',speed:150,moving:false,frame:0,frameTime:0};
 /* ========== INPUT (SOLO D-PAD EN PANTALLA) ========== */
 const keys={up:false,down:false,left:false,right:false};
 function bindHold(btn,on,off){
-  const start=e=>{e.preventDefault();on();};
-  const end=e=>{e.preventDefault();off();};
+  const start=e=>{ e.preventDefault(); AudioGate.unlock(); on(); };
+  const end=e=>{ e.preventDefault(); off(); };
   btn.addEventListener('touchstart',start,{passive:false});
   btn.addEventListener('touchend',end,{passive:false});
   btn.addEventListener('touchcancel',end,{passive:false});
 }
+
 
 bindHold(document.getElementById('btn-up'), 
   ()=>{ 
@@ -954,6 +983,7 @@ const Music = (() => {
   }
 
   function play(name, { volume = 0.5, fadeMs = 0 } = {}) {
+    await AudioGate.ready();
     const next = elements[name];
     if (!next) return;
     const prev = current && current !== next ? current : null;
@@ -1017,10 +1047,7 @@ if (dialogOpen){
   advanceDialog(); 
 
   if (willFinishNow && wasIntro) {
-    combatMusic.pause(); 
-    combatMusic.currentTime = 0;
-    const p = townMusic.play(); 
-    if (p && p.catch) p.catch(()=>{});
+    Music.play('town', { volume: 0.5, fadeMs: 400 });
   }
   return;
 }
@@ -2612,7 +2639,6 @@ function startCinematic1(){
   CUT.active = true; CUT.id='cine1'; CUT.phase='lock';
   ambientLock = true; player.moving=false;
 
-  // F1: bloquea y muestra "¿Qué pasa?"
   setTimeout(() => {
     openDialog([{speaker:'Juan', text:'...'},{speaker:'Juan', text:'Algo pasa...'}], true);
   }, 1000);
@@ -4700,6 +4726,7 @@ if (DEBUG_CINE && CINE_BUILT.length){
 /* ========== LOOP / MEGAINIT ========== */
 function loop(t){ if(!loop.last) loop.last=t; const dt=Math.min(1/60,(t-loop.last)/1000); loop.last=t; _nowSec = t / 1000;  update(dt); draw(); requestAnimationFrame(loop); }
 
+  
 async function init(){
   const [bg,spr] = await Promise.all([loadImage(BG_SRC), preloadSprites(JUAN)]);
   bgImg=bg; sprites=spr;
