@@ -2802,21 +2802,32 @@ function continueCine1_WithFumaos_Portraits(doneCb){
   if (!CUT.active || CUT.id!=='cine1') { if (typeof doneCb==='function') doneCb(); return; }
 
   const fumaosScript = [
-    { speaker:'DonRamon y Perchita', text:'Hermano... ¿tú también lo ves brillando o soy yo?' },
-    { speaker:'DonRamon y Perchita', text:'Shh... el brillo te mira de vuelta.' },
-    { speaker:'Juan',    text:'Muchachos, ¿están bien?' },
-    { speaker:'DonRamon y Perchita', text:'Estamos... elevadísimos.' }
+    { speaker:'DonRamon y Perchita', text:'Hermano... ¿no ves mogollón de pitufitos volando por todas partes?' },
+    { speaker:'DonRamon y Perchita', text:'Shh...' },
+    { speaker:'Juan',  text:'¿Están bien?' },
+    { speaker:'DonRamon y Perchita', text:'¿Pero quién es este payaso?' },
+    { speaker:'DonRamon y Perchita', text:'¿Tú qué eres? ¿El sheriff del barrio?' },
+    { speaker:'Juan', text:'Fuertes gilipollas...' },
+    { speaker:'DonRamon y Perchita', text:'¿A quién llamas tú gilipollas?' },
+    { speaker:'DonRamon y Perchita', text:'Acércate que te vamos a dar una que vas a viajar en el tiempo.' },
   ];
   fadeOutFogThenEnd();
-  portraitsOpen2(fumaosScript);
+  setTimeout(() => {
+    portraitsOpen2(fumaosScript);
+  }, 1000);
+  
   
   CUT.onEnd = ()=>{
     _cine1_startFakeFightUI(); 
     const koScript = [
       { speaker:'', text:'No te da tiempo realizar ningún ataque.' },
-      { speaker:'', text:'Estaban tan volados que se han autoderrotado.' }
+      { speaker:'', text:'Van tan volados que se han autoderrotado.' }
     ];
+
+      setTimeout(() => {
     portraitsOpen(koScript);
+  }, 1000);
+    
 
     CUT.onEnd = ()=>{
       _cine1_stopFakeFightUI();
