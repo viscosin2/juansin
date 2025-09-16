@@ -2821,7 +2821,7 @@ function continueCine1_WithFumaos_Portraits(doneCb){
       CUT.onEnd = ()=>{
 
         HPBARS.setTargets(100, 0);  
-        setTimeout(()=>{
+
           const koScript_2 = [
             { speaker:'', text:'Van tan volados que se han autoderrotado.' }
           ];
@@ -2833,7 +2833,7 @@ function continueCine1_WithFumaos_Portraits(doneCb){
             endCine();
             if (typeof doneCb === 'function') doneCb();
           };
-        }, 200); 
+
       };
   };
 }
