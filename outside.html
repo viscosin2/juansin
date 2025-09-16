@@ -2843,11 +2843,11 @@ function portraitsAppendAndContinue(extra){
     if (PORTRAITS.left)  PORTRAITS.left.x  = PORTRAITS.left.inX;
     if (PORTRAITS.right) PORTRAITS.right.x = PORTRAITS.right.inX;
     openDialog([ PORTRAITS.script[0] ], true);
-    CUT.hijackAction = _defaultPortraitAdvance;
     return;
   }
 
   PORTRAITS.script.push(...extra);
+
   if (!dialogOpen){
     const next = PORTRAITS.script[PORTRAITS.idx+1];
     if (next){
@@ -2856,17 +2856,15 @@ function portraitsAppendAndContinue(extra){
     }
     return;
   }
-  CUT.hijackAction && CUT.hijackAction();
 }
 
   
-let musicLockUntil = 0;       // timestamp ms
-let musicLockOnly  = null;    // p.ej. 'town'
+let musicLockUntil = 0;
+let musicLockOnly  = null;
   
 function continueCine1_WithFumaos_Portraits(doneCb){
   if (!CUT.active || CUT.id!=='cine1') { if (typeof doneCb==='function') doneCb(); return; }
 
-  // --- Bloques de diálogo ---
   const pre = [
     { speaker:'DonRamon y Perchita', text:'Hermano... ¿no ves mogollón de pitufitos volando por todas partes?' },
     { speaker:'DonRamon y Perchita', text:'Shh...' },
@@ -2886,15 +2884,13 @@ function continueCine1_WithFumaos_Portraits(doneCb){
     { speaker:'', text:'Van tan volados que se han autoderrotado.' }
   ];
 
-  // --- Preparativos escena ---
+  // Escena y portraits iniciales
   fadeOutFogThenEnd();
   portraitsOpen2(pre);
 
-  // --- Estado local de esta cine ---
-  let phase = 'pre';      // 'pre' -> 'ko1' -> 'ko1b' -> 'ko2' -> 'end'
+  let phase = 'pre';
   let finished = false;
 
-  // helper: avanzar inline (sin cerrar retratos)
   function inlineAdvanceToNext(){
     const next = PORTRAITS.script[PORTRAITS.idx + 1];
     if (!next) return false;
@@ -2913,36 +2909,41 @@ function continueCine1_WithFumaos_Portraits(doneCb){
     if (isTyping){ advanceDialog(); return; }
 
     if (phase === 'pre'){
-      // ¿estamos mostrando la ÚLTIMA línea del pre?
+      // ¿estamos ahora en la ÚLTIMA línea del pre?
       if (PORTRAITS.idx === pre.length - 1){
-        // 1) añadimos ko1 al script
+        // añade ko1 y muestra "Acércate…"
         portraitsAppendAndContinue(ko1);
 
-        // 2) avanzamos inline a la PRIMERA línea de ko1 ("Acércate…")
-        PORTRAITS.idx++;
+        PORTRAITS.idx++; // primera de ko1
         dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
         dialogScript = [ PORTRAITS.script[PORTRAITS.idx] ]; dialogIndex = 0;
         renderCurrentLine(true);
 
-        // 3) AHORA arrancamos combate (mientras se está diciendo “Acércate…”)
-        //    limpiamos cualquier lock a 'town' por si quedara vivo:
+        // ahora sí: arranca combate mientras se dice "Acércate…"
         try { musicLockOnly = null; musicLockUntil = 0; } catch(_) {}
-        _cine1_startFakeFightUI(); // dentro hace Music.play('combat', {fadeMs: ...})
+        _cine1_startFakeFightUI();
 
         phase = 'ko1';
         return;
       }
 
-      // Aún dentro de pre: avanza inline siempre para evitar animaciones/cierres aquí
-      if (inlineAdvanceToNext()) return;
+      // dentro del pre: si cambia de speaker, usa el flujo normal para que cambien los retratos
+      const next = PORTRAITS.script[PORTRAITS.idx+1];
+      const cur  = dialogScript[dialogIndex];
+      if (next && cur && next.speaker === cur.speaker){
+        inlineAdvanceToNext(); // mismo speaker → inline
+      } else {
+        closeDialog();         // cambio de speaker → animación normal de portraits
+        _nextPortraitLine();
+      }
       return;
     }
 
     if (phase === 'ko1'){
-      // siguiente debe ser "No te da tiempo..."
+      // siguiente debe ser "No te da tiempo…"
       const next = PORTRAITS.script[PORTRAITS.idx + 1];
       if (next && next.text === 'No te da tiempo a realizar ningún ataque.'){
-        inlineAdvanceToNext();    // mostramos “No te da tiempo…”
+        inlineAdvanceToNext();
         phase = 'ko1b';
         return;
       }
@@ -2951,11 +2952,11 @@ function continueCine1_WithFumaos_Portraits(doneCb){
     }
 
     if (phase === 'ko1b'){
-      // ahora bajan barras y añadimos ko2, y lo mostramos
+      // bajar barras y añadir ko2
       HPBARS.setTargets(100, 0);
       portraitsAppendAndContinue(ko2);
 
-      PORTRAITS.idx++;
+      PORTRAITS.idx++; // única de ko2
       dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
       dialogScript = [ PORTRAITS.script[PORTRAITS.idx] ]; dialogIndex = 0;
       renderCurrentLine(true);
@@ -2965,9 +2966,8 @@ function continueCine1_WithFumaos_Portraits(doneCb){
     }
 
     if (phase === 'ko2'){
-      // fin de cine
       closeDialog();
-      _cine1_stopFakeFightUI();   // aquí dentro vuelve a 'town' con fade
+      _cine1_stopFakeFightUI(); // aquí dentro Music.play('town', {fadeMs:...})
       endCine();
       finished = true;
       CUT.hijackAction = null;
@@ -2975,7 +2975,6 @@ function continueCine1_WithFumaos_Portraits(doneCb){
       return;
     }
 
-    // Fallback improbable
     if (typeof _prevHijack === 'function') _prevHijack();
   };
 }
