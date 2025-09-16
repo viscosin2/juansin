@@ -436,7 +436,7 @@ const AMBIENT_ZONES = [
   {
     name:'Bluehour zone', palette:'bluehour',
     music: 'bluehour',
-    // musicFadeMs: 900,          // ← opcional: fuerza duración (si no, usa AMBIENT.fadeMs)
+    musicFadeMs: 900,
     dialogOnEnter:[
       { speaker:'Juan', text:'...' },
       { speaker:'Juan', text:'Tengo un mal presentimiento...' },
@@ -944,25 +944,21 @@ const Music = (() => {
     bluehour: document.getElementById('bgBluehour'),
     combat: document.getElementById('bgCombat')
   };
-  let current = null, _fadeReq = null;
+  let current = null, currentName = null, _fadeReq = null;
 
-  Object.values(elements).forEach(el => {
-    if (!el) return;
-    el.loop = true;
-  });
+  Object.values(elements).forEach(el => el && (el.loop = true));
 
   function _fade(fromEl, toEl, ms = 0, targetVol = 0.5) {
     if (_fadeReq) cancelAnimationFrame(_fadeReq);
     const t0 = performance.now();
     const fromStart = fromEl ? fromEl.volume : 0;
-    const toStart = toEl ? toEl.volume : 0;
-    toEl && (toEl.volume = toStart, toEl.play().catch(()=>{}));
+    const toStart   = toEl   ? toEl.volume   : 0;
+    toEl && (toEl.play().catch(()=>{}));
 
     const step = (now) => {
       const k = ms ? Math.min(1, (now - t0) / ms) : 1;
       if (fromEl) fromEl.volume = Math.max(0, fromStart * (1 - k));
-      if (toEl)   toEl.volume   = Math.min(targetVol, toStart + (targetVol - toStart) * k);
-
+      if (toEl)   toEl.volume   = toStart + (targetVol - toStart) * k;
       if (k < 1) { _fadeReq = requestAnimationFrame(step); }
       else {
         if (fromEl) { fromEl.pause(); fromEl.currentTime = 0; }
@@ -976,22 +972,39 @@ const Music = (() => {
     await AudioGate.ready();
     const next = elements[name];
     if (!next) return;
-    const prev = current && current !== next ? current : null;
-    next.volume = (fadeMs ? 0 : volume);
+
+    // MISMA PISTA → solo tween de volumen (nada de mute/pausa)
+    if (current === next) {
+      if (fadeMs > 0) {
+        _fade(null, next, fadeMs, volume); // del vol actual → target
+      } else {
+        next.volume = volume;
+      }
+      currentName = name;
+      return;
+    }
+
+    // PISTA DISTINTA → crossfade normal
+    const prev = current || null;
     if (!fadeMs) {
       prev && (prev.pause(), prev.currentTime = 0);
+      next.volume = volume;
       next.play().catch(()=>{});
     } else {
+      // ojo: NO pongas next.volume=0 si ya está sonando esa misma pista
+      // (aquí no lo está, porque current !== next)
+      if (next.volume === 0) { /* ok */ } else { next.volume = 0; }
       _fade(prev, next, fadeMs, volume);
     }
     current = next;
+    currentName = name;
   }
 
   function stop({ fadeMs = 0 } = {}) {
     if (!current) return;
     if (!fadeMs) { current.pause(); current.currentTime = 0; }
     else _fade(current, null, fadeMs, 0);
-    current = null;
+    current = null; currentName = null;
   }
 
   return { play, stop, get current(){ return current; } };
