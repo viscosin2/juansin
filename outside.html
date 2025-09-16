@@ -4039,28 +4039,25 @@ function update(dt){
 
   if (!dialogOpen && ambientLock && !ambientLockOwner) ambientLock = false;
 
-
-if (introActive){
+  if (introActive){
     AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
     player.moving = false; player.frame = 0;
     const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
     if (canCenterCam) centerCameraOnPlayer();
 
     if (AMBIENT.k >= 1 && !initialDialogShown){
-  initialDialogShown = true;
-setTimeout(()=>{
-  initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
-  interactBlocked = true;     // ← bloquea interacciones
-  openDialog([{speaker:'Juan', text:'¡Chuuuus! Qué pelete.'}], true);
-  introActive = false;
-}, 300);
-
-}
-
+      initialDialogShown = true;
+      setTimeout(()=>{
+        initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
+        interactBlocked = true;     // ← bloquea interacciones
+        openDialog([{speaker:'Juan', text:'¡Chuuuus! Qué pelete.'}], true);
+        introActive = false;
+      }, 300);
+    }
     return;
   }
 
-   if (!CUT.active){
+  if (!CUT.active){
     const feet = feetWorld();
     const cz = CINE_BUILT.find(z=> !z._done && feet.x>=z.x && feet.x<=z.x+z.w && feet.y>=z.y && feet.y<=z.y+z.h);
     if (cz){
@@ -4071,7 +4068,6 @@ setTimeout(()=>{
       if (cz.id === 'cine3'){ startCinematic4(); return; }
     }
   }
-
 
   if (!CUT.active && dialogOpen){
     player.moving = false; player.frame = 0;
@@ -4085,9 +4081,10 @@ setTimeout(()=>{
     const canCenterCam = !CUT.active && !CAM_TWEEN.on && !dialogOpen && !ambientLock;
     if (canCenterCam) centerCameraOnPlayer();
   }
-  HPBARS.update(dt);
 
+  HPBARS.update(dt);
   portraitsUpdate(dt);
+
   if (CAM_TWEEN.on){
     CAM_TWEEN.t = Math.min(1, CAM_TWEEN.t + dt*1000 / CAM_TWEEN.dur);
     const ease = (x)=> x<0.5 ? 2*x*x : 1 - Math.pow(-2*x+2,2)/2;
@@ -4098,21 +4095,21 @@ setTimeout(()=>{
   }
 
   if (CUT.active){
-  if (CUT.phase === 'autowalk'){
-    // animar como si estuviera andando
-    player.moving = true;
-    if (CUT.autoDir) player.dir = CUT.autoDir;
-    player.frameTime += dt;
-    if (player.frameTime >= 0.12){
-      player.frame = (player.frame + 1) % 2;
-      player.frameTime = 0;
+    if (CUT.phase === 'autowalk'){
+      // animar como si estuviera andando
+      player.moving = true;
+      if (CUT.autoDir) player.dir = CUT.autoDir;
+      player.frameTime += dt;
+      if (player.frameTime >= 0.12){
+        player.frame = (player.frame + 1) % 2;
+        player.frameTime = 0;
+      }
+    } else {
+      // resto de fases: congelado
+      player.moving = false;
+      player.frame = 0;
     }
   } else {
-    // resto de fases: congelado
-    player.moving = false;
-    player.frame = 0;
-  }
-} else {
     const wantsToMove = !!(vx || vy);
     player.moving = !ambientLock && wantsToMove;
 
@@ -4156,7 +4153,7 @@ setTimeout(()=>{
   const prevZone = _ambientCurrentZone;
 
   if (newZone !== prevZone){
-    // limpiar anterior
+    // limpiar timers/locks de la zona previa
     if (prevZone){
       if (ambientLockOwner === prevZone){
         ambientLock = false;
@@ -4166,7 +4163,7 @@ setTimeout(()=>{
       clearTimeout(prevZone._dialogTO);
     }
 
-    // bloqueo SOLO si habrá diálogo y solo primera vez
+    // diálogos/locks de la nueva zona
     if (newZone){
       const willShowDialog =
         Array.isArray(newZone.dialogOnEnter) &&
@@ -4191,32 +4188,33 @@ setTimeout(()=>{
       }
     }
 
+    // paleta objetivo
     const targetPal = newZone ? newZone.palette : 'peach';
     AMBIENT.targets.peach    = (targetPal === 'peach')    ? 1 : 0;
     AMBIENT.targets.bluehour = (targetPal === 'bluehour') ? 1 : 0;
     AMBIENT.targets.hell     = (targetPal === 'hell')     ? 1 : 0;
 
-
- try {
+    // música (crossfade con tu Music manager)
     const fadeMs =
       (newZone && typeof newZone.musicFadeMs === 'number' && newZone.musicFadeMs >= 0)
         ? newZone.musicFadeMs
         : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 650);
 
-    if (newZone && newZone.music && window.MUSIC && typeof MUSIC.fadeTo === 'function') {
-      MUSIC.fadeTo(newZone.music, fadeMs);
-    } else if (!newZone && window.MUSIC && typeof MUSIC.fadeTo === 'function') {
-      // si sales a “neutral/peach”, pon música por defecto si quieres
-      if (MUSIC.tracks && MUSIC.tracks['town']) MUSIC.fadeTo('town', fadeMs);
+    if (newZone && newZone.music) {
+      // entrar en zona con música propia
+      Music.play(newZone.music, { volume: 0.5, fadeMs });
+    } else {
+      // salir a “neutral/peach” -> música por defecto
+      Music.play('town', { volume: 0.5, fadeMs });
     }
-  } catch (e) { console.warn('Music fade error:', e); }
 
     _ambientCurrentZone = newZone;
   }
 
+  // (importante) No dispares música fuera del bloque anterior para evitar repetir play() cada frame
+
   AMBIENT.k = Math.min(1, AMBIENT.k + dt / (AMBIENT.introMs / 1000));
 
-  // Interpolar alphas hacia sus objetivos (crossfade continuo)
   for (const key of Object.keys(AMBIENT.alphas)) {
     const a = AMBIENT.alphas[key];
     const t = AMBIENT.targets[key];
@@ -4224,35 +4222,36 @@ setTimeout(()=>{
       ? t
       : a + (t - a) * Math.min(1, (dt * 1000) / AMBIENT.fadeMs);
   }
+
   smokeUpdate(dt);
   updateBushScene(dt);
-
   updateBushPulse(dt);
-if (GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
-  const feet = feetWorld();
-  const pot = PROPS.find(p => p._isPotion);
-  if (pot){
-    const rx = 10, ry = 8; // radios “pie” para pickup
-    const rect = { x: pot.x - rx, y: pot.y - ry, w: rx*2, h: ry*2 };
-    if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, rect)){
-      const idx = PROPS.indexOf(pot);
-      if (idx >= 0) PROPS.splice(idx, 1);
 
-      GAME_FLAGS.has_potion = true;
-      GAME_FLAGS.need_potion = false;
+  if (GAME_FLAGS.need_potion && !GAME_FLAGS.has_potion){
+    const feet = feetWorld();
+    const pot = PROPS.find(p => p._isPotion);
+    if (pot){
+      const rx = 10, ry = 8; // radios “pie” para pickup
+      const rect = { x: pot.x - rx, y: pot.y - ry, w: rx*2, h: ry*2 };
+      if (ellipseRectOverlap(player.x, player.y + FEET_OFFSET_Y, FEET_RADIUS_X, FEET_RADIUS_Y, rect)){
+        const idx = PROPS.indexOf(pot);
+        if (idx >= 0) PROPS.splice(idx, 1);
 
-      ambientLock = true;
-      ambientLockOwner = 'potion_pick'; // opcional, por consistencia
-      startJuanBlueHalo(0, { permanent:true });
-      setTimeout(()=>{
-        ambientLock = false; ambientLockOwner = null;
-        openDialog([{ speaker:'Juan', text:'¡Ahora sí!' }], true);
-      }, 1000);
+        GAME_FLAGS.has_potion = true;
+        GAME_FLAGS.need_potion = false;
+
+        ambientLock = true;
+        ambientLockOwner = 'potion_pick'; // opcional, por consistencia
+        startJuanBlueHalo(0, { permanent:true });
+        setTimeout(()=>{
+          ambientLock = false; ambientLockOwner = null;
+          openDialog([{ speaker:'Juan', text:'¡Ahora sí!' }], true);
+        }, 1000);
+      }
     }
   }
 }
 
-}
 
 async function spawnTresorShinyAt(x, y){
   if (!spawnTresorShinyAt._img){
