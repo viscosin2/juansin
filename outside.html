@@ -2812,22 +2812,19 @@ function continueCine1_WithFumaos_Portraits(doneCb){
     { speaker:'DonRamon y Perchita', text:'Acércate que te vamos a dar una que vas a viajar en el tiempo.' },
   ];
   fadeOutFogThenEnd();
-  setTimeout(() => {
+
     portraitsOpen2(fumaosScript);
-  }, 1000);
+
   
   
   CUT.onEnd = ()=>{
     _cine1_startFakeFightUI(); 
     const koScript = [
-      { speaker:'', text:'No te da tiempo realizar ningún ataque.' },
+      { speaker:'', text:'No te da tiempo a realizar ningún ataque.' },
       { speaker:'', text:'Van tan volados que se han autoderrotado.' }
     ];
 
-      setTimeout(() => {
     portraitsOpen(koScript);
-  }, 1000);
-    
 
     CUT.onEnd = ()=>{
       _cine1_stopFakeFightUI();
