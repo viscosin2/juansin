@@ -187,23 +187,21 @@ const AudioGate = (() => {
     unlocked = true;
     primeAll();
   }
-  function primeAll(){
-    if (primed || primingPromise) return primingPromise || Promise.resolve();
-    const audios = getAll();
-    primingPromise = Promise.all(audios.map(a=>{
-      if (!a) return;
-      const prevMuted=a.muted; a.muted=true;
-      const p=a.play();
-      if(p&&p.then){
-        return p.then(()=>{a.pause();a.currentTime=0;a.muted=prevMuted;})
-                 .catch(()=>{a.muted=prevMuted;});
-      } else {
-        try{a.pause();a.currentTime=0;}catch(e){}
-        a.muted=prevMuted;
-      }
-    })).then(()=>{primed=true;});
-    return primingPromise;
-  }
+  
+function primeAll(){
+  if (primed || primingPromise) return primingPromise || Promise.resolve();
+  const audios = getAll();
+  primingPromise = Promise.all(audios.map(a=>{
+    if (!a) return;
+    const prevMuted=a.muted, prevLoop=a.loop;
+    a.muted=true; a.loop=false;
+    const p=a.play();
+    const stop=()=>{ try{ a.pause(); a.currentTime=0; }catch(_){} a.muted=prevMuted; a.loop=prevLoop; };
+    return p && p.then ? p.then(stop).catch(stop) : stop();
+  })).then(()=>{ primed=true; });
+  return primingPromise;
+}
+
   async function ready(){ if(!unlocked) unlock(); await primeAll(); }
   return {unlock,ready};
 })();
@@ -954,11 +952,9 @@ const Music = (() => {
   };
   let current = null, _fadeReq = null;
 
-  // Asegura loop infinito (atributo loop + fallback 'ended')
   Object.values(elements).forEach(el => {
     if (!el) return;
     el.loop = true;
-    el.addEventListener('ended', () => { el.currentTime = 0; el.play().catch(()=>{}); });
   });
 
   function _fade(fromEl, toEl, ms = 0, targetVol = 0.5) {
@@ -2832,10 +2828,10 @@ function _cine1_startFakeFightUI(){
   if (typeof startFightUI === 'function'){
     try { startFightUI({ enemies: [] }); return; } catch(e){}
   }
-  // Fallback: una banderita por si tu HUD pinta barras cuando esto está activo
+
   window.HUD = window.HUD || {};
   HUD.showHPBars = true;
-  HUD.tempEnemies = []; // vacío: no hay spawns, solo efecto visual
+  HUD.tempEnemies = []; 
 }
 
 function _cine1_stopFakeFightUI(){
