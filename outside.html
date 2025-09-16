@@ -226,7 +226,7 @@ const PORTRAIT_SCALES = {
   GandalfW: 3,
   Juan:    1.7,
   Voldemort: 2,
-  "DonRamon y Perchita": 1.5,
+  "DonRamon y Perchita": 2,
   SSJ:     1.7
 };
 
@@ -851,9 +851,9 @@ function stopTownMusic(){
 /* ========= MINI AUDIO MANAGER ========= */
 const SFX = (() => {
   const _cache = new Map();
-  const _lastByName = new Map();
 
   function _get(path) {
+    // Clonamos para evitar solapar .currentTime/volume entre instancias
     if (!_cache.has(path)) _cache.set(path, new Audio(path));
     const base = _cache.get(path);
     const a = base.cloneNode(true);
@@ -862,6 +862,7 @@ const SFX = (() => {
     return a;
   }
 
+  // Reproducir un sonido por nombre: SFX.play('miau') -> assets/sounds/miau.mp3
   async function play(name, { volume = 1, start = 0, duration = null, folder = 'assets/sounds' } = {}) {
     const a = _get(`${folder}/${name}.mp3`);
     a.volume = volume;
@@ -877,55 +878,17 @@ const SFX = (() => {
     if (a.readyState >= 2) startWhenReady();
     else a.addEventListener('loadedmetadata', startWhenReady, { once:true });
 
-    _lastByName.set(name, a);
     return a;
   }
 
-  function playFile(path, opts = {}) {
-  const name   = path.replace(/^.*[\\/]/, '').replace(/\.\w+$/, '');
-  const folder = path.replace(/\/[^/]+$/, '');
-  return play(name, { ...opts, folder });
-}
-
-
-  function stop(name) {
-    const a = _lastByName.get(name);
-    if (a) {
-      a.pause();
-      a.currentTime = 0;
-    }
+  // Reproducir un archivo arbitrario (ruta completa)
+  function playFile(path, opts={}) {
+    const name = path.replace(/^.*[\\/]/, '').replace(/\.\w+$/, '');
+    return play(name, { ...opts, folder: path.replace(/\/[^/]+$/, '') });
   }
 
-  function fadeIn(name, targetVol = 1, duration = 2000) {
-    const a = _lastByName.get(name);
-    if (!a) return;
-    a.volume = 0;
-    a.play().catch(()=>{});
-    const step = targetVol / (duration / 50);
-    const fade = setInterval(() => {
-      a.volume = Math.min(targetVol, a.volume + step);
-      if (a.volume >= targetVol) clearInterval(fade);
-    }, 50);
-  }
-
-  function fadeOut(name, duration = 2000) {
-    const a = _lastByName.get(name);
-    if (!a) return;
-    const step = a.volume / (duration / 50);
-    const fade = setInterval(() => {
-      a.volume = Math.max(0, a.volume - step);
-      if (a.volume <= 0) {
-        clearInterval(fade);
-        a.pause();
-        a.currentTime = 0;
-      }
-    }, 50);
-  }
-
-  return { play, playFile, stop, fadeIn, fadeOut };
+  return { play, playFile };
 })();
-
-
 
 const Music = (() => {
   const elements = {
@@ -935,6 +898,7 @@ const Music = (() => {
   };
   let current = null, _fadeReq = null;
 
+  // Asegura loop infinito (atributo loop + fallback 'ended')
   Object.values(elements).forEach(el => {
     if (!el) return;
     el.loop = true;
@@ -1884,6 +1848,7 @@ function spawnGandalfWhiteAtPlayer(){
   BUSH_SCENE.yStart = yStart;
   BUSH_SCENE.yEnd = yEnd;
 
+  // Nube de niebla
   fogUseWorld({ x, y: yStart });
   fogStart();
   FOG.color = '255,255,255';
@@ -2659,7 +2624,7 @@ function phaseFogFill(){
 
   fogUseWorld(anchorWorld); 
 
- 
+  SFX.play("niebla", { volume: 0.08 });
   fogBeginFill({
     dur: 3000,
     areaW: 360,
@@ -2674,8 +2639,6 @@ function phaseFogFill(){
     CUT.phase = 'prePanDelay';
     setTimeout(()=>{
       if (CUT.active && CUT.id==='cine1'){ 
-         await SFX.play("niebla", { volume: 0 }); 
-         SFX.fadeIn("niebla", 0.01, 3000);
         phaseCameraPan();
       }
     }, 3700);
@@ -2776,10 +2739,7 @@ function spawnTempGandalfAhead(targetCamY){
     { speaker:'Gandalf',    text:'Te estaré observando de cerca. Tal vez hoy la suerte nos mire… o tal vez no.' }
   ];
   portraitsOpen(cineScript);
-    CUT.onEnd = () => {
-    SFX.fadeOut("niebla", 2000);
-  continueCine1_WithFumaos_Portraits();
-};
+    CUT.onEnd = ()=>{ nieblaAudio.pause(); nieblaAudio.currentTime = 0; continueCine1_WithFumaos_Portraits(); };
 }
 
 function continueCine1_WithFumaos_Portraits(doneCb){
@@ -4208,17 +4168,17 @@ setTimeout(()=>{
 
 
  try {
-const fadeMs =
-  (newZone && typeof newZone.musicFadeMs === 'number' && newZone.musicFadeMs >= 0)
-    ? newZone.musicFadeMs
-    : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 650);
+    const fadeMs =
+      (newZone && typeof newZone.musicFadeMs === 'number' && newZone.musicFadeMs >= 0)
+        ? newZone.musicFadeMs
+        : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 650);
 
-if (newZone && newZone.music) {
-  Music.play(newZone.music, { fadeMs: fadeMs });
-} else {
-  Music.play('town', { fadeMs: fadeMs });
-}
-
+    if (newZone && newZone.music && window.MUSIC && typeof MUSIC.fadeTo === 'function') {
+      MUSIC.fadeTo(newZone.music, fadeMs);
+    } else if (!newZone && window.MUSIC && typeof MUSIC.fadeTo === 'function') {
+      // si sales a “neutral/peach”, pon música por defecto si quieres
+      if (MUSIC.tracks && MUSIC.tracks['town']) MUSIC.fadeTo('town', fadeMs);
+    }
   } catch (e) { console.warn('Music fade error:', e); }
 
     _ambientCurrentZone = newZone;
