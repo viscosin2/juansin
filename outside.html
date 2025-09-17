@@ -3822,8 +3822,8 @@ if (typeof _cine4_fireballFromLtoR === 'function'){
     y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.68)), // un poco más abajo
     // IMPORTANTE: si usas mi versión con normalización puedes poner 28 = 28%;
     // si usas la antigua sin normalización, usa 0.28 y -0.08.
-    offsetL: 50,           // empieza mucho más a la derecha (≈28% de W desde L)
-    offsetR: 60,           // termina 8% MÁS ALLÁ de R (overshoot a la derecha)
+    offsetL: 35,           // empieza mucho más a la derecha (≈28% de W desde L)
+    offsetR: -30,           // termina 8% MÁS ALLÁ de R (overshoot a la derecha)
     debug: true
   }, ()=>{
     // ⚠️ Quitamos el nudge para no duplicar “recibir”
