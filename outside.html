@@ -3820,11 +3820,11 @@ function cine3_beginPortraits(){
       _cine4_fireballFromLtoR({
         startDelayMs: 120,
         dur: 600,
-        rBase: 16,
-        rPeak: 36,
+        rBase: 28,
+        rPeak: 46,
         y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)),
-        offsetL: 0.08,
-        offsetR: 0.06
+        offsetL: 1.5,
+        offsetR: 1.5
       }, ()=>{
         // nudge en Juan (opcional)
         if (typeof _cine2_nudge === 'function'){
@@ -3840,7 +3840,6 @@ function cine3_beginPortraits(){
     }
   }
 
-  // ===== POST-ATAQUE: diálogo + sincronía de eventos =====
   function afterAttack(){
     // Mostramos 2 líneas: 0) “te ataca…”, 1) “No puedes seguir luchando.”
     openDialog([
@@ -3890,9 +3889,6 @@ function cine3_beginPortraits(){
     };
   }
 }
-
-
-
 
 
 
