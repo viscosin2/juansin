@@ -4875,28 +4875,26 @@ async function spawnTresorShinyAt(x, y){
     spawnTresorShinyAt._img = await loadImage('assets/objects/tresor.png');
   }
   const img = spawnTresorShinyAt._img;
-  if (!img) { console.warn('tresor.png no cargó'); return null; }
+
+  // altura de Juan en unidades de mundo (las mismas que usa tu draw)
+  const juanWorldH = JUAN.size.h * JUAN.scale;
+
+  // queremos que el tesoro sea un 70% de la altura de Juan
+  const targetH = juanWorldH * 0.5;
+  const scale   = targetH / img.height; // <- clave
 
   const prop = {
-type: 'tresorShiny',   // tu draw mira CATALOG[p.type]
-id:  'tresor_' + Date.now(), // por si usas BUSH_PULSE/targetId
-img,
-x, y,
-
-iw: img.width,
-ih: img.height,
-scale: 1,
-
-anchorX: 0.5,
-anchorY: 1.0,
-z: (Z?.FG ?? 200) + 10,
+    type: 'tresorShiny',
+    id: 'tresor_' + Date.now(),
+    img, x, y,
+    iw: img.width, ih: img.height,
+    scale,
+    anchorX: 0.5, anchorY: 1.0,
     alwaysOnTop: true
   };
 
-  // Efecto y registro en escena
   SFX.play("shine", { volume: 0.4 });
   PROPS.push(prop);
-
   return prop;
 }
 
