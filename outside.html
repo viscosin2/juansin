@@ -4590,7 +4590,6 @@ const tilesUp = 1;
 // y del pie de Juan en coordenada mundo
 const juanFootY = player.y + FEET_OFFSET_Y;
 
-// spawnea 12 tiles por encima del pie
 const spawnX = player.x;
 const spawnY = juanFootY - tilesUp * TILE_SIZE;
 
@@ -4876,28 +4875,43 @@ async function spawnTresorShinyAt(x, y){
   }
   const img = spawnTresorShinyAt._img;
 
-  // altura de Juan en unidades de mundo (las mismas que usa tu draw)
+  // escala: 50% de la altura de Juan
   const juanWorldH = JUAN.size.h * JUAN.scale;
+  const targetH = juanWorldH * 0.50;
+  const scale   = targetH / img.height;
 
-  // queremos que el tesoro sea un 70% de la altura de Juan
-  const targetH = juanWorldH * 0.5;
-  const scale   = targetH / img.height; // <- clave
+  // --- subirlo un pelín en Y (ajusta a tu gusto) ---
+  // fijo en px de mundo:
+  const bumpY = 6; // p.ej. 6 px
+  // o proporcional: const bumpY = Math.round(targetH * 0.06);
+  const yFinal = y - bumpY;
+
+  // --- halo (brillo) ---
+  const halo = {
+    // radio en mundo escalado a algo razonable para ese tamaño
+    radius: Math.max(18, targetH * 0.45),
+    alpha: 0.60,
+    pulse: 0.05,
+    offsetY: 0.55,          // centro del halo ~mitad superior
+    color: '255,255,160'    // amarillo cálido
+  };
 
   const prop = {
     type: 'tresorShiny',
     id: 'tresor_' + Date.now(),
-    img, x, y,
+    img,
+    x, y: yFinal,
     iw: img.width, ih: img.height,
     scale,
     anchorX: 0.5, anchorY: 1.0,
-    alwaysOnTop: true
+    alwaysOnTop: true,
+    _halo: halo              // <<--- ¡brillo!
   };
 
   SFX.play("shine", { volume: 0.4 });
   PROPS.push(prop);
   return prop;
 }
-
   
 /* ========== MEGADRAW ========== */
 function draw(){
