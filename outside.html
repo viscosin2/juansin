@@ -2994,7 +2994,7 @@ function continueCine1_WithFumaos_Portraits(doneCb){
 
     if (phase === 'ko2'){
      closeDialog();
-      Music.play('town', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:100) });
+      Music.play('town', { volume: 0.5});
      const prevHijack = CUT.hijackAction;
      CUT.hijackAction = ()=>{};
 
