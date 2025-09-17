@@ -3120,77 +3120,86 @@ function step2() {
 }
 
 
+// ==================== START FIGHT (R ya está; entra L) ====================
 function _cine2_startFightUI(){
-  // Asegura que los dos están creados
+  // Asegura objetos
   PORTRAITS.left  = PORTRAITS.left  || _makeSide(IMG_VOLD_P,  'left',  'Voldemort');
   PORTRAITS.right = PORTRAITS.right || _makeSide(IMG_JUAN_BIG,'right', 'Juan');
   PORTRAITS.active = true;
+  PORTRAITS.stage  = 'entering';
 
-  // Juan cambia a sprite de combate
+  // Juan cambia a sprite de combate (R ya estaba en pantalla)
   PORTRAITS.right.img = IMG_JUAN_FIGHT;
+  PORTRAITS.right.x   = PORTRAITS.right.inX; // lo fijamos por si acaso
 
   // Barras de vida
   HPBARS.leftName  = 'Voldemort';
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
   HPBARS.show(100, 100);
+  { // fade-in barras
+    const t0 = performance.now(), dur = 400;
+    (function step(t){
+      const k = Math.min(1, (t - t0) / dur);
+      HPBARS.alpha = k;
+      if (k < 1) requestAnimationFrame(step);
+    })(t0);
+  }
 
-  // Fijo portraits dentro ya desde el frame 0
-  _cine2_pinPortraitsIn();
-
-  // Fade de las barras
-  const t0 = performance.now(), dur = 400;
-  (function step(t){
-    const k = Math.min(1, (t - t0) / dur);
-    HPBARS.alpha = k;
-    if (k < 1) requestAnimationFrame(step);
-  })(t0);
-
-  // Diálogo + menú
-  openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
-
-  CUT.hijackAction = () => {
-    if (isTyping) return advanceDialog();
-
-    _cine2_openMenu();
+  // ENTRA SOLO L y luego mostramos menú
+  _cine2_enterLeft(() => {
+    PORTRAITS.stage = 'speaking';
+    openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
 
     CUT.hijackAction = () => {
-      const choice = _cine2_menuConfirm();
-      if (choice < 0) return; // aún no elegido
-      closeDialog();
-      _cine2_closeMenu();
+      if (isTyping) return advanceDialog();
 
-      const R = PORTRAITS.right; // Juan
-      const L = PORTRAITS.left;  // Voldemort
+      _cine2_openMenu();
 
-      // Pequeña “carga” de Juan sin salir de pantalla
-      SFX.play("ataque");
-      _cine2_nudge(R, -screenRect.dw * 0.04, 1.00, 1.06, () => {
-        // “Impacto” sobre L: bajada de vida y nudge
-        _cine2_nudge(L,  screenRect.dw * 0.02, 1.00, 0.96, () => {
-          HPBARS.setTargets(100, 50); // ajusta si tu orden es inverso
-          openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
-          CUT.hijackAction = () => {
-            if (isTyping) return advanceDialog();
-            closeDialog();
-            venganzaVoldemort(); // tu flujo posterior
-          };
+      CUT.hijackAction = () => {
+        const choice = _cine2_menuConfirm();
+        if (choice < 0) return;
+
+        closeDialog();
+        _cine2_closeMenu();
+
+        const R = PORTRAITS.right;
+        const L = PORTRAITS.left;
+
+        // Carga y golpe (SIN salir de escena)
+        SFX && SFX.play && SFX.play("ataque");
+        _cine2_nudge(R, -screenRect.dw * 0.04, 1.00, 1.06, () => {
+          _cine2_nudge(L,  screenRect.dw * 0.02, 1.00, 0.96, () => {
+            HPBARS.setTargets(100, 50); // ajusta orden si tu implementación es inversa
+
+            openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
+            CUT.hijackAction = () => {
+              if (isTyping) return advanceDialog();
+              closeDialog();
+
+              // En la venganza: SE VAN LOS DOS
+              _cine2_slideOutBoth(() => {
+                venganzaVoldemort();
+              });
+            };
+          });
         });
-      });
+      };
     };
-  };
+  });
 }
+// ==================== Helpers comunes combate ====================
 
-  // --- Utils de pin y nudge para combate ---
+// Fijar ambos en su posición "in" (sin animación)
 function _cine2_pinPortraitsIn(){
   if (!PORTRAITS?.left || !PORTRAITS?.right) return;
   const L = PORTRAITS.left, R = PORTRAITS.right;
-  // forzamos posiciones finales
   L.x = L.inX; L.sFrom = 1; L.sTo = 1;
   R.x = R.inX; R.sFrom = 1; R.sTo = 1;
-  PORTRAITS.stage = 'speaking'; // no "entering", ya están dentro
+  PORTRAITS.stage = 'speaking';
 }
 
+// Micro-empujón/escala sin salir de escena
 function _cine2_nudge(node, deltaPx, sFrom=1.00, sTo=0.96, cb){
   const orig = node.inX;
   const kick = orig + Math.round(deltaPx);
@@ -3199,6 +3208,34 @@ function _cine2_nudge(node, deltaPx, sFrom=1.00, sTo=0.96, cb){
     node.sFrom = sTo; node.sTo = sFrom;
     _startSlide(node, orig, cb||(()=>{}));
   });
+}
+
+// Entra SOLO la izquierda (L) desde outX→inX
+function _cine2_enterLeft(cb){
+  const L = PORTRAITS.left;
+  if (!L) return cb && cb();
+  L.x = L.outX;
+  _startSlide(L, L.inX, cb||(()=>{}));
+}
+
+// Entran L y R a la vez desde outX→inX
+function _cine2_enterBoth(cb){
+  const L = PORTRAITS.left, R = PORTRAITS.right;
+  let pending = 0;
+  function done(){ if (--pending <= 0 && cb) cb(); }
+  if (L){ pending++; L.x = L.outX; _startSlide(L, L.inX, done); }
+  if (R){ pending++; R.x = R.outX; _startSlide(R, R.inX, done); }
+  if (pending === 0 && cb) cb();
+}
+
+// Salen L y R a la vez hacia outX
+function _cine2_slideOutBoth(cb){
+  const L = PORTRAITS.left, R = PORTRAITS.right;
+  let pending = 0;
+  function done(){ if (--pending <= 0 && cb) cb(); }
+  if (L){ pending++; _startSlide(L, L.outX, done); }
+  if (R){ pending++; _startSlide(R, R.outX, done); }
+  if (pending === 0 && cb) cb();
 }
 
 
@@ -3248,50 +3285,27 @@ function _cine2_nudge(node, deltaPx, sFrom=1.00, sTo=0.96, cb){
   
 function _cine2_continueFight(){
 
-  // --- helpers locales: fijar dentro + micro-empujón sin salir de pantalla ---
-  function pinIn(){
-    if (!PORTRAITS?.left || !PORTRAITS?.right) return;
-    const L = PORTRAITS.left, R = PORTRAITS.right;
-    L.x = L.inX; L.sFrom = 1; L.sTo = 1;
-    R.x = R.inX; R.sFrom = 1; R.sTo = 1;
-  }
-  function nudge(node, deltaPx, sFrom=1.00, sTo=0.96, cb){
-    const orig = node.inX;
-    const kick = orig + Math.round(deltaPx);
-    node.sFrom = sFrom; node.sTo = sTo;
-    _startSlide(node, kick, () => {
-      node.sFrom = sTo; node.sTo = sFrom;
-      _startSlide(node, orig, cb||(()=>{}));
-    });
-  }
-
-  // --- estado base retrabajado ---
+  // Estado base
   PORTRAITS.active = true;
-  PORTRAITS.stage  = 'speaking'; // ya dentro, nada de 'entering'
+  PORTRAITS.stage  = 'entering';
   PORTRAITS.idx    = 0;
   PORTRAITS.blurK  = 0;
   PORTRAITS.script = Array.isArray(PORTRAITS.script) ? PORTRAITS.script : [];
 
+  // (Re)crear lados
   PORTRAITS.left  = _makeSide(IMG_VOLD_P,  'left',  'Voldemort');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG,'right', 'Juan');
 
-  // Pequeño offset que tú añadías
+  // Tu offset custom para L
   PORTRAITS.left.inX += 60;
-  PORTRAITS.left.x    = PORTRAITS.left.inX;
 
-  // Fijar ambos dentro desde ya
-  PORTRAITS.right.x   = PORTRAITS.right.inX;
-  pinIn();
-
-  // --- Barras de vida ---
+  // Barras de vida (ejemplo: 100 vs 50 como traías)
   HPBARS.leftName  = 'Voldemort';
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
   HPBARS.show(100, 50);
-
   {
-    const t0 = performance.now();
-    const dur = 400;
+    const t0 = performance.now(), dur = 400;
     function step(t){
       const k = Math.min(1, (t - t0) / dur);
       HPBARS.alpha = k;
@@ -3300,14 +3314,17 @@ function _cine2_continueFight(){
     requestAnimationFrame(step);
   }
 
-  const R = PORTRAITS.right; // Juan
+  // ENTRAN A LA VEZ L y R
+  _cine2_enterBoth(() => {
+    PORTRAITS.stage = 'speaking';
 
-  // Pequeño impacto inicial sin sacar a R
-  (function(){
+    // Pequeño “recuerdo” del golpe previo (nudge R) y prompt
+    const R = PORTRAITS.right;
     const kickPx = screenRect ? screenRect.dw * 0.02 : 12;
     R.sFrom = 1.00; R.sTo = 0.96;
-    nudge(R, +kickPx, 1.00, 0.96, () => {
-      // Ajusta el orden si tu implementación de setTargets es al revés
+
+    _cine2_nudge(R, +kickPx, 1.00, 0.96, () => {
+      // Ajusta orden si difiere
       HPBARS.setTargets(10, 50);
 
       openDialog([{ speaker:'', text:'Ha sido un golpe duro. Remata esto.' }], true);
@@ -3326,26 +3343,22 @@ function _cine2_continueFight(){
           CUT.hijackAction = () => {
             if (_c4_started) return;
             const choice = _cine2_menuConfirm();
-            if (choice < 0) return; // no elegido aún
+            if (choice < 0) return;
             _c4_started = true;
 
             closeDialog();
             _cine2_closeMenu();
 
-            const L = PORTRAITS.left; // Voldemort
-            const forward = screenRect ? -screenRect.dw * 0.04 : -24; // carga hacia delante
+            const L = PORTRAITS.left;
+            const forward = screenRect ? -screenRect.dw * 0.04 : -24;
 
-            // Anim de "carga" de Juan sin salir de pantalla
             SFX && SFX.play && SFX.play("ataque");
-            nudge(R, forward, 1.00, 1.06, () => {
-              // Impacto sobre L: baja vida + nudge de retroceso
+            _cine2_nudge(PORTRAITS.right, forward, 1.00, 1.06, () => {
+
               const recoil = screenRect ? screenRect.dw * 0.02 : 12;
+              HPBARS.setTargets(10, 0); // Voldemort pierde 50
 
-              // Voldemort pierde 50 (ajusta orden si en tu motor es inverso)
-              HPBARS.setTargets(10, 0);
-
-              nudge(L, recoil, 1.00, 0.96, () => {
-                // Diálogo final y caída de L
+              _cine2_nudge(L, recoil, 1.00, 0.96, () => {
                 openDialog([{ speaker:'Voldemort', text:'No puede ser.' }], true);
                 _cine3_removeVoldFromMap && _cine3_removeVoldFromMap();
 
@@ -3353,22 +3366,10 @@ function _cine2_continueFight(){
                   if (isTyping){ advanceDialog(); return; }
                   closeDialog();
 
-                  const L = PORTRAITS.left;
-                  const startY = (L.y ?? 0);
-                  const endY   = startY + Math.round((screenRect?.dh || 200) * 0.8); // resbala ~80% de alto
-                  const t0 = performance.now();
-                  const dur = 550;
-
-                  function fallStep(t){
-                    const k = Math.min(1, (t - t0) / dur);
-                    L.y = startY + (endY - startY) * k;
-                    if (k < 1){
-                      requestAnimationFrame(fallStep);
-                    }else{
-                      endCine2(); // al terminar la caída, cerramos cine2
-                    }
-                  }
-                  requestAnimationFrame(fallStep);
+                  // Puedes cerrar aquí la cine2, o sacar a los dos antes:
+                  _cine2_slideOutBoth(() => {
+                    endCine2(); // o tu flujo siguiente
+                  });
                 };
               });
             });
@@ -3376,9 +3377,8 @@ function _cine2_continueFight(){
         };
       };
     });
-  })();
+  });
 }
-
 
 
 function endCine2(){ 
