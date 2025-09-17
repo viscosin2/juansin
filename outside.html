@@ -4190,8 +4190,7 @@ confettiExplosion(ctx, {
 });
     
     openDialog([
-          { speaker:'Pueblo', text:'OLÉ' },
-          { speaker:'Juan', text:'Yujuu' }
+          { speaker:'Pueblo', text:'Bravoooo' },
         ], true);
 
     CUT.hijackAction = () => { 
@@ -4202,19 +4201,20 @@ confettiExplosion(ctx, {
 
       (async ()=>{
         const aheadX = player.x + (player.dir==='right'? 8 : player.dir==='left' ? -8 : 0);
-        const aheadY = player.y + (player.dir==='down' ? 0 : -6);
-        try{ await spawnTresorShinyAt(aheadX, aheadY); }catch(e){ console.warn('tresor spawn fail', e); }
+        const aheadY = player.y + (player.dir==='down' ? 0 : 1);
 
         openDialog([
-          { speaker:'Juan', text:'¿Eso… brilla?' },
-          { speaker:'Juan', text:'¡Un tesorito!' }
+          { speaker:'Pueblo', text:'Juan, ¡nos has salvado!' },
+          { speaker:'Megafonía', text:'Comunicamos que el supermercado permanecerá cerrado hasta nuevo aviso.' },
+                    { speaker:'Juan', text:'No jodas... Me quedé sin los Tresor...' },
+                              { speaker:'Abuelita', text:'¡De eso nada! ¡Aquí tienes!' }
         ], true);
 
         CUT.hijackAction = ()=>{
           if (isTyping) return advanceDialog();
           if (dialogIndex < dialogScript.length - 1){ advanceDialog(); return; }
           closeDialog();
-
+        try{ await spawnTresorShinyAt(aheadX, aheadY); }catch(e){ console.warn('tresor spawn fail', e); }
           goToEnd();
         };
       })();
@@ -4492,8 +4492,8 @@ async function spawnTresorShinyAt(x, y){
     type: 'tresor',
     img, x, y,
     iw: img.naturalWidth, ih: img.naturalHeight,
-    scale: 0.12,
-    _halo: { color:'255,255,160', radius:30, alpha:0.75, pulse:0.08, offsetY:0.62 } // 🔆 brillo
+    scale: 0.16,
+    _halo: { color:'255,255,160', radius:30, alpha:0.75, pulse:0.08, offsetY:0.62 } 
   };
   PROPS.push(prop);
   return prop;
