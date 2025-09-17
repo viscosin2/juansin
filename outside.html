@@ -886,7 +886,6 @@ function stopTownMusic(){
   Music.stop({ fadeMs: 400 });
 }
 
-/* ========= MINI AUDIO MANAGER ========= */
 const SFX = (() => {
   const _cache = new Map();
   const _lastByName = new Map();
@@ -901,12 +900,13 @@ const SFX = (() => {
   }
 
   async function play(
-    if (window.MUSIC_HARDLOCK && name !== window.MUSIC_HARDLOCK) {
-  name = window.MUSIC_HARDLOCK;
-}
     name,
     { volume = 1, start = 0, duration = null, folder = 'assets/sounds' } = {}
   ) {
+if (window.MUSIC_HARDLOCK && name !== window.MUSIC_HARDLOCK) {
+  name = window.MUSIC_HARDLOCK;
+}
+
     const a = _get(`${folder}/${name}.mp3`);
     a.volume = volume;
 
@@ -921,7 +921,7 @@ const SFX = (() => {
     if (a.readyState >= 2) startWhenReady();
     else a.addEventListener('loadedmetadata', startWhenReady, { once:true });
 
-    _lastByName.set(name, a); // guarda la última instancia por nombre
+    _lastByName.set(name, a);
     return a;
   }
 
@@ -931,7 +931,6 @@ const SFX = (() => {
     return play(name, { ...opts, folder });
   }
 
-  // Parar por nombre (sin variable)
   function stop(name) {
     const a = _lastByName.get(name);
     if (!a) return;
@@ -939,7 +938,6 @@ const SFX = (() => {
     a.currentTime = 0;
   }
 
-  // Fade out por nombre y parar
   function fadeOut(name, ms = 400) {
     const a = _lastByName.get(name);
     if (!a) return;
@@ -955,6 +953,7 @@ const SFX = (() => {
 
   return { play, playFile, stop, fadeOut };
 })();
+
 
 
 const Music = (() => {
@@ -1061,10 +1060,10 @@ document.getElementById('btn-act').addEventListener('touchstart', e => {
 
   if (!window._audioUnlocked) {
 
-// --- ACTIVAR CANDADO DEFINITIVO ---
-window.MUSIC_HARDLOCK = 'town';
+  window._audioUnlocked = true;
+  window.MUSIC_HARDLOCK = 'town';
 
-// pausa y blanquea todas menos 'town'
+
 const kill = (el) => {
   if (!el) return;
   try { el.pause(); } catch(_) {}
