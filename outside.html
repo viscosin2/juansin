@@ -3858,11 +3858,11 @@ function cine3_beginPortraits(){
       _cine4_fireballFromLtoR({
         startDelayMs: 120,
         dur: 600,
-        rBase: 16,
-        rPeak: 36,
+        rBase: 38,
+        rPeak: 48,
         y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)),
-        offsetL: 0.08,
-        offsetR: 0.06
+        offsetL: 1.5,
+        offsetR: 1.5
       }, ()=>{
         if (typeof _cine2_nudge === 'function'){
           _cine2_nudge(R, +(screenRect?.dw||60)*0.02, 1.00, 0.98, ()=>{
@@ -4464,9 +4464,6 @@ function _cine4_step1(){
         CUT.hijackAction = waitForTypingOrNext;
       } break;
 
-      // Paso 3: secuencia de ataque de SSJ (cine3_attackSequence)
-// Paso 3: secuencia de ataque de SSJ (cine3_attackSequence) + bola de energía
-// Paso 3: secuencia de ataque de SSJ + bola en paralelo
 case 3: {
   console.log('[cine4] SSJ attack sequence + fireball');
   closeDialog();
@@ -4487,11 +4484,11 @@ case 3: {
   _cine4_fireballFromLtoR({
     startDelayMs: 120,          // <-- sincroniza con el golpe del SSJ
     dur: 600,
-    rBase: 14,                   // más grande
-    rPeak: 34,                   // pico más grande
+    rBase: 28,                   // más grande
+    rPeak: 48,                   // pico más grande
     y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)), // más abajo
-    offsetL: 0.07,               // sale un pelín más desde L
-    offsetR: 0.07
+    offsetL:1.5,               // sale un pelín más desde L
+    offsetR: 1.5
   }, ()=>{
     // pequeño “nudge” de impacto en Juan si quieres
     _cine2_nudge && _cine2_nudge(R, +(screenRect?.dw||60)*0.02, 1.00, 0.98, ()=>{
