@@ -251,7 +251,7 @@ const PORTRAITS = {
 
 const PORTRAIT_SCALES = {
   Gandalf: 2.3,
-  GandalfW: 3,
+  GandalfW: 3.6,
   Juan:    1.7,
   Voldemort: 1.3,
   "DonRamon y Perchita": 1.2,
@@ -1372,6 +1372,12 @@ function portraitsOpen(script){
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
+  // ⇩ igualamos al setup de "fumaos"
+  PORTRAITS.left.inX += 60;
+  PORTRAITS.left.x   += 60;
+  // (si quieres también elevar un poco como en fumaos:)
+  // PORTRAITS.left.yBottom -= 30;
+
   const line0 = PORTRAITS.script[PORTRAITS.idx];
   const node0 = _nodeForSpeaker(line0.speaker);
   _startSlide(node0, node0.inX, ()=>{
@@ -1379,27 +1385,24 @@ function portraitsOpen(script){
     openDialog([line0], true);
   });
 
-CUT.hijackAction = () => {
-  if (!PORTRAITS.active) return;
-  if (!dialogOpen) return;
+  CUT.hijackAction = () => {
+    if (!PORTRAITS.active || !dialogOpen) return;
+    if (isTyping){ advanceDialog(); return; }
 
-  if (isTyping){ advanceDialog(); return; }
+    const next = PORTRAITS.script[PORTRAITS.idx+1];
+    const cur  = dialogScript[dialogIndex];
 
-  const next = PORTRAITS.script[PORTRAITS.idx+1];
-  const cur  = dialogScript[dialogIndex]; 
+    if (next && cur && next.speaker === cur.speaker){
+      PORTRAITS.idx++;
+      dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
+      dialogScript = [ next ]; dialogIndex = 0;
+      renderCurrentLine(true);
+      return;
+    }
 
-  if (next && cur && next.speaker === cur.speaker){
-    PORTRAITS.idx++;
-    dialogEl.classList.remove('ready'); dialogHintEl.style.opacity = 0;
-    dialogScript = [ next ]; dialogIndex = 0;
-    renderCurrentLine(true);
-    return;
-  }
-
-  closeDialog();
-  _nextPortraitLine();
-};
-
+    closeDialog();
+    _nextPortraitLine();
+  };
 }
 
 
@@ -1873,7 +1876,7 @@ function openSoloGandalfEpic(script){
 
   // zoom épico progresivo mientras habla (hasta tope)
   const maxScaleBoost = 1.20; // ~+10%
-  const growMs = 4000;
+  const growMs = 2000;
   (function epicZoom(t0 = performance.now()){
     if (!PORTRAITS.active || !PORTRAITS.soloEpic) return;
     const k = Math.min(1, (performance.now()-t0)/growMs);
