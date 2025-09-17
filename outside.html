@@ -4048,118 +4048,172 @@ function spawnAroundJuanFromList(list){
 
 
 function _cine4_step1(){
-
-
+  // --- Setup básico de portraits y barras ---
   PORTRAITS.active = true;
   PORTRAITS.stage  = 'entering';
   PORTRAITS.idx    = 0;
   PORTRAITS.blurK  = 0;
   PORTRAITS.script = Array.isArray(PORTRAITS.script) ? PORTRAITS.script : [];
 
-  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ,  'left',  'SSJ');
-  PORTRAITS.right = _makeSide(IMG_JUAN_FIGHT,'right', 'Juan');
-  PORTRAITS.left.flipX = true;
+  PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ,  'left',  'SSJ');   // SSJ
+  PORTRAITS.right = _makeSide(IMG_JUAN_FIGHT,'right', 'Juan');  // Juan
 
-  PORTRAITS.left.x  = PORTRAITS.left.outX;
-  PORTRAITS.right.x = PORTRAITS.right.outX;
+  const L = PORTRAITS.left;   // SSJ
+  const R = PORTRAITS.right;  // Juan
+
+  L.flipX = true;
+
+  L.x = L.outX;
+  R.x = R.outX;
 
   HPBARS.leftName  = 'SSJ';
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
   HPBARS.show(150, 100);
 
-  { // fade-in de barras
+  // Fade-in de barras
+  {
     const t0 = performance.now(), dur = 400;
-    const step = (t)=>{ const k = Math.min(1,(t-t0)/dur); HPBARS.alpha=k; if(k<1) requestAnimationFrame(step); };
+    const step = (t)=>{ 
+      const k = Math.min(1,(t - t0)/dur); 
+      HPBARS.alpha = k; 
+      if (k < 1) requestAnimationFrame(step); 
+    };
     requestAnimationFrame(step);
   }
 
-  const L = PORTRAITS.left;   // SSJ
-  const R = PORTRAITS.right;  // Juan
+  // --- Estado y utilidades ---
+  let stepIdx = 0;
+  let locked = false; // para evitar dobles taps en el mismo frame
 
-  // 1) Entra SSJ
-  _startSlide(L, L.inX, ()=>{
-    // SSJ habla
-    openDialog([{ speaker:'SSJ', text:'¡Te voy a hacer polvo!' }], true);
-    CUT.hijackAction = ()=>{
-      if (isTyping) return advanceDialog();
-      closeDialog();
+  function next(){
+    if (locked) return;
+    locked = true;
+    try {
+      stepIdx++;
+      runStep(stepIdx);
+    } finally {
+      // pequeño delay para que no se encadenen taps
+      setTimeout(()=>{ locked = false; }, 40);
+    }
+  }
 
-      console.log('[cine4] SSJ attack sequence');
-      cine3_attackSequence(()=>{
+  function waitForTypingOrNext(){
+    // Si aún está escribiendo, avanza el texto; si no, pasa al siguiente paso.
+    if (isTyping) { advanceDialog(); return; }
+    next();
+  }
 
-        _startSlide(L, L.outX, ()=>{
+  // --- Animaciones auxiliares (sin sacar a nadie de escena) ---
+  function bouncePortrait(p, sx1, sx2, dxPx, onEnd){
+    // Pequeña traslación + cambio de escala para dar impacto
+    const origX = p.inX;
+    const midX  = origX + Math.round(screenRect.dw * (dxPx || 0.02));
+    p.sFrom = sx1; p.sTo = sx2;
+    _startSlide(p, midX, ()=>{
+      p.sFrom = sx2; p.sTo = sx1;
+      _startSlide(p, origX, onEnd);
+    });
+  }
 
-          _startSlide(R, R.inX, ()=>{
+  // --- Flujo de la escena (state machine) ---
+  function runStep(i){
+    switch(i){
 
-            openDialog([{ speaker:'', text:'Juan SSJ Legendario te ataca con una bola de energía.' }], true);
-            CUT.hijackAction = ()=>{
-              if (isTyping) return advanceDialog();
-              closeDialog();
+      // Paso 1: entran L y R a la vez y se quedan dentro
+      case 1: {
+        console.log('[cine4] portraits enter simultaneously');
+        PORTRAITS.stage = 'entering';
+        let pending = 2;
+        const doneOne = ()=>{ if(--pending===0){ PORTRAITS.stage='idle'; next(); } };
 
-              openDialog([{ speaker:'', text:'No ha tenido efecto…' }], true);
-              CUT.hijackAction = ()=>{
-                if (isTyping) return advanceDialog();
-                closeDialog();
+        _startSlide(L, L.inX, doneOne);
+        _startSlide(R, R.inX, doneOne);
+      } break;
 
-                openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
-                CUT.hijackAction = ()=>{
-                  if (isTyping){ advanceDialog(); return; }
+      // Paso 2: SSJ habla (inicio pelea)
+      case 2: {
+        console.log('[cine4] SSJ opening line');
+        openDialog([{ speaker:'SSJ', text:'¡Te voy a hacer polvo!' }], true);
+        CUT.hijackAction = waitForTypingOrNext;
+      } break;
 
-                  _cine2_openMenu();
-
-                  CUT.hijackAction = ()=>{
-
-                    const choice = _cine2_menuConfirm();
-                    if (choice < 0) return; // no elegido aún
-
-                    closeDialog();
-                    _cine2_closeMenu();
-
-                    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
-                    const back = R.inX;
-
-                    R.sFrom = 1.00; R.sTo = 1.06;
-                    _startSlide(R, mid, ()=>{
-                      R.sFrom = 1.06; R.sTo = 1.00;
-                      _startSlide(R, back, ()=>{
-
-                        _startSlide(R, R.outX, ()=>{
-
-                          _startSlide(L, L.inX, ()=>{
-                            const orig = L.inX;
-                            const kick = orig + Math.round(screenRect.dw * 0.02);
-
-                            L.sFrom = 1.00; L.sTo = 0.96;
-                            _startSlide(L, kick, ()=>{
-
-                              if (typeof HPBARS.setTargets === 'function') HPBARS.setTargets(150, 0);
-
-                              L.sFrom = 0.96; L.sTo = 1.00;
-                              _startSlide(L, orig, ()=>{
-
-                                openDialog([{ speaker:'SSJ', text:'¡Imposible!' }], true);
-                                _cine4_removeSSJFromMap();
-                                CUT.hijackAction = ()=>{
-                                  if (isTyping) return advanceDialog();
-                                  closeDialog();
-                                  _cine4_end(); 
-                                };
-                              });
-                            });
-                          });
-                        });
-                      });
-                    });
-                  };
-                };
-              };
-            };
-          });
+      // Paso 3: secuencia de ataque de SSJ (cine3_attackSequence)
+      case 3: {
+        console.log('[cine4] SSJ attack sequence');
+        closeDialog();
+        cine3_attackSequence(()=>{
+          // Al terminar el ataque, seguimos
+          next();
         });
-      });
-    };
-  });
+      } break;
+
+      // Paso 4: narrador — bola de energía
+      case 4: {
+        console.log('[cine4] narrator: energy ball');
+        openDialog([{ speaker:'', text:'Juan SSJ Legendario te ataca con una bola de energía.' }], true);
+        CUT.hijackAction = waitForTypingOrNext;
+      } break;
+
+      // Paso 5: narrador — sin efecto
+      case 5: {
+        console.log('[cine4] narrator: no effect');
+        openDialog([{ speaker:'', text:'No ha tenido efecto…' }], true);
+        CUT.hijackAction = waitForTypingOrNext;
+      } break;
+
+      // Paso 6: menú de acción del jugador
+      case 6: {
+        console.log('[cine4] open player action menu');
+        openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
+        CUT.hijackAction = ()=>{
+          if (isTyping){ advanceDialog(); return; }
+          _cine2_openMenu();
+          // Cambiamos el hijack para esperar la elección
+          CUT.hijackAction = ()=>{
+            const choice = _cine2_menuConfirm();
+            if (choice < 0) return; // aún no ha elegido
+            closeDialog();
+            _cine2_closeMenu();
+
+            // Animación de preparación: Juan hace un "impulso" (sin salir de escena)
+            console.log('[cine4] player (Juan) prepares attack');
+            bouncePortrait(R, 1.00, 1.06, -0.04, ()=>{
+              // Impacto del prota: SSJ recibe (sin salir de escena)
+              console.log('[cine4] SSJ gets hit');
+              bouncePortrait(L, 1.00, 0.96, +0.02, ()=>{
+                if (typeof HPBARS.setTargets === 'function') HPBARS.setTargets(150, 0);
+                next();
+              });
+            });
+          };
+        };
+      } break;
+
+      // Paso 7: SSJ reacciona
+      case 7: {
+        console.log('[cine4] SSJ: reaction line');
+        openDialog([{ speaker:'SSJ', text:'¡Imposible!' }], true);
+        CUT.hijackAction = waitForTypingOrNext;
+      } break;
+
+      // Paso 8: cierre — retirar SSJ del mapa y fin de la cine
+      case 8: {
+        console.log('[cine4] ending scene');
+        closeDialog();
+        _cine4_removeSSJFromMap();
+        _cine4_end();
+      } break;
+
+      default: break;
+    }
+  }
+
+  // Arrancamos la escena
+  stepIdx = 0;
+  runStep(++stepIdx);
+  // Mientras dure la escena, este hijack controla el avance por pasos
+  CUT.hijackAction = waitForTypingOrNext;
 }
 
 function goToEnd(){
