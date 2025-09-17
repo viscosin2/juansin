@@ -4583,10 +4583,16 @@ function _cine4_end(){
 
         closeDialog();
 
-const TILE_SIZE = 16; // o 24 / 32, lo que uses
+const TILE_SIZE = 16;
 const tilesUp = 12;
+
+// y del pie de Juan en coordenada mundo
+const juanFootY = player.y + FEET_OFFSET_Y;
+
+// spawnea 12 tiles por encima del pie
 const spawnX = player.x;
-const spawnY = player.y - tilesUp * TILE_SIZE;
+const spawnY = juanFootY - tilesUp * TILE_SIZE;
+
 await spawnTresorShinyAt(spawnX, spawnY);
 SFX.play("shine", { volume: 0.4 });
 
@@ -4934,10 +4940,13 @@ const dx = Math.round(px - dw/2), dy = Math.round(py - dh);
   const anchor = (spec.depthAnchorY ?? 0) * mapScaleY;
   const pyCut = py + anchor;
 
-  const sortY = spec.forceBack ? -9999 :
-                (jFoot < pyCut - band) ? (py + 0.5) :
-                (jFoot > pyCut + band) ? (py - 0.5) :
-                py;
+  // dentro del bucle de PROPS, donde calculas sortY:
+const sortY = p.alwaysOnTop
+  ? Number.POSITIVE_INFINITY    // <- se dibuja el último de la zlist
+  : (spec.forceBack ? -9999 :
+     (jFoot < pyCut - band) ? (py + 0.5) :
+     (jFoot > pyCut + band) ? (py - 0.5) :
+     py);
 
   zlist.push({
     y: sortY,
