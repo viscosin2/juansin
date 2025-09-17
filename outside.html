@@ -3671,6 +3671,7 @@ async function startCinematic3(){
 
       (async () => {
         const other = await applyOtherJuanSSJ({ boostHalo: true });
+        SFX.play("fire",{start: 0.5, duration: 2});
 
         setTimeout(() => {
           openDialog([{ speaker:'Juan', text:'Ah, pues no.' }], true);
