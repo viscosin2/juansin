@@ -1944,6 +1944,8 @@ function spawnGandalfWhiteAtPlayer(){
   FOG.targetDensity = 180;
   FOG.areaW = 120;
   FOG.areaH = 70;
+  
+  SFX.play("niebla", { volume: 0.35 });
   fogBeginFill({ dur:600, density:0.9, areaW:FOG.areaW, areaH:FOG.areaH });
 
  BUSH_SCENE._onLanded = () => {
@@ -2473,7 +2475,7 @@ function unfreezeIdle(){
     { speaker:'Gandalf', text:'Tranquilo, tengo la solución.' },
     { speaker:'Gandalf', text:'He escondido una pócima en el bosque.' },
     { speaker:'Gandalf', text:'Bébetela. Serás tres mil veces más poderoso.' },
-    { speaker:'Juan', text:'No, sí... La fiesta...' }
+    { speaker:'Juan', text:'No, sí... La fiesta aquí...' }
   ];
 
   PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
@@ -2547,6 +2549,7 @@ function fadeOutFogAndGandalf(done){
       requestAnimationFrame(tick);
     } else {
       fogStop();
+      SFX.fadeOut("niebla", 1000);  
       if (npc){
         const i = NPCS.indexOf(npc);
         if (i>=0) NPCS.splice(i,1);
@@ -3693,18 +3696,34 @@ async function startCinematic3(){
             const ty = v ?  v.y  + 35    : player.y;
 
   cine2AutoWalkTo(tx, ty, 700, () => {
-    player.dir = 'up';
-                    setTimeout(() => {
-                  openDialog([{ speaker:'Juan SSJ Legendario', text:'¿Adónde crees que vas?' }], true);
-                  CUT.hijackAction = () => {
-                    if (dialogOpen){
-                      closeDialog();
-                      CUT.hijackAction = null;
-                      cine3_beginPortraits();
-                    }
-                  };
-                }, 200);
-  });       
+  player.dir = 'up';
+
+  setTimeout(() => {
+    const prePortraits = [
+      { speaker:'Juan SSJ Legendario', text:'¿Adónde crees que vas?' },
+      { speaker:'Juan',                text:'Al súper, que me cierran.' },
+      { speaker:'Juan SSJ Legendario', text:'¿Vacilando? A ver qué tal te sienta esto.' },
+    ];
+
+    openDialog(prePortraits, true);
+
+    CUT.hijackAction = () => {
+      if (!dialogOpen) return;
+      if (isTyping){ advanceDialog(); return; }
+
+      if (dialogIndex < dialogScript.length - 1){
+        advanceDialog();
+        return;
+      }
+
+      // fin del diálogo previo → arrancan los portraits
+      closeDialog();
+      CUT.hijackAction = null;
+      cine3_beginPortraits();
+    };
+  }, 200);
+});
+  
           };
         }, 1000);
       })();
