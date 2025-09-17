@@ -4550,7 +4550,7 @@ function _cine4_end(){
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
   _cine2_closePortraitsAndOverlay(() => {
-     Music.play('happy', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
+     
 
     const game = document.getElementById('game');
 
@@ -4559,6 +4559,7 @@ function _cine4_end(){
       y: game.clientHeight / 2 
     });
 
+    Music.play('happy', { volume: 0.5 });
     openDialog([{ speaker:'Pueblo', text:'Bravoooo' }], true);
 
     CUT.hijackAction = () => { 
@@ -4586,7 +4587,7 @@ function _cine4_end(){
         closeDialog();
 
         try {
-          const tilesUp = 30; 
+          const tilesUp = 12; 
           const spawnX = player.x;
           const spawnY = player.y - tilesUp;
           await spawnTresorShinyAt(spawnX, spawnY);
