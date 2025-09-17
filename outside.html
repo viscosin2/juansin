@@ -4583,9 +4583,10 @@ function _cine4_end(){
 
         closeDialog();
 
+const TILE_SIZE = 16; // o 24 / 32, lo que uses
 const tilesUp = 12;
 const spawnX = player.x;
-const spawnY = player.y - tilesUp;
+const spawnY = player.y - tilesUp * TILE_SIZE;
 await spawnTresorShinyAt(spawnX, spawnY);
 SFX.play("shine", { volume: 0.4 });
 
@@ -4869,20 +4870,20 @@ async function spawnTresorShinyAt(x, y){
   const img = spawnTresorShinyAt._img;
   if (!img) { console.warn('tresor.png no cargó'); return null; }
 
-  // ⚠️ NO recalcular con player.x/y aquí: usamos los argumentos que te pasan
   const prop = {
-    type: 'tresorShiny',
-    img,
-    x,                // mundo
-    y,                // mundo (arriba de Juan si le pasas player.y - tilesUp)
-    w: img.width,
-    h: img.height,
-    // anclaje para que "caiga" justo encima de la cabeza de Juan
-    anchorX: 0.5,
-    anchorY: 1.0,
-    // Fuerza dibujado por delante de otros props
-    z: Z.FG + 10,     // o layer: 'fg' si usas layers por string
-    alwaysOnTop: true // si tu renderer lo soporta
+type: 'tresorShiny',   // tu draw mira CATALOG[p.type]
+id:  'tresor_' + Date.now(), // por si usas BUSH_PULSE/targetId
+img,
+x, y,
+
+iw: img.width,
+ih: img.height,
+scale: 1,
+
+anchorX: 0.5,
+anchorY: 1.0,
+z: (Z?.FG ?? 200) + 10,
+    alwaysOnTop: true
   };
 
   // Efecto y registro en escena
