@@ -4164,21 +4164,18 @@ function spawnAroundJuanFromList(list){
   }
 }
 
-  // Requiere getFXCanvasOnTop() (overlay transparente con z-index alto)
 function _cine4_fireballFromLtoR(opts = {}, cb){
   const {
-    // sincronía
     startDelayMs = 0,
-    // duración total
     dur = 600,
-    // y explícito (si no, se calcula desde el portrait L)
     y: forcedY = null,
-    // tamaño: radio base y pico
-    rBase = 25,
-    rPeak = 40,
-    // offsets horizontales desde cada portrait para no “nacer pegado”
-    offsetL = 2, // en % del ancho pantalla
-    offsetR = 5,
+    rBase = 28,
+    rPeak = 46,
+    // Ahora aceptan tanto 0.06 (=6%) como 6 (=6%)
+    offsetL = 12,   // % hacia la derecha desde L
+    offsetR = -6,   // % antes de R (negativo = overshoot a la derecha de R)
+    clipToScreen = true,
+    debug = false,
   } = opts;
 
   const fx = getFXCanvasOnTop();
@@ -4187,31 +4184,48 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
   const L = PORTRAITS.left, R = PORTRAITS.right;
   if (!L || !R){ cb && cb(); return; }
 
-  const W = (screenRect?.dw || fx.width);
-  const H = (screenRect?.dh || fx.height);
+  // === MEDIDAS EN CSS PX (coinciden con el sistema tras setTransform(dpr,...)) ===
+  const Wcss = fx.clientWidth  || fx.width;
+  const Hcss = fx.clientHeight || fx.height;
 
-  // Pos Y: intenta usar L.y (si tus portraits tienen y); si no, baja la banda (62% de H)
-  const baseY = forcedY != null ? forcedY : (typeof L.y === 'number' ? L.y : Math.round(H * 0.62));
-  const y = Math.max(0, Math.min(H - 1, baseY));
+  // Normaliza offsets: si te pasan 6 => 6% => 0.06
+  const norm = v => (Math.abs(v) >= 1 ? v/100 : v);
+  const oL = norm(offsetL);
+  const oR = norm(offsetR);
 
-  // Pos X: desde borde derecho de L hacia borde izquierdo de R con offsets
-  const startX = Math.round(L.inX + W * offsetL);
-  const endX   = Math.round(R.inX - W * offsetR);
+  // Si tienes letterbox con desplazamiento, usa screenRect.dx/dy si existen
+  const dx = (screenRect && screenRect.dx) ? screenRect.dx : 0;
+  const dy = (screenRect && screenRect.dy) ? screenRect.dy : 0;
+  const W  = (screenRect && screenRect.dw) ? screenRect.dw : Wcss;
+  const H  = (screenRect && screenRect.dh) ? screenRect.dh : Hcss;
 
-  // SFX opcional
+  // Y en CSS px
+  const baseY = forcedY != null ? forcedY : (typeof L.y === 'number' ? L.y : Math.round(dy + H * 0.62));
+  let startX = Math.round(dx + L.inX + W * oL);
+  let endX   = Math.round(dx + R.inX - W * oR);
+  const y    = Math.max(0, Math.min(dy + H - 1, baseY));
+
+  if (clipToScreen){
+    startX = Math.max(0, Math.min(dx + W, startX));
+    endX   = Math.max(0, Math.min(dx + W, endX));
+  }
+
+  if (debug){
+    console.log('[fireball]',
+      {offsetL, offsetR, oL, oR, dx, dy, W, H, L_inX: L.inX, R_inX: R.inX, startX, endX, y});
+  }
+
   try { SFX && SFX.play && SFX.play('fireball'); } catch(e){}
 
   const colors = ['#ffd166','#ff9f1c','#ff595e'];
   const trail = [];
 
   function drawBall(cx, cy, r){
-    // halo externo
     ctx.beginPath();
     ctx.arc(cx, cy, r + 10, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(255, 220, 130, 0.25)';
     ctx.fill();
 
-    // gradiente radial núcleo
     const g = ctx.createRadialGradient(cx, cy, r*0.2, cx, cy, r);
     g.addColorStop(0, '#ffffff');
     g.addColorStop(0.45, colors[0]);
@@ -4223,7 +4237,7 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
     ctx.fill();
   }
 
-  function ease(k){ return 1 - Math.pow(1-k, 3); } // out-cubic
+  const ease = k => 1 - Math.pow(1-k, 3); // out-cubic
 
   const start = () => {
     const t0 = performance.now();
@@ -4231,32 +4245,29 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
       const k = Math.min(1, (now - t0) / dur);
       const e = ease(k);
 
-      ctx.clearRect(0, 0, fx.width, fx.height);
+      ctx.clearRect(0, 0, fx.width, fx.height); // limpia SOLO overlay (en device px, ok)
 
       const x = startX + (endX - startX) * e;
-      const size = rBase + (rPeak - rBase) * (1 - Math.abs(0.5 - k) * 2); // late
+      const size = rBase + (rPeak - rBase) * (1 - Math.abs(0.5 - k) * 2); // pulso
 
-      // estela
       trail.push({x, y, r: size});
       while (trail.length > 12) trail.shift();
       for (let i=0;i<trail.length;i++){
         const p = trail[i];
-        const a = (i+1) / trail.length;
+        const a = (i+1)/trail.length;
         ctx.globalAlpha = 0.15 * a;
         drawBall(p.x, p.y, Math.max(6, p.r*0.65));
       }
       ctx.globalAlpha = 1;
-
-      // bola actual
       drawBall(x, y, size);
 
       if (k < 1){
         requestAnimationFrame(loop);
       } else {
-        // flash de impacto
-        const flashT0 = performance.now(), flashDur = 130;
+        const t1 = performance.now();
+        const flashDur = 130;
         function flash(now2){
-          const f = Math.min(1, (now2 - flashT0) / flashDur);
+          const f = Math.min(1, (now2 - t1) / flashDur);
           ctx.clearRect(0,0,fx.width,fx.height);
           ctx.globalAlpha = 0.5 * (1 - f);
           drawBall(endX, y, rPeak + 16);
@@ -4273,6 +4284,7 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
   if (startDelayMs > 0) setTimeout(start, startDelayMs);
   else start();
 }
+
 
 
 
