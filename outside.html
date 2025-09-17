@@ -1984,7 +1984,7 @@ function spawnGandalfWhiteAtPlayer(){
   FOG.areaW = 120;
   FOG.areaH = 70;
   
-  SFX.play("niebla", { volume: 0.4 });
+  SFX.play("niebla", { volume: 0.3});
   fogBeginFill({ dur:600, density:0.9, areaW:FOG.areaW, areaH:FOG.areaH });
 
  BUSH_SCENE._onLanded = () => {
@@ -2760,7 +2760,7 @@ function phaseFogFill(){
   Music.current.volume = 0.1;
 }
   
-  SFX.play("niebla", { volume: 0.4 });
+  SFX.play("niebla", { volume: 0.3 });
   fogBeginFill({
     dur: 3000,
     areaW: 360,
