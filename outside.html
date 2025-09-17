@@ -1052,7 +1052,7 @@ function advanceDialog(){
     closeDialog();
   }
 }
-document.getElementById('btn-act').addEventListener('touchstart', e => {
+document.getElementById('btn-act').addEventListener('touchstart', async e => {
   e.preventDefault();
 
   if (!window._audioUnlocked) {
