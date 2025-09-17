@@ -183,11 +183,6 @@ combatMusic.volume = 0.5;
 combatMusicDBZ.volume = 0.5;
 hapinnessMusic.volume = 0.5;
 
-townMusic.addEventListener('ended',  () => { townMusic.currentTime = 0; townMusic.play().catch(()=>{}); });
-combatMusic.addEventListener('ended',() => { combatMusic.currentTime = 0; combatMusic.play().catch(()=>{}); });
-combatMusicDBZ.addEventListener('ended',() => { combatMusicDBZ.currentTime = 0; combatMusicDBZ.play().catch(()=>{}); });
-hapinnessMusic.addEventListener('ended',() => { hapinnessMusic.currentTime = 0; hapinnessMusic.play().catch(()=>{}); });
-
 /* ====== AUDIO GATE GLOBAL ====== */
 const AudioGate = (() => {
   let unlocked = false, primed = false, primingPromise = null;
@@ -636,7 +631,8 @@ const OBSTACLE_DEFS = [
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
 
-  window.addEventListener('touchstart', ()=>AudioGate.unlock(), {once:true, passive:true});
+window.addEventListener('touchstart', ()=>AudioGate.unlock(), {once:true, passive:true, capture:true});
+
 
 let bgImg=null, sprites=null, world={w:0,h:0};
 let PROP_IMAGES={}, PROPS=[], OBSTACLES=[];
@@ -1061,7 +1057,11 @@ document.getElementById('btn-act').addEventListener('touchstart', e => {
   if (!window._audioUnlocked) {
 
   window._audioUnlocked = true;
+
+     await AudioGate.ready();
+    
   window.MUSIC_HARDLOCK = 'town';
+    window.__lockToTown = true;
 
 
 const kill = (el) => {
@@ -1069,8 +1069,7 @@ const kill = (el) => {
   try { el.pause(); } catch(_) {}
   try { el.loop = false; } catch(_) {}
   try { el.currentTime = 0; } catch(_) {}
-  // opcional “nuclear” para que nada externo pueda re-arrancarlas:
-  // el.src = ''; el.load();
+
 };
 
 const town  = document.getElementById('bgTown');
@@ -1080,17 +1079,15 @@ const comb  = document.getElementById('bgCombat');
 const dbz   = document.getElementById('bgCombatDBZ');
 const happy = document.getElementById('bgHappiness');
 
-kill(blue); kill(hell); kill(comb); kill(dbz); kill(happy);
+ [blue, hell, comb, dbz, happy].forEach(kill);
 
-// por si alguna tuviera escuchas de 'ended' que re-lanzan play():
-[blue, hell, comb, dbz, happy].forEach(a=>{
-  if (!a) return;
-  a.onended = null;            // anula handler único
-  a.replaceWith(a.cloneNode()); // resetea listeners de forma limpia
-});
+    [blue, hell, comb, dbz, happy].forEach(a=>{
+      if (!a) return;
+      a.replaceWith(a.cloneNode()); // clona sin listeners
+    });
 
-// lanza town (sin fade si quieres inmediatez)
-Music.play('town', { volume: 0.5, fadeMs: 0 });
+    // 3e) Lanza SOLO town
+    Music.play('town', { volume: 0.5, fadeMs: 0 });
   }
 
   if (CUT.active && typeof CUT.hijackAction === 'function') {
