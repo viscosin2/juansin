@@ -3714,7 +3714,7 @@ function _cine3_getSSJ(){
 }
 
 function cine3_beginPortraits(){
-  // Estado base
+  // ===== Estado base =====
   PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
   PORTRAITS.active = true;
   PORTRAITS.blurK = 0;
@@ -3747,10 +3747,45 @@ function cine3_beginPortraits(){
     requestAnimationFrame(step);
   }
 
+  // ===== helpers =====
+  function closePortraitsAndBars(cb){
+    if (typeof _cine2_closePortraitsAndOverlay === 'function'){
+      _cine2_closePortraitsAndOverlay(cb || (()=>{}));
+      return;
+    }
+    // Fallback: fade barras + slide out L/R
+    const L = PORTRAITS.left, R = PORTRAITS.right;
+    let pending = 1;
+    const done = ()=>{ if(--pending<=0) (cb||(()=>{}))(); };
+
+    // fade barras
+    (function fadeBars(){
+      const t0 = performance.now(), dur = 250;
+      function step(now){
+        const k = Math.min(1, (now - t0)/dur);
+        HPBARS.alpha = 1 - k;
+        if (k < 1) requestAnimationFrame(step); else done();
+      }
+      requestAnimationFrame(step);
+    })();
+
+    // slide out portraits
+    if (L || R){
+      pending++;
+      let p2 = 0;
+      const ok = ()=>{ if(++p2===((L?1:0)+(R?1:0))) done(); };
+      if (L) _startSlide(L, L.outX, ok);
+      if (R) _startSlide(R, R.outX, ok);
+    }
+  }
+
+  // Guards para no re-ejecutar fases
+  let attackPhaseStarted = false;
+
   // Bloquear acción durante la coreografía inicial
   CUT.hijackAction = ()=>{};
 
-  // --- ENTRADA SIMULTÁNEA L y R ---
+  // ===== ENTRADA SIMULTÁNEA L y R =====
   let pend = 2;
   const doneEnter = ()=>{
     if (--pend === 0){
@@ -3762,9 +3797,11 @@ function cine3_beginPortraits(){
   _startSlide(PORTRAITS.left,  PORTRAITS.left.inX,  doneEnter);
   _startSlide(PORTRAITS.right, PORTRAITS.right.inX, doneEnter);
 
-  // --- FASE DE ATAQUE (SSJ + bola en paralelo) ---
+  // ===== FASE DE ATAQUE (SSJ + bola en paralelo) =====
   function startAttackPhase(){
-    // Lanzamos la animación propia del SSJ y la fireball a la vez
+    if (attackPhaseStarted) return;
+    attackPhaseStarted = true;
+
     let doneA = false, doneB = false;
     const maybeNext = ()=>{
       if (doneA && doneB) afterAttack();
@@ -3776,21 +3813,20 @@ function cine3_beginPortraits(){
       maybeNext();
     });
 
-    // 2) Bola de energía desde L -> R (overlay). Más grande y más baja.
+    // 2) Fireball en overlay (si está disponible)
     const L = PORTRAITS.left, R = PORTRAITS.right;
     const H = (screenRect?.dh || (getFXCanvasOnTop().height));
-
     if (typeof _cine4_fireballFromLtoR === 'function'){
       _cine4_fireballFromLtoR({
-        startDelayMs: 120,      // para sincronizar con el “pico” del golpe
+        startDelayMs: 120,
         dur: 600,
-        rBase: 16,              // más grande
-        rPeak: 36,              // pico más grande
+        rBase: 16,
+        rPeak: 36,
         y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)),
-        offsetL: 0.08,          // nace un poco a la derecha del L
-        offsetR: 0.06           // termina un poco antes del R
+        offsetL: 0.08,
+        offsetR: 0.06
       }, ()=>{
-        // pequeño nudge en Juan al impacto (opcional)
+        // nudge en Juan (opcional)
         if (typeof _cine2_nudge === 'function'){
           _cine2_nudge(R, +(screenRect?.dw||60)*0.02, 1.00, 0.98, ()=>{
             doneB = true; maybeNext();
@@ -3799,47 +3835,62 @@ function cine3_beginPortraits(){
           doneB = true; maybeNext();
         }
       });
-    }else{
-      // Si no hay helper de fireball, simplemente seguimos al acabar la coreografía
+    } else {
       doneB = true; maybeNext();
     }
   }
 
-  // --- POST-ATAQUE: narrador, reacción y continuar flujo ---
+  // ===== POST-ATAQUE: diálogo + sincronía de eventos =====
   function afterAttack(){
-    // Mostrar línea de ataque y las siguientes como querías
+    // Mostramos 2 líneas: 0) “te ataca…”, 1) “No puedes seguir luchando.”
     openDialog([
       { speaker:'', text:'Juan Super SSJ te ataca con una bola de energía.' },
-      { speaker:'', text:'No puedes seguir luchando.'},
-      { speaker:'', text:'¡Rápido! ¡Escóndete en algún sitio!'}
+      { speaker:'', text:'No puedes seguir luchando.'}
     ], true);
 
-    // Ahora sí dejamos que Acción avance el diálogo
+    let showedRapid = false;   // ya mostré "¡Rápido!...” ?
+    let hpDropped   = false;   // ya hice hitReaction + setTargets ?
+
+    // Ahora Acción controla el flujo exacto:
     CUT.hijackAction = ()=>{
       if (isTyping) return advanceDialog();
 
-      // ¿Queda texto? entonces avanza
-      if (dialogIndex < dialogScript.length - 1){
-        advanceDialog();
+      // Estamos en la 1ª línea -> pasar a la 2ª y sincronizar ahí el golpe/bajada de vida
+      if (dialogIndex === 0){
+        advanceDialog(); // pasa a "No puedes seguir luchando."
+        // Ejecuta aquí la animación de recibir + bajar vida (mientras se muestra esa línea)
+        try { cine3_hitReaction(PORTRAITS.right); } catch(e){}
+        try { HPBARS.setTargets(1, 100); } catch(e){}
+        hpDropped = true;
         return;
       }
 
-      // Fin del bloque de narrador → reacción de Juan y bajar barra
-      closeDialog();
+      // Estamos en la 2ª línea ("No puedes…")
+      if (dialogIndex === 1 && !showedRapid){
+        // Reemplazamos el diálogo por la línea final y, en PARALELO, cerramos retratos/barras.
+        dialogScript = [{ speaker:'', text:'¡Rápido! ¡Escóndete en algún sitio!'}];
+        dialogIndex  = 0;
+        renderCurrentLine(true);
 
-      try { cine3_hitReaction(PORTRAITS.right); } catch(e){}
-      try { HPBARS.setTargets(1, 100); } catch(e){}
+        // cerrar retratos y barras detrás (el texto queda visible)
+        closePortraitsAndBars(/* cb opcional */);
+        showedRapid = true;
+        return;
+      }
 
-      // Continúa con tu narrador/post
-      if (typeof cine3_openNarrator === 'function'){
-        cine3_openNarrator();
-      }else{
-        // fallback: liberar acción
+      // Ya se mostró "¡Rápido!...": cerrar diálogo y continuar
+      if (showedRapid){
+        closeDialog();
         CUT.hijackAction = null;
+        if (typeof cine3_openNarrator === 'function'){
+          cine3_openNarrator();
+        }
+        return;
       }
     };
   }
 }
+
 
 
 
