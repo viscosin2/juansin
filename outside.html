@@ -3779,6 +3779,47 @@ function cine3_beginPortraits(){
     }
   }
 
+  // Activa la fase “escóndete”: libera movimiento, parpadeo arbusto y espera esconderse→Gandalf
+  function _startHidePhase(){
+    try { ambientLock = false; ambientLockOwner = null; } catch(e){}
+    try { interactBlocked = false; } catch(e){}
+    try { player.controlEnabled = true; } catch(e){}      // si usas este flag
+    try { player.moving = false; } catch(e){}             // reseteo animación
+
+    // Parpadeo del “arbus/arbusto”
+    try { startArbusBlink && startArbusBlink(); } catch(e){}
+    try { arbusBlinkStart && arbusBlinkStart(); } catch(e){}
+    try { arbustoBlinkStart && arbustoBlinkStart(); } catch(e){}
+
+    // Esperar a que el jugador se esconda y disparar Gandalf
+    if (typeof cine3_waitForHideAndSpawnGandalf === 'function'){
+      // Si ya tenías esta función, úsala y listo
+      cine3_waitForHideAndSpawnGandalf();
+    } else if (typeof onPlayerHidden === 'function'){
+      onPlayerHidden(()=>{
+        try { spawnGandalfCutscene && spawnGandalfCutscene(); } catch(e){}
+        try { cine3_afterHide && cine3_afterHide(); } catch(e){}
+      });
+    } else {
+      // Fallback poller (si no tienes eventos). EDITA este checker a tu gusto:
+      let _once = false;
+      const check = ()=>{
+        if (_once) return;
+        try {
+          // si tienes un helper real, úsalo:
+          if (typeof playerIsHidden === 'function' && playerIsHidden()){
+            _once = true;
+            try { spawnGandalfCutscene && spawnGandalfCutscene(); } catch(e){}
+            try { cine3_afterHide && cine3_afterHide(); } catch(e){}
+            return;
+          }
+        } catch(e){}
+        requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    }
+  }
+
   // Guards para no re-ejecutar fases
   let attackPhaseStarted = false;
 
@@ -3807,31 +3848,27 @@ function cine3_beginPortraits(){
       if (doneA && doneB) afterAttack();
     };
 
-    // 1) Secuencia de ataque del SSJ (tu coreografía)
     cine3_attackSequence(()=>{
-      doneA = true;
-      maybeNext();
+      doneA = true; maybeNext();
     });
 
-    // 2) Fireball en overlay (si está disponible)
     const L = PORTRAITS.left, R = PORTRAITS.right;
     const H = (screenRect?.dh || (getFXCanvasOnTop().height));
     if (typeof _cine4_fireballFromLtoR === 'function'){
       _cine4_fireballFromLtoR({
         startDelayMs: 120,
         dur: 600,
-        rBase: 28,
-        rPeak: 46,
+        rBase: 16,
+        rPeak: 36,
         y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)),
-        offsetL: 1.5,
-        offsetR: 1.5
+        offsetL: 0.08,
+        offsetR: 0.06
       }, ()=>{
-        // nudge en Juan (opcional)
         if (typeof _cine2_nudge === 'function'){
           _cine2_nudge(R, +(screenRect?.dw||60)*0.02, 1.00, 0.98, ()=>{
             doneB = true; maybeNext();
           });
-        }else{
+        } else {
           doneB = true; maybeNext();
         }
       });
@@ -3839,6 +3876,58 @@ function cine3_beginPortraits(){
       doneB = true; maybeNext();
     }
   }
+
+  // ===== POST-ATAQUE: diálogo + sincronía de eventos =====
+  function afterAttack(){
+    // 1ª y 2ª línea: en la 2ª bajamos la vida y reproducimos hit en ese mismo momento
+    openDialog([
+      { speaker:'', text:'Juan Super SSJ te ataca con una bola de energía.' },
+      { speaker:'', text:'No puedes seguir luchando.'}
+    ], true);
+
+    let showedRapid = false;
+
+    CUT.hijackAction = ()=>{
+      if (isTyping) return advanceDialog();
+
+      // Pasa a la 2ª línea y BAJA VIDA + reacción en ese instante
+      if (dialogIndex === 0){
+        advanceDialog();
+        try { cine3_hitReaction(PORTRAITS.right); } catch(e){}
+        try { HPBARS.setTargets(1, 100); } catch(e){}
+        return;
+      }
+
+      // Ahora mostramos ¡Rápido!… y a la vez cerramos portraits/barras y activamos fase de esconderse
+      if (dialogIndex === 1 && !showedRapid){
+        dialogScript = [{ speaker:'', text:'¡Rápido! ¡Escóndete en algún sitio!'}];
+        dialogIndex  = 0;
+        renderCurrentLine(true);
+
+        closePortraitsAndBars(()=>{
+          // aquí ya no hay overlays -> activa juego libre + arbus + espera esconderse/Gandalf
+          _startHidePhase();
+        });
+
+        showedRapid = true;
+        return;
+      }
+
+      // Siguiente Acción: cerramos este último texto y soltamos el hijack
+      if (showedRapid){
+        closeDialog();
+        CUT.hijackAction = null;
+
+        // Si tu flujo posterior lo llevaba cine3_openNarrator, mantenlo aquí:
+        try { cine3_openNarrator && cine3_openNarrator(); } catch(e){}
+
+        // importante: ya con hijack=null, el jugador puede moverse y usar Acción para esconderse
+        return;
+      }
+    };
+  }
+}
+
 
   function afterAttack(){
     // Mostramos 2 líneas: 0) “te ataca…”, 1) “No puedes seguir luchando.”
