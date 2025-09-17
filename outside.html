@@ -4547,69 +4547,133 @@ function _cine4_end(){
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
   _cine2_closePortraitsAndOverlay(() => {
-     
-
     const game = document.getElementById('game');
-
-    confettiExplosionFX({ 
-      x: game.clientWidth / 2, 
-      y: game.clientHeight / 2 
-    });
+    if (game) {
+      confettiExplosionFX({ 
+        x: Math.round(game.clientWidth  / 2), 
+        y: Math.round(game.clientHeight / 2)
+      });
+    } else {
+      console.warn('[cine4] #game no encontrado para confetti');
+    }
 
     Music.play('happy', { volume: 0.5 });
-    openDialog([{ speaker:'Pueblo', text:'Bravoooo' }], true);
+    openDialog([{ speaker:'Pueblo', text:'¡Bravoooo!' }], true);
 
-    CUT.hijackAction = () => { 
-      if (isTyping) return advanceDialog();
+    // -------- FSM por fases --------
+    // intro: primer "¡Bravoooo!"
+    // main : diálogo principal
+    // spawn: spawnea tresor y espera confirmación del jugador
+    // end  : goToEnd()
+    let phase = 'intro';
+    let armed = false;   // evita dobles ejecuciones
+    let _spawning = false;
 
-      closeDialog();
-      CUT.hijackAction = null;
+    // Helpers robustos
+    const canAdvance = () => (typeof isTyping === 'boolean' ? !isTyping : true);
+    const tryAdvance = () => { 
+      if (typeof advanceDialog === 'function') advanceDialog(); 
+    };
+    const tryCloseDialog = () => { 
+      if (typeof closeDialog === 'function') closeDialog(); 
+    };
+    const dialogHasMore = () => {
+      // Si tienes helpers reales, sustitúyelos.
+      // Aquí asumimos que tu openDialog gestiona índices internos.
+      // Usamos una heurística: si isTyping === true, aún no ha terminado la línea.
+      // Si no hay isTyping disponible, dejamos avanzar y cerrará cuando toque.
+      return (typeof isTyping === 'boolean') ? isTyping : false;
+    };
 
-      // Diálogo principal
-      openDialog([
-        { speaker:'Pueblo',    text:'Juan, ¡nos has salvado!' },
-        { speaker:'Megafonía', text:'Comunicamos que el supermercado permanecerá cerrado hasta nuevo aviso.' },
-        { speaker:'Juan',      text:'No jodas... Me quedé sin los Tresor...' },
-        { speaker:'Abuelita',  text:'¡De eso nada! ¡Aquí tienes!' }
-      ], true);
+    CUT.hijackAction = async () => {
+      // Mientras esté escribiendo, solo avanza typing
+      if (typeof isTyping === 'boolean' && isTyping) {
+        if (typeof advanceDialog === 'function') return advanceDialog();
+        return;
+      }
 
-      CUT.hijackAction = async ()=>{
-        if (isTyping) return advanceDialog();
+      try {
+        // ---- FASE INTRO ----
+        if (phase === 'intro') {
+          // Cierra "¡Bravoooo!" y abre el principal
+          tryCloseDialog();
 
-        if (dialogIndex < dialogScript.length - 1){ 
-          advanceDialog();
-          return; 
+          openDialog([
+            { speaker:'Pueblo',    text:'Juan, ¡nos has salvado!' },
+            { speaker:'Megafonía', text:'Comunicamos que el supermercado permanecerá cerrado hasta nuevo aviso.' },
+            { speaker:'Juan',      text:'No jodas... Me quedé sin los Tresor...' },
+            { speaker:'Abuelita',  text:'¡De eso nada! ¡Aquí tienes!' }
+          ], true);
+
+          phase = 'main';
+          console.debug('[cine4] -> main');
+          return;
         }
 
-        closeDialog();
+        // ---- FASE MAIN ----
+        if (phase === 'main') {
+          // Si el diálogo todavía tiene letras escribiéndose, ya habremos devuelto antes.
+          // Aquí simplemente intentamos avanzar; cuando ya no haya más, cerramos.
+          if (dialogHasMore()) return tryAdvance();
 
-const TILE_SIZE = 16;
-const tilesUp = 12;
+          // Intento de avanzar una línea; si ya no hay más, cerrará tu sistema o nos quedamos sin isTyping.
+          tryAdvance();
 
-// y del pie de Juan en coordenada mundo
-const juanFootY = player.y + FEET_OFFSET_Y;
+          // Si ya no hay más (el sistema cerrará o quedará en última línea), forzamos cierre y pasamos a spawn.
+          tryCloseDialog();
+          phase = 'spawn';
+          console.debug('[cine4] -> spawn');
+          return;
+        }
 
-// spawnea 12 tiles por encima del pie
-const spawnX = player.x;
-const spawnY = juanFootY - tilesUp * TILE_SIZE;
+        // ---- FASE SPAWN ----
+        if (phase === 'spawn') {
+          if (_spawning) return; // reentrancia
+          _spawning = true;
 
-await spawnTresorShinyAt(spawnX, spawnY);
-SFX.play("shine", { volume: 0.4 });
+          // Calcula pie de Juan y spawnea 12 tiles por encima
+          const TILE_SIZE = 16;
+          const tilesUp = 12;
+          const juanFootY = player.y + FEET_OFFSET_Y; // en tu debug usas este pie
 
+          const spawnX = player.x;
+          const spawnY = juanFootY - tilesUp * TILE_SIZE;
 
-        let armed = true;
-        CUT.hijackAction = () => {
-          if (!armed) return;
+          // IMPORTANTE: spawnTresorShinyAt es async; aquí SÍ estamos en async
+          const p = await spawnTresorShinyAt(spawnX, spawnY);
+          SFX.play("shine", { volume: 0.4 });
+          console.debug('[cine4] Tresor spawn:', p?.id || '(sin id)');
+
+          // opcional: si quieres un texto corto tras el spawn:
+          if (typeof openDialog === 'function') {
+            openDialog([{ speaker:'Abuelita', text:'¡Tus Tresor, mi niño!' }], true);
+          }
+
+          armed = true;             // listo para finalizar en el siguiente input
+          phase = 'end';
+          _spawning = false;
+          console.debug('[cine4] -> end (armed)');
+          return;
+        }
+
+        // ---- FASE END ----
+        if (phase === 'end') {
+          if (!armed) return;       // evita dobles
           armed = false;
-          CUT.hijackAction = null;
-          goToEnd();
-        };
-      };
-    }; 
+          CUT.hijackAction = null;  // libera el hijack
+
+          tryCloseDialog();
+          console.debug('[cine4] goToEnd()');
+          if (typeof goToEnd === 'function') return goToEnd();
+          console.warn('[cine4] goToEnd no definido');
+          return;
+        }
+      } catch (err) {
+        console.error('[cine4] hijack error:', err);
+      }
+    };
   });
 }
-
-
 
 
 /* ========== MOVIMIENTO / MEGAUPDATE ========== */
@@ -5321,6 +5385,25 @@ if (DEBUG_CINE && CINE_BUILT.length){
   smokeDraw();
   ctx.restore();
 
+  // >>>> REPAINT de props alwaysOnTop por encima de la niebla y el humo <<<<
+  {
+    for (const p of PROPS){
+      if (!p.alwaysOnTop || !p.img) continue;
+
+      // mismo cálculo de coords que arriba (sin zlist)
+      const pulse = (BUSH_PULSE.active && p.id === BUSH_PULSE.targetId) ? BUSH_PULSE.scale : 1.0;
+      const dw = Math.round(p.iw * p.scale * pulse * mapScaleX);
+      const dh = Math.round(p.ih * p.scale * pulse * mapScaleY);
+
+      const px = screenRect.dx + (p.x - cam.x) * mapScaleX;
+      const py = screenRect.dy + (p.y - cam.y) * mapScaleY;
+      const dx = Math.round(px - dw/2);
+      const dy = Math.round(py - dh);
+
+      // ojo: no aplicamos gCO=lighter ni halos aquí (ya se dibujaron antes)
+      ctx.drawImage(p.img, 0, 0, p.iw, p.ih, dx, dy, dw, dh);
+    }
+  }
   // Retratos / modo cine
   portraitsDrawOverlay();
   drawHPBars();
