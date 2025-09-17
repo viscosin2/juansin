@@ -4202,7 +4202,7 @@ confettiExplosion(ctx, {
       (async ()=>{
         const aheadX = player.x + (player.dir==='right'? 8 : player.dir==='left' ? -8 : 0);
         const aheadY = player.y + (player.dir==='down' ? 0 : 1);
-
+        try{ await spawnTresorShinyAt(aheadX, aheadY); }catch(e){ console.warn('tresor spawn fail', e); }
         openDialog([
           { speaker:'Pueblo', text:'Juan, ¡nos has salvado!' },
           { speaker:'Megafonía', text:'Comunicamos que el supermercado permanecerá cerrado hasta nuevo aviso.' },
@@ -4214,7 +4214,7 @@ confettiExplosion(ctx, {
           if (isTyping) return advanceDialog();
           if (dialogIndex < dialogScript.length - 1){ advanceDialog(); return; }
           closeDialog();
-        try{ await spawnTresorShinyAt(aheadX, aheadY); }catch(e){ console.warn('tresor spawn fail', e); }
+
           goToEnd();
         };
       })();
