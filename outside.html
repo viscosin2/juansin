@@ -3153,6 +3153,8 @@ function _cine2_startFightUI(){
   HPBARS.leftName  = 'Voldemort';
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
+  Music.play('combat', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
+
   HPBARS.show(100, 100);
   { // fade-in barras
     const t0 = performance.now(), dur = 400;
@@ -3163,7 +3165,6 @@ function _cine2_startFightUI(){
     })(t0);
   }
 
-  // ENTRA SOLO L y luego mostramos menú
   _cine2_enterLeft(() => {
     PORTRAITS.stage = 'speaking';
     openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
@@ -3183,10 +3184,10 @@ function _cine2_startFightUI(){
         const R = PORTRAITS.right;
         const L = PORTRAITS.left;
 
-        // Carga y golpe (SIN salir de escena)
-        SFX && SFX.play && SFX.play("ataque");
+        SFX && SFX.play && SFX.play("attack");
         _cine2_nudge(R, -screenRect.dw * 0.04, 1.00, 1.06, () => {
           _cine2_nudge(L,  screenRect.dw * 0.02, 1.00, 0.96, () => {
+            SFX.play("ataque", { volume: 0.35 });
             HPBARS.setTargets(100, 50); // ajusta orden si tu implementación es inversa
 
             openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
@@ -3194,7 +3195,6 @@ function _cine2_startFightUI(){
               if (isTyping) return advanceDialog();
               closeDialog();
 
-              // En la venganza: SE VAN LOS DOS
               _cine2_slideOutBoth(() => {
                 venganzaVoldemort();
               });
@@ -3399,14 +3399,16 @@ function _cine2_continueFight(){
 
 
 function endCine2(){ 
+   Music.play('bluehour', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
   CUT.active=false; 
   CUT.id=null; 
   CUT.phase=null; 
   CUT.hijackAction=null; 
   CUT.onEnd=null; 
   ambientLock=false; 
-      _cine2_closePortraitsAndOverlay(() => {
-openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true); 
+  
+ _cine2_closePortraitsAndOverlay(() => {
+ openDialog([{ speaker:'Juan', text:'Puto amo.' }], true); 
   CUT.hijackAction = () => { 
     if (isTyping){ advanceDialog(); 
                   return; } 
@@ -3415,8 +3417,6 @@ openDialog([{ speaker:'Juan', text:'Pues ya estaría.' }], true);
   }; 
     });   
 }
-
-  
 
 // ========== FX rayo verde desde Voldemort hacia la izquierda ==========
 function playVoldemortRayFx(fromNpc){
@@ -3431,6 +3431,7 @@ function playVoldemortRayFx(fromNpc){
   ray.style.width = len + 'px';
   ray.style.display = 'block';
 
+  SFX.play("avada", { volume: 0.35 });
   ray.animate([{ transform:`translateX(0) scaleX(0)` }, { transform:`translateX(-${len}px) scaleX(1)` }], { duration: 320, easing:'ease-out' });
   setTimeout(()=>{ ray.style.display='none'; }, 360);
 }
@@ -4528,9 +4529,11 @@ case 3: {
             // Animación de preparación: Juan hace un "impulso" (sin salir de escena)
             console.log('[cine4] player (Juan) prepares attack');
             bouncePortrait(R, 1.00, 1.06, -0.04, ()=>{
+              SFX.play("attack", { volume: 0.35 });
               // Impacto del prota: SSJ recibe (sin salir de escena)
               console.log('[cine4] SSJ gets hit');
               bouncePortrait(L, 1.00, 0.96, +0.02, ()=>{
+                SFX.play("ataque", { volume: 0.35 });
                 if (typeof HPBARS.setTargets === 'function') HPBARS.setTargets(150, 0);
                 next();
               });
