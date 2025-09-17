@@ -3929,56 +3929,6 @@ function cine3_beginPortraits(){
 }
 
 
-  function afterAttack(){
-    // Mostramos 2 líneas: 0) “te ataca…”, 1) “No puedes seguir luchando.”
-    openDialog([
-      { speaker:'', text:'Juan Super SSJ te ataca con una bola de energía.' },
-      { speaker:'', text:'No puedes seguir luchando.'}
-    ], true);
-
-    let showedRapid = false;   // ya mostré "¡Rápido!...” ?
-    let hpDropped   = false;   // ya hice hitReaction + setTargets ?
-
-    // Ahora Acción controla el flujo exacto:
-    CUT.hijackAction = ()=>{
-      if (isTyping) return advanceDialog();
-
-      // Estamos en la 1ª línea -> pasar a la 2ª y sincronizar ahí el golpe/bajada de vida
-      if (dialogIndex === 0){
-        advanceDialog(); // pasa a "No puedes seguir luchando."
-        // Ejecuta aquí la animación de recibir + bajar vida (mientras se muestra esa línea)
-        try { cine3_hitReaction(PORTRAITS.right); } catch(e){}
-        try { HPBARS.setTargets(1, 100); } catch(e){}
-        hpDropped = true;
-        return;
-      }
-
-      // Estamos en la 2ª línea ("No puedes…")
-      if (dialogIndex === 1 && !showedRapid){
-        // Reemplazamos el diálogo por la línea final y, en PARALELO, cerramos retratos/barras.
-        dialogScript = [{ speaker:'', text:'¡Rápido! ¡Escóndete en algún sitio!'}];
-        dialogIndex  = 0;
-        renderCurrentLine(true);
-
-        // cerrar retratos y barras detrás (el texto queda visible)
-        closePortraitsAndBars(/* cb opcional */);
-        showedRapid = true;
-        return;
-      }
-
-      // Ya se mostró "¡Rápido!...": cerrar diálogo y continuar
-      if (showedRapid){
-        closeDialog();
-        CUT.hijackAction = null;
-        if (typeof cine3_openNarrator === 'function'){
-          cine3_openNarrator();
-        }
-        return;
-      }
-    };
-  }
-}
-
 
 
 function cine3_attackSequence(done){
