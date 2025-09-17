@@ -2977,6 +2977,7 @@ function continueCine1_WithFumaos_Portraits(doneCb){
 
     if (phase === 'ko2'){
      closeDialog();
+      Music.play('town', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:100) });
      const prevHijack = CUT.hijackAction;
      CUT.hijackAction = ()=>{};
 
@@ -3026,7 +3027,7 @@ function _cine1_stopFakeFightUI(){
     HUD.showHPBars = false;
     delete HUD.tempEnemies;
   }
-  Music.play('town', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:650) });
+  
 }
 
 
