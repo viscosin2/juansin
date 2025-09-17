@@ -4877,12 +4877,12 @@ async function spawnTresorShinyAt(x, y){
 
   // escala: 50% de la altura de Juan
   const juanWorldH = JUAN.size.h * JUAN.scale;
-  const targetH = juanWorldH * 0.43;
+  const targetH = juanWorldH * 0.36;
   const scale   = targetH / img.height;
 
   // --- subirlo un pelín en Y (ajusta a tu gusto) ---
   // fijo en px de mundo:
-  const bumpY = 20; // p.ej. 6 px
+  const bumpY = 21; // p.ej. 6 px
   // o proporcional: const bumpY = Math.round(targetH * 0.06);
   const yFinal = y - bumpY;
 
