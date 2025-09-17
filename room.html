@@ -133,7 +133,7 @@ const TVOFF_IMG ="assets/objects/tv_off.png";
 const BED_IMG   ="assets/objects/bed.png";
 const SANDALS_IMG="assets/objects/shoes.png";
 const LAMP_IMG  ="assets/objects/lamp.png";
-const BALL  ="assets/objects/ball.png";
+const BALL_IMG  ="assets/objects/ball.png";
 
 /* ===== ESTADO GLOBAL ===== */
 let bgImg=null, plant1Img=null, sofaImg=null, tvOnImg=null, tvOffImg=null, bedImg=null, sandalsImg=null, ballImg=null, lampImg=null;
@@ -162,7 +162,7 @@ const doorBase={x:392,y:31,w:48,h:63}, doorInteractDepth=14;
 const doorInteractBase={x:doorBase.x-8,y:doorBase.y+doorBase.h-doorInteractDepth,w:doorBase.w+16,h:doorInteractDepth};
 
 /* ===== POS ESCALADAS ===== */
-let bounds={}, obstacles=[], bedPos={}, sofaPos={}, sofaPos={}, ballPos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={}, doorPos={}, doorInteractPos={};
+let bounds={}, obstacles=[], bedPos={}, sofaPos={}, ballPos={}, lampPos={}, tvPos={}, sandalsPos={}, tvInteractPos={}, lampInteractPos={}, doorPos={}, doorInteractPos={};
 
 /* ===== HELPERS ===== */
 const loadImage=src=>new Promise(res=>{const img=new Image(); img.onload=()=>res(img); img.onerror=()=>{const ph=document.createElement('canvas'); ph.width=ph.height=1; res(ph)}; img.src=src;});
@@ -180,7 +180,7 @@ function updateScaledBounds(){
   tvInteractPos={x:tvPos.x,y:tvPos.y+tvPos.h-Math.round(40*scaleFactor),w:tvPos.w,h:Math.round(2*scaleFactor)};
   bedPos ={x:bgRect.dx+Math.round(bedBase.x*scaleFactor), y:bgRect.dy+Math.round(bedBase.y*scaleFactor), w:Math.round(bedBase.w*scaleFactor), h:Math.round(bedBase.h*scaleFactor)};
   plant1Pos={x:bgRect.dx+Math.round(plant1Base.x*scaleFactor), y:bgRect.dy+Math.round(plant1Base.y*scaleFactor), w:Math.round(plant1Base.w*scaleFactor), h:Math.round(plant1Base.h*scaleFactor)};
-  ballBase={x:bgRect.dx+Math.round(ballBase.x*scaleFactor), y:bgRect.dy+Math.round(ballBase.y*scaleFactor), w:Math.round(ballBase.w*scaleFactor), h:Math.round(ballBase.h*scaleFactor)};
+  ballPos={x:bgRect.dx+Math.round(ballBase.x*scaleFactor), y:bgRect.dy+Math.round(ballBase.y*scaleFactor), w:Math.round(ballBase.w*scaleFactor), h:Math.round(ballBase.h*scaleFactor)};
   lampPos={x:bgRect.dx+Math.round(lampBase.x*scaleFactor), y:bgRect.dy+Math.round(lampBase.y*scaleFactor), w:Math.round(lampBase.w*scaleFactor), h:Math.round(lampBase.h*scaleFactor)};
   lampInteractPos={x:lampPos.x, y:lampPos.y+lampPos.h-Math.round(18*scaleFactor), w:lampPos.w, h:Math.round(16*scaleFactor)};
   sandalsPos={x:bgRect.dx+Math.round(sandalsBase.x*scaleFactor), y:bgRect.dy+Math.round(sandalsBase.y*scaleFactor), w:Math.round(sandalsBase.w*scaleFactor), h:Math.round(sandalsBase.h*scaleFactor)};
@@ -337,7 +337,7 @@ function draw(){
   drawList.push({y:tvPos.y, draw:()=>{ if(timg&&timg.width) ctx.drawImage(timg,tvPos.x,tvPos.y,tvPos.w,tvPos.h); }});
   if(lampImg&&lampImg.width)    drawList.push({y:lampPos.y+lampPos.h/2,  draw:()=>ctx.drawImage(lampImg,  lampPos.x,  lampPos.y,  lampPos.w,  lampPos.h)});
   if(plant1Img&&plant1Img.width)drawList.push({y:plant1Pos.y,           draw:()=>ctx.drawImage(plant1Img,plant1Pos.x,plant1Pos.y,plant1Pos.w,plant1Pos.h)});
-  if(ballImg&&plant1Img.width)drawList.push({y:ballPos.y,           draw:()=>ctx.drawImage(ballImg,ballPos.x,ballPos.y,ballPos.w,ballPos.h)});
+  if(ballImg&&ballImg.width)drawList.push({y:ballPos.y,           draw:()=>ctx.drawImage(ballImg,ballPos.x,ballPos.y,ballPos.w,ballPos.h)});
   if(sofaImg&&sofaImg.width)    drawList.push({y:sofaPos.y+sofaPos.h/2,  draw:()=>ctx.drawImage(sofaImg,  sofaPos.x,  sofaPos.y,  sofaPos.w,  sofaPos.h)});
   if(bedImg&&bedImg.width)      drawList.push({y:bedPos.y+bedPos.h/2,    draw:()=>ctx.drawImage(bedImg,   bedPos.x,   bedPos.y,   bedPos.w,   bedPos.h)});
   if(!hasShoes&&sandalsImg&&sandalsImg.width) drawList.push({y:sandalsPos.y+sandalsPos.h/2, draw:()=>ctx.drawImage(sandalsImg,sandalsPos.x,sandalsPos.y,sandalsPos.w,sandalsPos.h)});
