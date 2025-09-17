@@ -74,7 +74,7 @@
 
 <audio id="bgTown"     src="assets/sounds/ambientepueblo.mp3" loop preload="auto" playsinline></audio>
 <audio id="bgBluehour" src="assets/sounds/bluehour.mp3"      loop preload="auto" playsinline></audio>
-  <audio id="bgHappiness" src="assets/sounds/happiness.mp3"      loop preload="auto" playsinline></audio>
+<audio id="bgHappiness" src="assets/sounds/happiness.mp3"      loop preload="auto" playsinline></audio>
 <audio id="bgHell" src="assets/sounds/hell.mp3"      loop preload="auto" playsinline></audio>
 <audio id="bgCombat"   src="assets/sounds/combate.mp3"        loop preload="auto" playsinline></audio>
 <audio id="bgCombatDBZ"   src="assets/sounds/combatedbz.mp3"        loop preload="auto" playsinline></audio>
@@ -175,13 +175,16 @@ const FOG = {
 const townMusic   = document.getElementById('bgTown');
 const combatMusic = document.getElementById('bgCombat');
 const combatMusicDBZ = document.getElementById('bgCombatDBZ');
+const hapinnessMusic = document.getElementById('bgHappiness');
 townMusic.volume = 0.5;
 combatMusic.volume = 0.5;
 combatMusicDBZ.volume = 0.5;
+hapinnessMusic.volume = 0.5;
 
 townMusic.addEventListener('ended',  () => { townMusic.currentTime = 0; townMusic.play().catch(()=>{}); });
 combatMusic.addEventListener('ended',() => { combatMusic.currentTime = 0; combatMusic.play().catch(()=>{}); });
 combatMusicDBZ.addEventListener('ended',() => { combatMusicDBZ.currentTime = 0; combatMusicDBZ.play().catch(()=>{}); });
+  hapinnessMusic.addEventListener('ended',() => { hapinnessMusic.currentTime = 0; hapinnessMusic.play().catch(()=>{}); });
 
 /* ====== AUDIO GATE GLOBAL ====== */
 const AudioGate = (() => {
@@ -376,7 +379,7 @@ const GAME_FLAGS = {
   talked_patata1: false,
   juansin_other_halo: false,
   need_potion:false, 
-  has_potion:false,
+  has_potion:true,
   talked_faramir: false,
   talked_denethor:false
 };
@@ -413,9 +416,9 @@ async function preloadCinematicImages(){
 
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
-  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
-  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:false },
-  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
+  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
+  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:true },
+  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:true }
 
 ];
   function buildCineZones(){
@@ -447,7 +450,7 @@ const AMBIENT_ZONES = [
   {
     name:'Bluehour zone', palette:'bluehour',
     music: 'bluehour',
-    musicFadeMs: 3000,
+    musicFadeMs: 600,
     dialogOnEnter:[
       { speaker:'Juan', text:'...' },
       { speaker:'Juan', text:'Tengo un mal presentimiento...' },
@@ -461,7 +464,7 @@ const AMBIENT_ZONES = [
   {
     name:'Infierno super', palette:'hell',
     music: 'hell',
-    musicFadeMs: 3000,
+    musicFadeMs: 600,
     rect:{type:'percent', x:60, y:35, w:50, h:100}
   }
 ];
@@ -1228,8 +1231,8 @@ function startJuanBlueHalo(ms=1000, { permanent=false } = {}){
     img, x: spot.x, y: spot.y,
     iw: img.naturalWidth, ih: img.naturalHeight,
     scale: 0.12,
-    // marca especial para draw + pickup
-    _isPotion: true,
+
+  _isPotion: true,
     _halo: { color:'80,160,255', radius:26, alpha:0.70, pulse:0.08, offsetY:0.65 }
   };
   PROPS.push(prop);
@@ -1383,11 +1386,10 @@ function portraitsOpen(script){
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // ⇩ igualamos al setup de "fumaos"
   PORTRAITS.left.inX += 60;
   PORTRAITS.left.x   += 60;
-  // (si quieres también elevar un poco como en fumaos:)
-  // PORTRAITS.left.yBottom -= 30;
+  PORTRAITS.right.inX -= 60;
+PORTRAITS.right.x   -= 60;
 
   const line0 = PORTRAITS.script[PORTRAITS.idx];
   const node0 = _nodeForSpeaker(line0.speaker);
@@ -2543,7 +2545,6 @@ CUT.onEnd = ()=>{
     ambientLock = false;
     CUT.active = false; CUT.id=null; CUT.hijackAction=null; CUT.onEnd=null;
 
-    // === NUEVO: activar objetivo y spawnear pócima ===
     GAME_FLAGS.need_potion = true;
     GAME_FLAGS.has_potion  = false;
     spawnPotionWithHalo();           // crea la pócima en el mapa
@@ -3151,11 +3152,9 @@ function _cine2_startFightUI(){
   PORTRAITS.active = true;
   PORTRAITS.stage  = 'entering';
 
-  // Juan cambia a sprite de combate (R ya estaba en pantalla)
   PORTRAITS.right.img = IMG_JUAN_FIGHT;
-  PORTRAITS.right.x   = PORTRAITS.right.inX; // lo fijamos por si acaso
+  PORTRAITS.right.x   = PORTRAITS.right.inX; 
 
-  // Barras de vida
   HPBARS.leftName  = 'Voldemort';
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
@@ -3192,8 +3191,9 @@ function _cine2_startFightUI(){
 
         SFX && SFX.play && SFX.play("attack");
         _cine2_nudge(R, -screenRect.dw * 0.04, 1.00, 1.06, () => {
+          SFX.play("ataque", { volume: 0.35 });
           _cine2_nudge(L,  screenRect.dw * 0.02, 1.00, 0.96, () => {
-            SFX.play("ataque", { volume: 0.35 });
+            
             HPBARS.setTargets(100, 50); // ajusta orden si tu implementación es inversa
 
             openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
@@ -3213,7 +3213,6 @@ function _cine2_startFightUI(){
 }
 // ==================== Helpers comunes combate ====================
 
-// Fijar ambos en su posición "in" (sin animación)
 function _cine2_pinPortraitsIn(){
   if (!PORTRAITS?.left || !PORTRAITS?.right) return;
   const L = PORTRAITS.left, R = PORTRAITS.right;
@@ -3222,7 +3221,6 @@ function _cine2_pinPortraitsIn(){
   PORTRAITS.stage = 'speaking';
 }
 
-// Micro-empujón/escala sin salir de escena
 function _cine2_nudge(node, deltaPx, sFrom=1.00, sTo=0.96, cb){
   const orig = node.inX;
   const kick = orig + Math.round(deltaPx);
@@ -3233,7 +3231,6 @@ function _cine2_nudge(node, deltaPx, sFrom=1.00, sTo=0.96, cb){
   });
 }
 
-// Entra SOLO la izquierda (L) desde outX→inX
 function _cine2_enterLeft(cb){
   const L = PORTRAITS.left;
   if (!L) return cb && cb();
@@ -3241,7 +3238,6 @@ function _cine2_enterLeft(cb){
   _startSlide(L, L.inX, cb||(()=>{}));
 }
 
-// Entran L y R a la vez desde outX→inX
 function _cine2_enterBoth(cb){
   const L = PORTRAITS.left, R = PORTRAITS.right;
   let pending = 0;
@@ -3251,7 +3247,6 @@ function _cine2_enterBoth(cb){
   if (pending === 0 && cb) cb();
 }
 
-// Salen L y R a la vez hacia outX
 function _cine2_slideOutBoth(cb){
   const L = PORTRAITS.left, R = PORTRAITS.right;
   let pending = 0;
@@ -3260,8 +3255,6 @@ function _cine2_slideOutBoth(cb){
   if (R){ pending++; _startSlide(R, R.outX, done); }
   if (pending === 0 && cb) cb();
 }
-
-
 
 
   function _cine2_closePortraitsAndOverlay(done){
@@ -3290,6 +3283,7 @@ function _cine2_slideOutBoth(cb){
       const vold = _cine2_getVold();
       setTimeout(() => {
           if (handled) return;
+          SFX.play("avada", { volume: 0.35 }); 
           playVoldemortRayFx(vold);
           openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
       }, 1000);
@@ -3308,21 +3302,17 @@ function _cine2_slideOutBoth(cb){
   
 function _cine2_continueFight(){
 
-  // Estado base
   PORTRAITS.active = true;
   PORTRAITS.stage  = 'entering';
   PORTRAITS.idx    = 0;
   PORTRAITS.blurK  = 0;
   PORTRAITS.script = Array.isArray(PORTRAITS.script) ? PORTRAITS.script : [];
 
-  // (Re)crear lados
   PORTRAITS.left  = _makeSide(IMG_VOLD_P,  'left',  'Voldemort');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG,'right', 'Juan');
 
-  // Tu offset custom para L
   PORTRAITS.left.inX += 60;
 
-  // Barras de vida (ejemplo: 100 vs 50 como traías)
   HPBARS.leftName  = 'Voldemort';
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
@@ -3337,17 +3327,15 @@ function _cine2_continueFight(){
     requestAnimationFrame(step);
   }
 
-  // ENTRAN A LA VEZ L y R
   _cine2_enterBoth(() => {
     PORTRAITS.stage = 'speaking';
 
-    // Pequeño “recuerdo” del golpe previo (nudge R) y prompt
     const R = PORTRAITS.right;
     const kickPx = screenRect ? screenRect.dw * 0.02 : 12;
     R.sFrom = 1.00; R.sTo = 0.96;
 
     _cine2_nudge(R, +kickPx, 1.00, 0.96, () => {
-      // Ajusta orden si difiere
+      SFX.play("ataque", { volume: 0.35 });
       HPBARS.setTargets(10, 50);
 
       openDialog([{ speaker:'', text:'Ha sido un golpe duro. Remata esto.' }], true);
@@ -3375,11 +3363,12 @@ function _cine2_continueFight(){
             const L = PORTRAITS.left;
             const forward = screenRect ? -screenRect.dw * 0.04 : -24;
 
-            SFX && SFX.play && SFX.play("ataque");
+            SFX && SFX.play && SFX.play("attack");
             _cine2_nudge(PORTRAITS.right, forward, 1.00, 1.06, () => {
 
               const recoil = screenRect ? screenRect.dw * 0.02 : 12;
-              HPBARS.setTargets(10, 0); // Voldemort pierde 50
+              SFX && SFX.play && SFX.play("ataque");
+              HPBARS.setTargets(10, 0); 
 
               _cine2_nudge(L, recoil, 1.00, 0.96, () => {
                 openDialog([{ speaker:'Voldemort', text:'No puede ser.' }], true);
@@ -3405,7 +3394,7 @@ function _cine2_continueFight(){
 
 
 function endCine2(){ 
-   Music.play('bluehour', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
+   Music.play('bluehour', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
   CUT.active=false; 
   CUT.id=null; 
   CUT.phase=null; 
@@ -3437,7 +3426,6 @@ function playVoldemortRayFx(fromNpc){
   ray.style.width = len + 'px';
   ray.style.display = 'block';
 
-  SFX.play("avada", { volume: 0.35 });
   ray.animate([{ transform:`translateX(0) scaleX(0)` }, { transform:`translateX(-${len}px) scaleX(1)` }], { duration: 320, easing:'ease-out' });
   setTimeout(()=>{ ray.style.display='none'; }, 360);
 }
@@ -3615,7 +3603,6 @@ function cine2AutoWalkTo(targetX, targetY, ms, onDone, { followCam = true, stepP
 
 // **************************** CINEMATICA 3
 
-// === Helpers globales para la cine 3 ===
 async function applyOtherJuanSSJ({boostHalo=true} = {}){
   const other = NPCS.find(n => n.id === 'juansin_other');
   if(!other) return null;
@@ -3652,7 +3639,6 @@ function cineAutoWalkTo(targetX, targetY, ms, onDone, { followCam = false, stepP
     player.y = sy + (targetY - sy) * k;
     face();
 
-    // — cadencia de pies desacoplada —
     player.moving = true;
     player.frameTime += 1/60;
     if (player.frameTime >= (stepPeriodMs/1000)){ player.frame = (player.frame + 1) % 2; player.frameTime = 0; }
@@ -3689,7 +3675,6 @@ async function startCinematic3(){
         return;
       }
 
-      // cerramos segunda línea → SSJ (con halo) → “Ah, pues no.”
       closeDialog();
       CUT.hijackAction = null;
 
@@ -3705,13 +3690,12 @@ async function startCinematic3(){
             closeDialog();
             CUT.hijackAction = null;
 
-            // tramo 1: alinear X
             const targetX1 = other.x;
             const targetY1 = player.y;
 
             const v  = _cine3_getSSJ();
             const tx = v ? (v.x ) : player.x;
-            const ty = v ?  v.y  + 35    : player.y;
+            const ty = v ?  v.y  + 25    : player.y;
 
   cine2AutoWalkTo(tx, ty, 700, () => {
   player.dir = 'up';
@@ -3777,7 +3761,7 @@ function cine3_beginPortraits(){
   HPBARS.alpha = 0; 
   HPBARS.show(10, 100);
   
-  Music.play('combatdbz', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
+  Music.play('combatdbz', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
 
   // Fade-in de barras
   {
@@ -3969,7 +3953,7 @@ function cine3_openNarrator(){
     CUT.hijackAction = null;
 
     try { HPBARS.hide(); } catch(e){}
-    Music.play('hell', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:100) });
+    Music.play('hell', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
 
     try { _endPortraits(); } catch(e){}
 
@@ -4139,8 +4123,8 @@ function getFXCanvasOnTop() {
     fx.style.left = game.offsetLeft + 'px';
     fx.style.top  = game.offsetTop  + 'px';
     fx.style.pointerEvents = 'none';
-    fx.style.zIndex = '9999';                 // ← por encima de todo
-    fx.style.backgroundColor = 'transparent'; // ← nada de fondo
+    fx.style.zIndex = '9999';
+    fx.style.backgroundColor = 'transparent';
     game.parentElement.appendChild(fx);
   }
   // Tamaño + DPR para que no quede borroso
@@ -4157,7 +4141,6 @@ function getFXCanvasOnTop() {
   return fx;
 }
 
-// Confeti dibujado SOLO en #fx, sin tocar el canvas del juego
 function confettiExplosionFX({ x, y, count = 60, spread = 2*Math.PI, fadeMs = 1200 }) {
   const fx = getFXCanvasOnTop();
   const ctx = fx.getContext('2d');
@@ -4193,7 +4176,6 @@ function confettiExplosionFX({ x, y, count = 60, spread = 2*Math.PI, fadeMs = 12
 
     if (k < 1) requestAnimationFrame(loop);
     else {
-      // limpieza final opcional
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     }
   }
@@ -4268,16 +4250,13 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
   const L = PORTRAITS.left, R = PORTRAITS.right;
   if (!L || !R){ cb && cb(); return; }
 
-  // Medidas en CSS px (tenemos setTransform(dpr,...))
   const Wcss = fx.clientWidth  || fx.width;
   const Hcss = fx.clientHeight || fx.height;
 
-  // Normaliza offsets: 28 -> 0.28
   const norm = v => (Math.abs(v) >= 1 ? v/100 : v);
   const oL = norm(offsetL);
   const oR = norm(offsetR);
 
-  // Letterbox
   const dx = (screenRect && screenRect.dx) ? screenRect.dx : 0;
   const dy = (screenRect && screenRect.dy) ? screenRect.dy : 0;
   const W  = (screenRect && screenRect.dw) ? screenRect.dw : Wcss;
@@ -4399,7 +4378,7 @@ function _cine4_step1(){
   HPBARS.alpha = 0;
   HPBARS.show(150, 100);
   
-  Music.play('combatdbz', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
+  Music.play('combatdbz', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
 
   {
     const t0 = performance.now(), dur = 400;
@@ -4449,9 +4428,7 @@ function _cine4_step1(){
   function runStep(i){
     switch(i){
 
-      // Paso 1: entran L y R a la vez y se quedan dentro
       case 1: {
-        console.log('[cine4] portraits enter simultaneously');
         PORTRAITS.stage = 'entering';
         let pending = 2;
         const doneOne = ()=>{ if(--pending===0){ PORTRAITS.stage='idle'; next(); } };
@@ -4460,27 +4437,22 @@ function _cine4_step1(){
         _startSlide(R, R.inX, doneOne);
       } break;
 
-      // Paso 2: SSJ habla (inicio pelea)
       case 2: {
-        console.log('[cine4] SSJ opening line');
-        openDialog([{ speaker:'SSJ', text:'¡Te voy a hacer polvo!' }], true);
+        openDialog([{ speaker:'SSJ', text:'¡Te vas a cagar!' }], true);
         CUT.hijackAction = waitForTypingOrNext;
       } break;
 
 case 3: {
-  console.log('[cine4] SSJ attack sequence + fireball');
   closeDialog();
 
   let doneAttack = false, doneFireball = false;
   const maybeNext = ()=>{ if (doneAttack && doneFireball) next(); };
 
-  // 3.a) Animación del SSJ (tu secuencia propia)
   cine3_attackSequence(()=>{
     doneAttack = true;
     maybeNext();
   });
 
-  // 3.b) Bola grande desde L → R, trayectoria más baja y a la vez
   const L = PORTRAITS.left, R = PORTRAITS.right;
   const H = (screenRect?.dh || getFXCanvasOnTop().height);
 
@@ -4494,53 +4466,41 @@ case 3: {
     offsetL: 35,           
     offsetR: -30
   }, ()=>{
-    // pequeño “nudge” de impacto en Juan si quieres
     _cine2_nudge && _cine2_nudge(R, +(screenRect?.dw||60)*0.02, 1.00, 0.98, ()=>{
+      SFX.play("ataque", { volume: 0.35 });
       doneFireball = true;
       maybeNext();
     });
   });
 } break;
 
-
-
-      // Paso 4: narrador — bola de energía
       case 4: {
-        console.log('[cine4] narrator: energy ball');
         openDialog([{ speaker:'', text:'Juan SSJ Legendario te ataca con una bola de energía.' }], true);
         CUT.hijackAction = waitForTypingOrNext;
       } break;
 
-      // Paso 5: narrador — sin efecto
       case 5: {
-        console.log('[cine4] narrator: no effect');
         openDialog([{ speaker:'', text:'No ha tenido efecto…' }], true);
         CUT.hijackAction = waitForTypingOrNext;
       } break;
 
-      // Paso 6: menú de acción del jugador
       case 6: {
-        console.log('[cine4] open player action menu');
         openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
         CUT.hijackAction = ()=>{
           if (isTyping){ advanceDialog(); return; }
           _cine2_openMenu();
-          // Cambiamos el hijack para esperar la elección
           CUT.hijackAction = ()=>{
             const choice = _cine2_menuConfirm();
-            if (choice < 0) return; // aún no ha elegido
+            if (choice < 0) return; 
             closeDialog();
             _cine2_closeMenu();
+            SFX.play("attack", { volume: 0.35 });
 
-            // Animación de preparación: Juan hace un "impulso" (sin salir de escena)
-            console.log('[cine4] player (Juan) prepares attack');
             bouncePortrait(R, 1.00, 1.06, -0.04, ()=>{
-              SFX.play("attack", { volume: 0.35 });
-              // Impacto del prota: SSJ recibe (sin salir de escena)
-              console.log('[cine4] SSJ gets hit');
+              
               bouncePortrait(L, 1.00, 0.96, +0.02, ()=>{
-                SFX.play("ataque", { volume: 0.35 });
-                if (typeof HPBARS.setTargets === 'function') HPBARS.setTargets(150, 0);
+                
+                if (typeof HPBARS.setTargets === 'function') SFX.play("ataque", { volume: 0.35 }); HPBARS.setTargets(150, 0);
                 next();
               });
             });
@@ -4590,7 +4550,7 @@ function _cine4_end(){
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
   _cine2_closePortraitsAndOverlay(() => {
-     Music.play('happiness', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
+     Music.play('happy', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
 
     const game = document.getElementById('game');
 
@@ -4626,7 +4586,7 @@ function _cine4_end(){
         closeDialog();
 
         try {
-          const tilesUp = 10; 
+          const tilesUp = 30; 
           const spawnX = player.x;
           const spawnY = player.y - tilesUp;
           await spawnTresorShinyAt(spawnX, spawnY);
@@ -4853,7 +4813,7 @@ function update(dt){
     const fadeMs =
       (newZone && typeof newZone.musicFadeMs === 'number' && newZone.musicFadeMs >= 0)
         ? newZone.musicFadeMs
-        : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 2000);
+        : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 400);
 
     if (newZone && newZone.music) {
       // entrar en zona con música propia
@@ -4892,13 +4852,13 @@ function update(dt){
         const idx = PROPS.indexOf(pot);
         if (idx >= 0) PROPS.splice(idx, 1);
 
-        SFX.play("potion", { volume: 0.35 });
-
+        
         GAME_FLAGS.has_potion = true;
         GAME_FLAGS.need_potion = false;
 
         ambientLock = true;
         ambientLockOwner = 'potion_pick'; // opcional, por consistencia
+        SFX.play("potion", { volume: 0.35 });
         startJuanBlueHalo(0, { permanent:true });
         setTimeout(()=>{
           ambientLock = false; ambientLockOwner = null;
