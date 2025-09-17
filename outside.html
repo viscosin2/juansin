@@ -178,12 +178,11 @@ const townMusic   = document.getElementById('bgTown');
 const combatMusic = document.getElementById('bgCombat');
 const combatMusicDBZ = document.getElementById('bgCombatDBZ');
 const hapinnessMusic = document.getElementById('bgHappiness');
-townMusic.volume = 0.5;
-combatMusic.volume = 0.5;
-combatMusicDBZ.volume = 0.5;
-hapinnessMusic.volume = 0.5;
+townMusic.volume = 0.35;
+combatMusic.volume = 0.35;
+combatMusicDBZ.volume = 0.35;
+hapinnessMusic.volume = 0.35;
 
-/* ====== AUDIO GATE GLOBAL ====== */
 const AudioGate = (() => {
   let unlocked = false, primed = false, primingPromise = null;
   const ids = ['bgTown','bgBluehour','bgCombat','bgHappiness','bgCombatDBZ','bgHell'];
@@ -1083,7 +1082,6 @@ const happy = document.getElementById('bgHappiness');
 
     [blue, hell, comb, dbz, happy].forEach(a=>{
       if (!a) return;
-      a.replaceWith(a.cloneNode()); // clona sin listeners
     });
 
     // 3e) Lanza SOLO town
@@ -1964,7 +1962,7 @@ function spawnGandalfWhiteAtPlayer(){
   FOG.areaW = 120;
   FOG.areaH = 70;
   
-  SFX.play("niebla", { volume: 0.35 });
+  SFX.play("niebla", { volume: 0.4 });
   fogBeginFill({ dur:600, density:0.9, areaW:FOG.areaW, areaH:FOG.areaH });
 
  BUSH_SCENE._onLanded = () => {
@@ -2740,7 +2738,7 @@ function phaseFogFill(){
   Music.current.volume = 0.1;
 }
   
-  SFX.play("niebla", { volume: 0.35 });
+  SFX.play("niebla", { volume: 0.4 });
   fogBeginFill({
     dur: 3000,
     areaW: 360,
@@ -3016,7 +3014,7 @@ function _cine1_startFakeFightUI(){
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
   HPBARS.show(100, 100);
-  Music.play('combat', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
+  Music.play('combat', { volume: 0.35 });
 
   const t0 = performance.now();
   const dur = 400;
@@ -3127,7 +3125,7 @@ function step2() {
   
   function step4() {
       _cine2_swapVoldProfileToFront();
-      SFX.play("risa",{start: 0.5, duration: 2});
+      SFX.play("risa",{start: 0.7, duration: 2});
       openDialog([{ speaker: 'Voldemort', text: '¡SOY LORD VOLDEMORT!' }], true);
       CUT.hijackAction = () => {
         if (isTyping) return advanceDialog();
@@ -3164,10 +3162,10 @@ function _cine2_startFightUI(){
   HPBARS.leftName  = 'Voldemort';
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
-  Music.play('combat', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
+  Music.play('combat', { volume: 0.35 });
 
   HPBARS.show(100, 100);
-  { // fade-in barras
+  { 
     const t0 = performance.now(), dur = 400;
     (function step(t){
       const k = Math.min(1, (t - t0) / dur);
@@ -3195,9 +3193,10 @@ function _cine2_startFightUI(){
         const R = PORTRAITS.right;
         const L = PORTRAITS.left;
 
-        SFX && SFX.play && SFX.play("attack");
+              SFX.play("attack",{volume: 0.4});
+
         _cine2_nudge(R, -screenRect.dw * 0.04, 1.00, 1.06, () => {
-          SFX.play("ataque", { volume: 0.35 });
+          SFX.play("ataque",{volume: 0.4});
           _cine2_nudge(L,  screenRect.dw * 0.02, 1.00, 0.96, () => {
             
             HPBARS.setTargets(100, 50); // ajusta orden si tu implementación es inversa
@@ -3289,7 +3288,7 @@ function _cine2_slideOutBoth(cb){
       const vold = _cine2_getVold();
       setTimeout(() => {
           if (handled) return;
-          SFX.play("avada", { volume: 0.35 }); 
+          SFX.play("avada", { volume: 0.4 }); 
           playVoldemortRayFx(vold);
           openDialog([{ speaker:'Voldemort', text:'¡Avada Kedavra!' }], true);
       }, 1000);
@@ -3341,7 +3340,7 @@ function _cine2_continueFight(){
     R.sFrom = 1.00; R.sTo = 0.96;
 
     _cine2_nudge(R, +kickPx, 1.00, 0.96, () => {
-      SFX.play("ataque", { volume: 0.35 });
+      SFX.play("ataque", { volume: 0.4 });
       HPBARS.setTargets(10, 50);
 
       openDialog([{ speaker:'', text:'Ha sido un golpe duro. Remata esto.' }], true);
@@ -3369,11 +3368,11 @@ function _cine2_continueFight(){
             const L = PORTRAITS.left;
             const forward = screenRect ? -screenRect.dw * 0.04 : -24;
 
-            SFX && SFX.play && SFX.play("attack");
+            SFX.play("attack",{volume: 0.4});
             _cine2_nudge(PORTRAITS.right, forward, 1.00, 1.06, () => {
 
               const recoil = screenRect ? screenRect.dw * 0.02 : 12;
-              SFX && SFX.play && SFX.play("ataque");
+              SFX.play("ataque",{volume: 0.4});
               HPBARS.setTargets(10, 0); 
 
               _cine2_nudge(L, recoil, 1.00, 0.96, () => {
@@ -3763,7 +3762,7 @@ function cine3_beginPortraits(){
   HPBARS.alpha = 0; 
   HPBARS.show(10, 100);
   
-  Music.play('combatdbz', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
+  Music.play('combatdbz', { volume: 0.5 });
 
   {
     const t0 = performance.now(), dur = 400;
@@ -3837,7 +3836,7 @@ function cine3_beginPortraits(){
 const L = PORTRAITS.left, R = PORTRAITS.right;
 const H = (screenRect?.dh || (getFXCanvasOnTop().height));
 if (typeof _cine4_fireballFromLtoR === 'function'){
-  SFX.play("ataquessj", { volume: 0.35 });
+  SFX.play("ataquessj", { volume: 0.4 });
   _cine4_fireballFromLtoR({
     startDelayMs: 120,
     dur: 600,
@@ -3942,7 +3941,7 @@ function cine3_openNarrator(){
     CUT.hijackAction = null;
 
     try { HPBARS.hide(); } catch(e){}
-    Music.play('hell', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
+    Music.play('hell', { volume: 0.5 });
 
     try { _endPortraits(); } catch(e){}
 
@@ -4260,8 +4259,6 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
     console.log('[fireball]', {xStart, xEnd, offsetL, offsetR, oL, oR, dx, dy, W, H, L_inX:L.inX, R_inX:R.inX, startX, endX, y});
   }
 
-  try { SFX && SFX.play && SFX.play('fireball'); } catch(e){}
-
   const colors = ['#ffd166','#ff9f1c','#ff595e'];
   const trail = [];
 
@@ -4354,7 +4351,7 @@ function _cine4_step1(){
   HPBARS.alpha = 0;
   HPBARS.show(150, 100);
   
-  Music.play('combatdbz', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
+  Music.play('combatdbz', { volume: 0.5 });
 
   {
     const t0 = performance.now(), dur = 400;
@@ -4432,7 +4429,7 @@ case 3: {
   const L = PORTRAITS.left, R = PORTRAITS.right;
   const H = (screenRect?.dh || getFXCanvasOnTop().height);
 
-  SFX.play("ataquessj", { volume: 0.35 });
+  SFX.play("ataquessj", { volume: 0.4 });
   _cine4_fireballFromLtoR({
     startDelayMs: 120,      
     dur: 600,
@@ -4443,7 +4440,7 @@ case 3: {
     offsetR: -30
   }, ()=>{
     _cine2_nudge && _cine2_nudge(R, +(screenRect?.dw||60)*0.02, 1.00, 0.98, ()=>{
-      SFX.play("ataque", { volume: 0.35 });
+      SFX.play("ataque", { volume: 0.4 });
       doneFireball = true;
       maybeNext();
     });
@@ -4470,13 +4467,13 @@ case 3: {
             if (choice < 0) return; 
             closeDialog();
             _cine2_closeMenu();
-            SFX.play("attack", { volume: 0.35 });
+            SFX.play("attack", { volume: 0.4 });
 
             bouncePortrait(R, 1.00, 1.06, -0.04, ()=>{
               
               bouncePortrait(L, 1.00, 0.96, +0.02, ()=>{
                 
-                if (typeof HPBARS.setTargets === 'function') SFX.play("ataque", { volume: 0.35 }); HPBARS.setTargets(150, 0);
+                if (typeof HPBARS.setTargets === 'function') SFX.play("ataque", { volume: 0.4 }); HPBARS.setTargets(150, 0);
                 next();
               });
             });
@@ -4832,7 +4829,7 @@ function update(dt){
 
         ambientLock = true;
         ambientLockOwner = 'potion_pick'; // opcional, por consistencia
-        SFX.play("potion", { volume: 0.35 });
+        SFX.play("potion", { volume: 0.4 });
         startJuanBlueHalo(0, { permanent:true });
         setTimeout(()=>{
           ambientLock = false; ambientLockOwner = null;
@@ -4855,7 +4852,7 @@ async function spawnTresorShinyAt(x, y){
 const spawnY = player.y;  
 await spawnTresorShinyAt(spawnX, spawnY);
 
-  SFX.play("shine", { volume: 0.35 });
+  SFX.play("shine", { volume: 0.4 });
   PROPS.push(prop);
   return prop;
 }
