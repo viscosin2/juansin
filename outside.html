@@ -3739,12 +3739,11 @@ function cine3_beginPortraits(){
   // Fade-in de barras
   {
     const t0 = performance.now(), dur = 400;
-    const step = (t)=>{ 
+    (function step(t){ 
       const k = Math.min(1,(t - t0)/dur); 
       HPBARS.alpha = k; 
       if (k < 1) requestAnimationFrame(step); 
-    };
-    requestAnimationFrame(step);
+    })(t0);
   }
 
   // ===== helpers =====
@@ -3754,18 +3753,18 @@ function cine3_beginPortraits(){
 
     if (typeof _cine2_closePortraitsAndOverlay === 'function'){
       try { _cine2_closePortraitsAndOverlay(proceed); } catch(e){ proceed(); }
-      // Fallback por si esa función nunca llama al callback
+      // Fallback por si nunca llama al callback
       setTimeout(proceed, 1200);
       return;
     }
 
-    // Fallback manual: fade barras + slide out L/R
+    // Fallback: fade barras + slide out L/R
     const L = PORTRAITS.left, R = PORTRAITS.right;
     let pending = 1;
     const doneOne = ()=>{ if(--pending<=0) proceed(); };
 
     // fade barras
-    (function fadeBars(){
+    (function(){
       const t0 = performance.now(), dur = 250;
       (function step(now){
         const k = Math.min(1, (now - t0)/dur);
@@ -3784,45 +3783,7 @@ function cine3_beginPortraits(){
     }
   }
 
-  // Fase “escóndete”: libera movimiento, parpadeo arbusto y espera esconderse→Gandalf
-  function _startHidePhase(){
-    try { ambientLock = false; ambientLockOwner = null; } catch(e){}
-    try { interactBlocked = false; } catch(e){}
-    try { player.controlEnabled = true; } catch(e){}
-    try { player.moving = false; } catch(e){}
-
-    // parpadeo arbusto (usa tus nombres reales)
-    try { startArbusBlink && startArbusBlink(); } catch(e){}
-    try { arbusBlinkStart && arbusBlinkStart(); } catch(e){}
-    try { arbustoBlinkStart && arbustoBlinkStart(); } catch(e){}
-
-    // esperar escondite y sacar a Gandalf
-    if (typeof cine3_waitForHideAndSpawnGandalf === 'function'){
-      cine3_waitForHideAndSpawnGandalf();
-    } else if (typeof onPlayerHidden === 'function'){
-      onPlayerHidden(()=>{
-        try { spawnGandalfCutscene && spawnGandalfCutscene(); } catch(e){}
-        try { cine3_afterHide && cine3_afterHide(); } catch(e){}
-      });
-    } else if (typeof playerIsHidden === 'function'){
-      let fired = false;
-      const poll = ()=>{
-        if (fired) return;
-        try {
-          if (playerIsHidden()){
-            fired = true;
-            try { spawnGandalfCutscene && spawnGandalfCutscene(); } catch(e){}
-            try { cine3_afterHide && cine3_afterHide(); } catch(e){}
-            return;
-          }
-        } catch(e){}
-        requestAnimationFrame(poll);
-      };
-      requestAnimationFrame(poll);
-    }
-  }
-
-  // Guards para no re-ejecutar fases
+  // Guards
   let attackPhaseStarted = false;
 
   // Bloquear acción durante la coreografía inicial
@@ -3860,7 +3821,7 @@ function cine3_beginPortraits(){
         rBase: 38,
         rPeak: 48,
         y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)),
-        offsetL: 12,
+        offsetL: 12,  // % → normalizado internamente si usas mi versión robusta
         offsetR: 12
       }, ()=>{
         if (typeof _cine2_nudge === 'function'){
@@ -3874,47 +3835,59 @@ function cine3_beginPortraits(){
     }
   }
 
-  // ===== POST-ATAQUE: diálogo + sincronía de eventos =====
+  // ===== POST-ATAQUE =====
   function afterAttack(){
-    // 1ª y 2ª línea (la 2ª baja vida en ese instante)
+    // 1ª y 2ª línea.
     openDialog([
       { speaker:'', text:'Juan Super SSJ te ataca con una bola de energía.' },
       { speaker:'', text:'No puedes seguir luchando.'}
     ], true);
 
-    let phase = 0; // 0-> mostrar 2ª con golpe; 1-> cerrar todo y liberar juego
+    // ⚡ Golpe + bajar vida INMEDIATO en la 1ª línea (no en la 2ª)
+    let hitDone = false;
+    setTimeout(()=>{
+      if (!hitDone && dialogOpen && dialogIndex === 0){
+        try { cine3_hitReaction(PORTRAITS.right); } catch(e){}
+        try { HPBARS.setTargets(1, 100); } catch(e){}
+        hitDone = true;
+      }
+    }, 0);
 
     CUT.hijackAction = ()=>{
       if (isTyping) return advanceDialog();
 
-      // Paso 1: pasar a la 2ª línea y bajar vida + hitReaction
-      if (phase === 0){
-        advanceDialog(); // ahora se ve "No puedes seguir luchando."
-        try { cine3_hitReaction(PORTRAITS.right); } catch(e){}
-        try { HPBARS.setTargets(1, 100); } catch(e){}
-        phase = 1;
+      // Primer tap: pasar a la 2ª línea (sin repetir golpe)
+      if (dialogIndex === 0){
+        advanceDialog();
         return;
       }
 
-      // Paso 2: cerrar diálogo + cerrar overlays + desbloquear movimiento + arrancar fase esconderse
-      if (phase === 1){
-        phase = 2; // lock
+      // Segundo tap (estamos en la 2ª): cerrar diálogo, cerrar overlays y entregar a tu cine3_openNarrator
+      if (dialogIndex === 1){
         closeDialog();
 
         closePortraitsAndBars(()=>{
-          _startHidePhase();
-          // Mensaje no bloqueante (si tienes HUD/Toast), porque el diálogo ya está cerrado:
-          try { HUD && HUD.toast && HUD.toast('¡Rápido! ¡Escóndete en algún sitio!', 2200); } catch(e){}
-          try { showHint && showHint('¡Rápido! ¡Escóndete en algún sitio!', 2200); } catch(e){}
-
-          // liberar el botón Acción para el gameplay
-          CUT.hijackAction = null;
+          // Abro el mensaje final y cedo el control a tu función original,
+          // que se encarga del bush pulse, desbloqueo, CUT.onEnd → startBushPulse(...) → endCine3(), etc.
+          openDialog([{ speaker:'', text:'¡Rápido! ¡Escóndete en algún sitio!'}], true);
+          try { cine3_openNarrator(); } catch(e){
+            // Fallback MUY básico si no existe cine3_openNarrator
+            CUT.hijackAction = ()=>{
+              if (isTyping) return advanceDialog();
+              closeDialog();
+              CUT.hijackAction = null;
+              try { startBushPulse && startBushPulse('bush_hideout'); } catch(e){}
+              try { endCine3 && endCine3(); } catch(e){}
+            };
+          }
         });
+
         return;
       }
     };
   }
 }
+
 
 
 
