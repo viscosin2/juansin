@@ -904,7 +904,7 @@ const SFX = (() => {
     name,
     { volume = 1, start = 0, duration = null, folder = 'assets/sounds' } = {}
   ) {
-    // ⚠️ NO hardlock aquí: los SFX deben sonar aunque el BGM esté bloqueado
+
     try { await AudioGate.ready(); } catch(_) {}
 
     const path = `${folder}/${name}.mp3`;
@@ -921,7 +921,6 @@ const SFX = (() => {
       } catch(_) {}
     };
 
-    // Si aún no tiene metadata, fuerza carga y espera un evento fiable
     if (a.readyState >= 2) {
       startNow();
     } else {
@@ -1002,16 +1001,22 @@ const Music = (() => {
 
   async function play(name, { volume = 0.5, fadeMs = 0 } = {}) {
 
-    if (performance.now() < musicLockUntil && musicLockOnly && name !== musicLockOnly) {
-      return;
-    }
-    
-    await AudioGate.ready();
-     if (window.__lockToTown && name !== 'town') {
+  if (musicLockOnly && performance.now() < musicLockUntil && name !== musicLockOnly) {
+    name = musicLockOnly;
+  }
+
+  // bloqueo duro de arranque
+  if (window.__lockToTown && name !== 'town') {
     name = 'town';
   }
+
+  await AudioGate.ready();
+  const next = elements[name];
+  if (!next) return;
     const next = elements[name];
     if (!next) return;
+    
+      next.loop = true;
 
     if (current === next) {
       if (fadeMs > 0) {
@@ -1086,7 +1091,6 @@ if (_actGate) return;
 const kill = (el) => {
   if (!el) return;
   try { el.pause(); } catch(_) {}
-  try { el.loop = false; } catch(_) {}
   try { el.currentTime = 0; } catch(_) {}
 
 };
