@@ -4541,139 +4541,77 @@ const Z = {
   UI: 1000
 };
 
+SOS
+
 function _cine4_end(){ 
   player.dir = 'down';
   try{ smokeStart(null); }catch(e){}
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
   _cine2_closePortraitsAndOverlay(() => {
+     
+
     const game = document.getElementById('game');
-    if (game) {
-      confettiExplosionFX({ 
-        x: Math.round(game.clientWidth  / 2), 
-        y: Math.round(game.clientHeight / 2)
-      });
-    } else {
-      console.warn('[cine4] #game no encontrado para confetti');
-    }
+
+    confettiExplosionFX({ 
+      x: game.clientWidth / 2, 
+      y: game.clientHeight / 2 
+    });
 
     Music.play('happy', { volume: 0.5 });
     openDialog([{ speaker:'Pueblo', text:'¡Bravoooo!' }], true);
 
-    // -------- FSM por fases --------
-    // intro: primer "¡Bravoooo!"
-    // main : diálogo principal
-    // spawn: spawnea tresor y espera confirmación del jugador
-    // end  : goToEnd()
-    let phase = 'intro';
-    let armed = false;   // evita dobles ejecuciones
-    let _spawning = false;
+    CUT.hijackAction = () => { 
+      if (isTyping) return advanceDialog();
 
-    // Helpers robustos
-    const canAdvance = () => (typeof isTyping === 'boolean' ? !isTyping : true);
-    const tryAdvance = () => { 
-      if (typeof advanceDialog === 'function') advanceDialog(); 
-    };
-    const tryCloseDialog = () => { 
-      if (typeof closeDialog === 'function') closeDialog(); 
-    };
-    const dialogHasMore = () => {
-      // Si tienes helpers reales, sustitúyelos.
-      // Aquí asumimos que tu openDialog gestiona índices internos.
-      // Usamos una heurística: si isTyping === true, aún no ha terminado la línea.
-      // Si no hay isTyping disponible, dejamos avanzar y cerrará cuando toque.
-      return (typeof isTyping === 'boolean') ? isTyping : false;
-    };
+      closeDialog();
+      CUT.hijackAction = null;
 
-    CUT.hijackAction = async () => {
-      // Mientras esté escribiendo, solo avanza typing
-      if (typeof isTyping === 'boolean' && isTyping) {
-        if (typeof advanceDialog === 'function') return advanceDialog();
-        return;
-      }
+      // Diálogo principal
+      openDialog([
+        { speaker:'Pueblo',    text:'Juan, ¡nos has salvado!' },
+        { speaker:'Megafonía', text:'Comunicamos que el supermercado permanecerá cerrado hasta nuevo aviso.' },
+        { speaker:'Juan',      text:'No jodas... Me quedé sin los Tresor...' },
+        { speaker:'Abuelita',  text:'¡De eso nada! ¡Aquí tienes!' }
+      ], true);
 
-      try {
-        // ---- FASE INTRO ----
-        if (phase === 'intro') {
-          // Cierra "¡Bravoooo!" y abre el principal
-          tryCloseDialog();
+      CUT.hijackAction = async ()=>{
+        if (isTyping) return advanceDialog();
 
-          openDialog([
-            { speaker:'Pueblo',    text:'Juan, ¡nos has salvado!' },
-            { speaker:'Megafonía', text:'Comunicamos que el supermercado permanecerá cerrado hasta nuevo aviso.' },
-            { speaker:'Juan',      text:'No jodas... Me quedé sin los Tresor...' },
-            { speaker:'Abuelita',  text:'¡De eso nada! ¡Aquí tienes!' }
-          ], true);
-
-          phase = 'main';
-          console.debug('[cine4] -> main');
-          return;
+        if (dialogIndex < dialogScript.length - 1){ 
+          advanceDialog();
+          return; 
         }
 
-        // ---- FASE MAIN ----
-        if (phase === 'main') {
-          // Si el diálogo todavía tiene letras escribiéndose, ya habremos devuelto antes.
-          // Aquí simplemente intentamos avanzar; cuando ya no haya más, cerramos.
-          if (dialogHasMore()) return tryAdvance();
+        closeDialog();
 
-          // Intento de avanzar una línea; si ya no hay más, cerrará tu sistema o nos quedamos sin isTyping.
-          tryAdvance();
+const TILE_SIZE = 1;
+const tilesUp = 1;
 
-          // Si ya no hay más (el sistema cerrará o quedará en última línea), forzamos cierre y pasamos a spawn.
-          tryCloseDialog();
-          phase = 'spawn';
-          console.debug('[cine4] -> spawn');
-          return;
-        }
+// y del pie de Juan en coordenada mundo
+const juanFootY = player.y + FEET_OFFSET_Y;
 
-        // ---- FASE SPAWN ----
-        if (phase === 'spawn') {
-          if (_spawning) return; // reentrancia
-          _spawning = true;
+// spawnea 12 tiles por encima del pie
+const spawnX = player.x;
+const spawnY = juanFootY - tilesUp * TILE_SIZE;
 
-          // Calcula pie de Juan y spawnea 12 tiles por encima
-          const TILE_SIZE = 16;
-          const tilesUp = 12;
-          const juanFootY = player.y + FEET_OFFSET_Y; // en tu debug usas este pie
+await spawnTresorShinyAt(spawnX, spawnY);
+SFX.play("shine", { volume: 0.4 });
 
-          const spawnX = player.x;
-          const spawnY = juanFootY - tilesUp * TILE_SIZE;
 
-          // IMPORTANTE: spawnTresorShinyAt es async; aquí SÍ estamos en async
-          const p = await spawnTresorShinyAt(spawnX, spawnY);
-          SFX.play("shine", { volume: 0.4 });
-          console.debug('[cine4] Tresor spawn:', p?.id || '(sin id)');
-
-          // opcional: si quieres un texto corto tras el spawn:
-          if (typeof openDialog === 'function') {
-            openDialog([{ speaker:'Abuelita', text:'¡Tus Tresor, mi niño!' }], true);
-          }
-
-          armed = true;             // listo para finalizar en el siguiente input
-          phase = 'end';
-          _spawning = false;
-          console.debug('[cine4] -> end (armed)');
-          return;
-        }
-
-        // ---- FASE END ----
-        if (phase === 'end') {
-          if (!armed) return;       // evita dobles
+        let armed = true;
+        CUT.hijackAction = () => {
+          if (!armed) return;
           armed = false;
-          CUT.hijackAction = null;  // libera el hijack
-
-          tryCloseDialog();
-          console.debug('[cine4] goToEnd()');
-          if (typeof goToEnd === 'function') return goToEnd();
-          console.warn('[cine4] goToEnd no definido');
-          return;
-        }
-      } catch (err) {
-        console.error('[cine4] hijack error:', err);
-      }
-    };
+          CUT.hijackAction = null;
+          goToEnd();
+        };
+      };
+    }; 
   });
 }
+
+
 
 
 /* ========== MOVIMIENTO / MEGAUPDATE ========== */
