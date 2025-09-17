@@ -146,6 +146,8 @@ const CUT = {
   onEnd: null        
 };
 
+let musicLockUntil = 0;  
+let musicLockOnly  = null; 
 
 const FOG = {
   active:false, parts:[],
@@ -1057,11 +1059,9 @@ document.getElementById('btn-act').addEventListener('touchstart', e => {
 
   window._audioUnlocked = true;
 
-     await AudioGate.ready();
-    
-  window.MUSIC_HARDLOCK = 'town';
-    window.__lockToTown = true;
-
+    await AudioGate.ready();          
+    window.MUSIC_HARDLOCK = 'town';
+    window.__lockToTown   = true;
 
 const kill = (el) => {
   if (!el) return;
@@ -2885,9 +2885,6 @@ function portraitsAppendAndContinue(extra){
   }
 }
 
-  
-let musicLockUntil = 0;
-let musicLockOnly  = null;
   
 function continueCine1_WithFumaos_Portraits(doneCb){
   if (!CUT.active || CUT.id!=='cine1') { if (typeof doneCb==='function') doneCb(); return; }
