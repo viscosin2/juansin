@@ -3980,78 +3980,75 @@ function startCinematic4(){
       };
       }
 
-function getFXCanvas(){
-  let fx = document.getElementById('fx');
+// === FX overlay transparente, encima del #game ===
+function getFXCanvasOnTop() {
   const game = document.getElementById('game');
-  if (!fx){
+  let fx = document.getElementById('fx');
+  if (!fx) {
     fx = document.createElement('canvas');
     fx.id = 'fx';
-    fx.width = game.width;
-    fx.height = game.height;
     fx.style.position = 'absolute';
     fx.style.left = game.offsetLeft + 'px';
     fx.style.top  = game.offsetTop  + 'px';
     fx.style.pointerEvents = 'none';
+    fx.style.zIndex = '9999';                 // ← por encima de todo
+    fx.style.backgroundColor = 'transparent'; // ← nada de fondo
     game.parentElement.appendChild(fx);
   }
+  // Tamaño + DPR para que no quede borroso
+  const dpr = (window.devicePixelRatio || 1);
+  fx.style.width  = game.clientWidth  + 'px';
+  fx.style.height = game.clientHeight + 'px';
+  fx.width  = Math.round(game.clientWidth  * dpr);
+  fx.height = Math.round(game.clientHeight * dpr);
+  const ctx = fx.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // coords en CSS px
+  // Re-posicionar si el game se mueve
+  fx.style.left = game.offsetLeft + 'px';
+  fx.style.top  = game.offsetTop  + 'px';
   return fx;
 }
 
-// Si el juego cambia tamaño/escala, llama a esto:
-function syncFXCanvasToGame(){
-  const game = document.getElementById('game');
-  const fx = document.getElementById('fx');
-  if (!fx || !game) return;
-  fx.width = game.width;
-  fx.height = game.height;
-  fx.style.left = game.offsetLeft + 'px';
-  fx.style.top  = game.offsetTop  + 'px';
-}
-
-  // Confeti en canvas FX (overlay)
-function confettiExplosionFX({ x, y, count = 40, spread = 2 * Math.PI, fadeMs = 1000 }){
-  const fx = getFXCanvas();
+// Confeti dibujado SOLO en #fx, sin tocar el canvas del juego
+function confettiExplosionFX({ x, y, count = 60, spread = 2*Math.PI, fadeMs = 1200 }) {
+  const fx = getFXCanvasOnTop();
   const ctx = fx.getContext('2d');
 
   const particles = [];
-  const colors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'];
+  const colors = ['#ff595e','#ffca3a','#8ac926','#1982c4','#6a4c93'];
 
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * spread;
-    const speed = 2 + Math.random() * 4;
+  for (let i=0;i<count;i++){
+    const ang = Math.random()*spread;
+    const speed = 2 + Math.random()*4;
     particles.push({
       x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life: fadeMs,
-      color: colors[Math.floor(Math.random() * colors.length)]
+      vx: Math.cos(ang)*speed,
+      vy: Math.sin(ang)*speed,
+      color: colors[(Math.random()*colors.length)|0]
     });
   }
 
-  const start = performance.now();
+  const t0 = performance.now();
 
   function loop(now){
-    const dt = now - start;
-    const k = Math.min(1, dt / fadeMs);
+    const k = Math.min(1, (now - t0) / fadeMs);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // limpia SOLO overlay
 
-    // ¡OJO! limpiamos SOLO el overlay
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-    particles.forEach(p => {
-      if (k < 1){
-        p.x += p.vx;
-        p.y += p.vy;
-        ctx.globalAlpha = 1 - k;
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, 4, 4);
-      }
-    });
-
+    for (const p of particles){
+      p.x += p.vx;
+      p.y += p.vy;
+      ctx.globalAlpha = 1 - k;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, 4, 4);
+    }
     ctx.globalAlpha = 1;
 
     if (k < 1) requestAnimationFrame(loop);
+    else {
+      // limpieza final opcional
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
   }
-
   requestAnimationFrame(loop);
 }
 
@@ -4282,20 +4279,19 @@ function goToEnd(){
 
 function _cine4_end(){ 
   player.dir = 'down';
-  
   try{ smokeStart(null); }catch(e){}
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
   _cine2_closePortraitsAndOverlay(() => {
-    // Confeti en overlay (centro de la pantalla de juego)
     const game = document.getElementById('game');
-    syncFXCanvasToGame && syncFXCanvasToGame();
+
+    // Confeti encima de todo (después de cerrar overlays)
     confettiExplosionFX({ 
-      x: game.width / 2, 
-      y: game.height / 2 
+      x: game.clientWidth / 2, 
+      y: game.clientHeight / 2 
     });
 
-    // Primer mini-diálogo
+    // Primer “Bravoooo”
     openDialog([{ speaker:'Pueblo', text:'Bravoooo' }], true);
 
     CUT.hijackAction = () => { 
@@ -4304,40 +4300,46 @@ function _cine4_end(){
       closeDialog();
       CUT.hijackAction = null;
 
-      // Diálogo principal (SIN spawnear todavía)
+      // Diálogo principal
       openDialog([
-        { speaker:'Pueblo', text:'Juan, ¡nos has salvado!' },
+        { speaker:'Pueblo',    text:'Juan, ¡nos has salvado!' },
         { speaker:'Megafonía', text:'Comunicamos que el supermercado permanecerá cerrado hasta nuevo aviso.' },
-        { speaker:'Juan', text:'No jodas... Me quedé sin los Tresor...' },
-        { speaker:'Abuela', text:'¡De eso nada! ¡Aquí tienes!' }
+        { speaker:'Juan',      text:'No jodas... Me quedé sin los Tresor...' },
+        { speaker:'Abuelita',  text:'¡De eso nada! ¡Aquí tienes!' }
       ], true);
 
       CUT.hijackAction = async ()=>{
         if (isTyping) return advanceDialog();
 
-        // Si aún queda diálogo, seguimos
+        // ¿Queda diálogo?
         if (dialogIndex < dialogScript.length - 1){ 
           advanceDialog();
           return; 
         }
 
-        // Se acabó el diálogo => AHORA spawneamos los Tresor
+        // Fin del diálogo → ahora spawneamos TRESOR por encima de Juan
         closeDialog();
 
         try {
-          // Por encima de Juan: si trabajas en tiles
-          const tilesUp = 2; // súbelo o bájalo según gusto
-          const spawnX = player.x;                // misma columna
-          const spawnY = player.y - tilesUp;      // algunas filas arriba
+          // ajusta según si usas tiles o pixeles
+          const tilesUp = 2; // un poco más arriba de Juan
+          const spawnX = player.x;
+          const spawnY = player.y - tilesUp;
           await spawnTresorShinyAt(spawnX, spawnY);
         } catch(e){
           console.warn('tresor spawn fail', e);
         }
 
-        // (Opcional) pequeña pausa para que se vea el spawn
-        setTimeout(()=>{ 
-          goToEnd();
-        }, 350);
+        // Esperar a que el/la jugadora pulse ACCIÓN para continuar
+        // (no cambiamos HTML hasta que pulsen)
+        let armed = true;
+        CUT.hijackAction = () => {
+          // no hay diálogo abierto, la primera pulsación nos vale
+          if (!armed) return;
+          armed = false;
+          CUT.hijackAction = null;
+          goToEnd(); // aquí haces el cambio de HTML/escena
+        };
       };
     }; 
   });
