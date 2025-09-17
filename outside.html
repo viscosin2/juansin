@@ -184,7 +184,7 @@ hapinnessMusic.volume = 0.5;
 townMusic.addEventListener('ended',  () => { townMusic.currentTime = 0; townMusic.play().catch(()=>{}); });
 combatMusic.addEventListener('ended',() => { combatMusic.currentTime = 0; combatMusic.play().catch(()=>{}); });
 combatMusicDBZ.addEventListener('ended',() => { combatMusicDBZ.currentTime = 0; combatMusicDBZ.play().catch(()=>{}); });
-  hapinnessMusic.addEventListener('ended',() => { hapinnessMusic.currentTime = 0; hapinnessMusic.play().catch(()=>{}); });
+hapinnessMusic.addEventListener('ended',() => { hapinnessMusic.currentTime = 0; hapinnessMusic.play().catch(()=>{}); });
 
 /* ====== AUDIO GATE GLOBAL ====== */
 const AudioGate = (() => {
@@ -379,7 +379,7 @@ const GAME_FLAGS = {
   talked_patata1: false,
   juansin_other_halo: false,
   need_potion:false, 
-  has_potion:true,
+  has_potion:false,
   talked_faramir: false,
   talked_denethor:false
 };
@@ -416,9 +416,9 @@ async function preloadCinematicImages(){
 
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
-  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
-  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:true },
-  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:true }
+  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
+  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:false },
+  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
 
 ];
   function buildCineZones(){
@@ -4665,8 +4665,8 @@ function update(dt){
     if (AMBIENT.k >= 1 && !initialDialogShown){
       initialDialogShown = true;
       setTimeout(()=>{
-        initialDialogLock = true;   // ← marca que el lock pertenece al diálogo inicial
-        interactBlocked = true;     // ← bloquea interacciones
+        initialDialogLock = true;
+        interactBlocked = true;
         openDialog([{speaker:'Juan', text:'¡Chuuuus! Qué pelete.'}], true);
         introActive = false;
       }, 300);
@@ -4811,17 +4811,14 @@ function update(dt){
     AMBIENT.targets.bluehour = (targetPal === 'bluehour') ? 1 : 0;
     AMBIENT.targets.hell     = (targetPal === 'hell')     ? 1 : 0;
 
-    // música (crossfade con tu Music manager)
     const fadeMs =
       (newZone && typeof newZone.musicFadeMs === 'number' && newZone.musicFadeMs >= 0)
         ? newZone.musicFadeMs
         : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 400);
 
     if (newZone && newZone.music) {
-      // entrar en zona con música propia
       Music.play(newZone.music, { volume: 0.5, fadeMs });
     } else {
-      // salir a “neutral/peach” -> música por defecto
       Music.play('town', { volume: 0.5, fadeMs });
     }
 
