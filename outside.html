@@ -3119,74 +3119,92 @@ function step2() {
 }
 
 
-  function _cine2_startFightUI(){
+ function _cine2_startFightUI(){
 
-    PORTRAITS.right.img = IMG_JUAN_FIGHT;
-    HPBARS.leftName  = 'Voldemort';
-    HPBARS.rightName  = 'Juan';
-    HPBARS.alpha  = 0; 
-    HPBARS.show(100, 100);
+  // Ajustes básicos UI
+  PORTRAITS.right.img = IMG_JUAN_FIGHT;
+  HPBARS.leftName  = 'Voldemort';
+  HPBARS.rightName = 'Juan';
+  HPBARS.alpha  = 0; 
+  HPBARS.show(100, 100);
 
-    const t0 = performance.now();
-    const dur = 400;
+  { // Fade-in barras
+    const t0 = performance.now(), dur = 400;
     function step(t){
       const k = Math.min(1, (t - t0) / dur);
       HPBARS.alpha = k;
       if (k < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
+  }
 
-openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
+  // Asegurar que L existe y meterlo en escena si está fuera
+  if (!PORTRAITS.left) {
+    PORTRACTS = PORTRAITS; // evitar typos si existe el obj global
+    PORTRAITS.left = _makeSide(IMG_VOLD_P, 'left', 'Voldemort');
+  }
+  const L = PORTRAITS.left;
+  const R = PORTRAITS.right;
 
-CUT.hijackAction = () => {
-  if (isTyping) return advanceDialog();
+  if (typeof L.x !== 'number') L.x = L.outX;
+  if (typeof R.x !== 'number') R.x = R.inX; // R ya está dentro según tu flujo
 
-  _cine2_openMenu();
+  // Si L no está dentro, lo traemos ahora; si ya está, seguimos
+  const bringLThenStart = () => {
+    openDialog([{ speaker: '', text: '¿Cómo quieres atacar?' }], true);
 
-  CUT.hijackAction = () => {
-    const choice = _cine2_menuConfirm();
-    if (choice < 0) return;
-    closeDialog();
-    _cine2_closeMenu();
+    CUT.hijackAction = () => {
+      if (isTyping) return advanceDialog();
 
-    const R = PORTRAITS.right;
-    const L = PORTRAITS.left;
-    const mid  = R.inX - Math.round(screenRect.dw * 0.04);
-    const back = R.inX;
+      _cine2_openMenu();
 
-    R.sFrom = 1.00; R.sTo = 1.06;
-    SFX.play("ataque");
-    _startSlide(R, mid, () => {
-      R.sFrom = 1.06; R.sTo = 1.00;
-      _startSlide(R, back, () => {
-_startSlide(R, R.outX, () => {
-        
-      L.x = L.outX; 
-    _startSlide(L, L.inX, () => {
-      const orig = L.inX;
-      const kick = orig + Math.round(screenRect.dw * 0.02);
-    
-      L.sFrom = 1.00; L.sTo = 0.96;
-      _startSlide(L, kick, () => {
-        HPBARS.setTargets(100, 50);
-        L.sFrom = 0.96; L.sTo = 1.00;
-_startSlide(L, orig, () => {
-  openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
-CUT.hijackAction = () => {
-        if (isTyping) return advanceDialog();
+      CUT.hijackAction = () => {
+        const choice = _cine2_menuConfirm();
+        if (choice < 0) return;
         closeDialog();
-venganzaVoldemort();
-};
-    });
+        _cine2_closeMenu();
 
-      });
-    });
+        // Anim: Juan (R) carga → vuelve → Voldemort (L) recibe. Nadie sale de escena.
+        const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+        const back = R.inX;
+
+        R.sFrom = 1.00; R.sTo = 1.06;
+        try { SFX.play && SFX.play("ataque"); } catch(_){}
+        _startSlide(R, mid, () => {
+          R.sFrom = 1.06; R.sTo = 1.00;
+          _startSlide(R, back, () => {
+
+            // Pequeño "kick" a L sin sacarlo
+            const orig = L.inX;
+            const kick = orig + Math.round(screenRect.dw * 0.02);
+            L.sFrom = 1.00; L.sTo = 0.96;
+            _startSlide(L, kick, () => {
+              try { HPBARS.setTargets && HPBARS.setTargets(100, 50); } catch(_){}
+              L.sFrom = 0.96; L.sTo = 1.00;
+              _startSlide(L, orig, () => {
+                openDialog([{ speaker:'Voldemort', text:'Me las pagarás.' }], true);
+                CUT.hijackAction = () => {
+                  if (isTyping) return advanceDialog();
+                  closeDialog();
+                  venganzaVoldemort();
+                };
+              });
+            });
+
+          });
         });
-      }); 
-    });
+      };
+    };
   };
-};
+
+  if (Math.abs(L.x - L.inX) > 1) {
+    // Meter a L primero (R ya está en escena)
+    _startSlide(L, L.inX, bringLThenStart);
+  } else {
+    bringLThenStart();
+  }
 }
+
 
 
   function _cine2_closePortraitsAndOverlay(done){
@@ -3231,7 +3249,7 @@ venganzaVoldemort();
     });   
   }
   
- function _cine2_continueFight(){
+function _cine2_continueFight(){
 
   PORTRAITS.active = true;
   PORTRAITS.stage  = 'entering';
@@ -3239,25 +3257,26 @@ venganzaVoldemort();
   PORTRAITS.blurK  = 0;
   PORTRAITS.script = Array.isArray(PORTRAITS.script) ? PORTRAITS.script : [];
 
+  // Refresco de portraits (como tenías)
   PORTRAITS.left  = _makeSide(IMG_VOLD_P,  'left',  'Voldemort');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG,'right', 'Juan');
 
-  PORTRAITS.left.x  = PORTRAITS.left.outX;
-  PORTRAITS.right.x = PORTRAITS.right.outX;
+  // Posiciones de partida
+  if (typeof PORTRAITS.left.x  !== 'number')  PORTRAITS.left.x  = PORTRAITS.left.outX;
+  if (typeof PORTRAITS.right.x !== 'number')  PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Pequeño offset que tú añadías
+  // Offset que añadías
   PORTRAITS.left.inX += 60;
   PORTRAITS.left.x   += 60;
 
-  // --- Barras de vida ---
+  // Barras de vida
   HPBARS.leftName  = 'Voldemort';
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
   HPBARS.show(100, 50);
 
-  {
-    const t0 = performance.now();
-    const dur = 400;
+  { // Fade-in barras
+    const t0 = performance.now(), dur = 400;
     function step(t){
       const k = Math.min(1, (t - t0) / dur);
       HPBARS.alpha = k;
@@ -3266,100 +3285,105 @@ venganzaVoldemort();
     requestAnimationFrame(step);
   }
 
-  const R = PORTRAITS.right; // Juan
-  R.x = R.outX;
+  const L = PORTRAITS.left;   // Voldemort
+  const R = PORTRAITS.right;  // Juan
 
-  _startSlide(R, R.inX, () => {
-    const orig = R.inX;
-    const kick = orig + Math.round(screenRect.dw * 0.02);
+  // Traer a ambos a escena en paralelo si hace falta
+  let pending = 0;
+  const afterEnter = () => {
 
+    // “Impulso” de Juan (dolor/aguante) sin salir de escena
+    const origR = R.inX;
+    const kickR = origR + Math.round(screenRect.dw * 0.02);
     R.sFrom = 1.00; R.sTo = 0.96;
-    _startSlide(R, kick, () => {
-      HPBARS.setTargets(10, 50); // ← Ajusta orden si tu implementación es al revés
+    _startSlide(R, kickR, () => {
+      try { HPBARS.setTargets && HPBARS.setTargets(10, 50); } catch(_){}
       R.sFrom = 0.96; R.sTo = 1.00;
 
-        _startSlide(R, orig, () => {
+      _startSlide(R, origR, () => {
         openDialog([{ speaker:'', text:'Ha sido un golpe duro. Remata esto.' }], true);
 
         CUT.hijackAction = () => {
           if (isTyping){ advanceDialog(); return; }
           closeDialog();
           openDialog([{ speaker:'', text:'¿Cómo quieres atacar?' }], true);
-          let _c4_started = false;
-          
-  CUT.hijackAction = () => {
-    if (isTyping){ advanceDialog(); return; }
-    
-          _cine2_openMenu();
+
+          let started = false;
 
           CUT.hijackAction = () => {
-            if (_c4_started) return;
-            const choice = _cine2_menuConfirm();
-            if (choice < 0) return; // no elegido aún
-            _c4_started = true;
-            
-            closeDialog();
-            _cine2_closeMenu();
+            if (isTyping){ advanceDialog(); return; }
 
-            const L = PORTRAITS.left; // Voldemort
-            const mid  = R.inX - Math.round(screenRect.dw * 0.04);
-            const back = R.inX;
+            _cine2_openMenu();
 
-            // Anim de "carga" de Juan antes de atacar
-            R.sFrom = 1.00; R.sTo = 1.06;
-            _startSlide(R, mid, () => {
-              R.sFrom = 1.06; R.sTo = 1.00;
-              _startSlide(R, back, () => {
+            CUT.hijackAction = () => {
+              if (started) return;
+              const choice = _cine2_menuConfirm();
+              if (choice < 0) return;
+              started = true;
 
-                _startSlide(R, R.outX, () => {
-                  L.x = L.outX;
-                  _startSlide(L, L.inX, () => {
-                    const origL = L.inX;
-                    const kickL = origL + Math.round(screenRect.dw * 0.02);
+              closeDialog();
+              _cine2_closeMenu();
 
-                    L.sFrom = 1.00; L.sTo = 0.96;
-                    _startSlide(L, kickL, () => {
-                      HPBARS.setTargets(10, 0); // ← Voldemort pierde 50; ajusta si tu orden difiere
-                      L.sFrom = 0.96; L.sTo = 1.00;
+              // Carga de Juan y golpe a Voldemort — ambos EN ESCENA
+              const mid  = R.inX - Math.round(screenRect.dw * 0.04);
+              const back = R.inX;
 
-                      _startSlide(L, origL, () => {
-                        // -- REEMPLAZA desde aquí --
-openDialog([{ speaker:'Voldemort', text:'No puede ser.' }], true);
-_cine3_removeVoldFromMap();
-CUT.hijackAction = () => {
-  if (isTyping){ advanceDialog(); return; }
-  closeDialog();
+              R.sFrom = 1.00; R.sTo = 1.06;
+              _startSlide(R, mid, () => {
+                R.sFrom = 1.06; R.sTo = 1.00;
+                _startSlide(R, back, () => {
 
-const L = PORTRAITS.left;
-const startY = (L.y ?? 0);
-const endY   = startY + Math.round(screenRect.dh * 0.8); // resbala ~80% de alto
-const t0 = performance.now();
-const dur = 550;
+                  const origL = L.inX;
+                  const kickL = origL + Math.round(screenRect.dw * 0.02);
 
-function fallStep(t){
-  const k = Math.min(1, (t - t0) / dur);
-  L.y = startY + (endY - startY) * k;
-  if (k < 1){
-    requestAnimationFrame(fallStep);
-  }else{
-    endCine2(); // ← cuando termina la caída, cerramos cine2
-  }
-}
-requestAnimationFrame(fallStep);
-};
-                      });
+                  L.sFrom = 1.00; L.sTo = 0.96;
+                  _startSlide(L, kickL, () => {
+                    try { HPBARS.setTargets && HPBARS.setTargets(10, 0); } catch(_){}
+                    L.sFrom = 0.96; L.sTo = 1.00;
+
+                    _startSlide(L, origL, () => {
+                      openDialog([{ speaker:'Voldemort', text:'No puede ser.' }], true);
+                      try { _cine3_removeVoldFromMap && _cine3_removeVoldFromMap(); } catch(_){}
+
+                      CUT.hijackAction = () => {
+                        if (isTyping){ advanceDialog(); return; }
+                        closeDialog();
+
+                        // Caída vertical final de Voldemort (única “salida”)
+                        const startY = (L.y != null ? L.y : 0);
+                        const endY   = startY + Math.round(screenRect.dh * 0.8);
+                        const t0 = performance.now(), dur = 550;
+
+                        function fallStep(t){
+                          const k = Math.min(1, (t - t0) / dur);
+                          L.y = startY + (endY - startY) * k;
+                          if (k < 1){
+                            requestAnimationFrame(fallStep);
+                          }else{
+                            endCine2();
+                          }
+                        }
+                        requestAnimationFrame(fallStep);
+                      };
                     });
                   });
                 });
               });
-            });
+            };
           };
-  };
-        };
+        });
       });
     });
-  });
+  };
+
+  const needL = Math.abs(PORTRAITS.left.x  - PORTRAITS.left.inX)  > 1;
+  const needR = Math.abs(PORTRAITS.right.x - PORTRAITS.right.inX) > 1;
+
+  if (needL){ pending++; _startSlide(PORTRAITS.left,  PORTRAITS.left.inX,  ()=>{ if(--pending===0) afterEnter(); }); }
+  if (needR){ pending++; _startSlide(PORTRAITS.right, PORTRAITS.right.inX, ()=>{ if(--pending===0) afterEnter(); }); }
+  if (!needL && !needR) afterEnter();
 }
+
 
 
 function endCine2(){ 
