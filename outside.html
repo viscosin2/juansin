@@ -405,9 +405,9 @@ async function preloadCinematicImages(){
 
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
-  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
-  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:false },
-  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
+  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
+  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:true },
+  { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:true }
 
 ];
   function buildCineZones(){
@@ -3961,6 +3961,48 @@ function startCinematic4(){
       };
       }
 
+// Confeti "explosión" en el centro del canvas
+function confettiExplosion(ctx, { x, y, count = 40, spread = 2 * Math.PI, fadeMs = 1000 }) {
+  const particles = [];
+  const colors = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93'];
+
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * spread;
+    const speed = 2 + Math.random() * 4;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: fadeMs,
+      color: colors[Math.floor(Math.random() * colors.length)]
+    });
+  }
+
+  const start = performance.now();
+
+  function draw(now) {
+    const dt = now - start;
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    particles.forEach(p => {
+      const k = dt / fadeMs;
+      if (k < 1) {
+        p.x += p.vx;
+        p.y += p.vy;
+        ctx.globalAlpha = 1 - k;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 4, 4);
+      }
+    });
+
+    ctx.globalAlpha = 1;
+
+    if (dt < fadeMs) requestAnimationFrame(draw);
+  }
+
+  requestAnimationFrame(draw);
+}
+
 function spawnNPCFromCatalog(type, x, y, opts = {}){
   const spec = NPC_CATALOG[type];
   const img  = NPC_IMAGES[type];
@@ -4137,6 +4179,16 @@ function _cine4_end(){
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
   _cine2_closePortraitsAndOverlay(() => {
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+
+confettiExplosion(ctx, { 
+  x: canvas.width / 2, 
+  y: canvas.height / 2 
+});
+    
     openDialog([
           { speaker:'Pueblo', text:'OLÉ' },
           { speaker:'Juan', text:'Yujuu' }
