@@ -4847,10 +4847,12 @@ function update(dt){
         GAME_FLAGS.need_potion = false;
 
         ambientLock = true;
-        ambientLockOwner = 'potion_pick'; // opcional, por consistencia
-        SFX.play("potion", { volume: 0.4 });
+        ambientLockOwner = 'potion_pick'; 
+        
         startJuanBlueHalo(0, { permanent:true });
+        
         setTimeout(()=>{
+          SFX.play("potion", { volume: 0.4 });
           ambientLock = false; ambientLockOwner = null;
           openDialog([{ speaker:'Juan', text:'¡Vamos niño!' }], true);
         }, 1000);
