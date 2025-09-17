@@ -4876,18 +4876,15 @@ async function spawnTresorShinyAt(x, y){
   const img = spawnTresorShinyAt._img;
   if (!img) { console.warn('tresor.png no cargó'); return null; }
 
-  const prop = {
-    id: 'tresor_' + Math.random().toString(36).slice(2,7),
-    type: 'tresor',
-    img, x, y,
-    iw: img.naturalWidth, ih: img.naturalHeight,
-    scale: 0.16,
-    _halo: { color:'255,255,160', radius:30, alpha:0.75, pulse:0.08, offsetY:0.62 } 
-  };
+  const spawnX = player.x;
+const spawnY = player.y;  
+await spawnTresorShinyAt(spawnX, spawnY);
+
   SFX.play("shine", { volume: 0.35 });
   PROPS.push(prop);
   return prop;
 }
+
 
   
 /* ========== MEGADRAW ========== */
