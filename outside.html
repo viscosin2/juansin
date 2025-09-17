@@ -186,7 +186,8 @@ combatMusicDBZ.addEventListener('ended',() => { combatMusicDBZ.currentTime = 0; 
 /* ====== AUDIO GATE GLOBAL ====== */
 const AudioGate = (() => {
   let unlocked = false, primed = false, primingPromise = null;
-  const ids = ['bgTown','bgBluehour','bgCombat, bgHappiness, bgCombatDBZ, bgHell'];
+  const ids = ['bgTown','bgBluehour','bgCombat','bgHappiness','bgCombatDBZ','bgHell'];
+
   const getAll = ()=> ids.map(id=>document.getElementById(id)).filter(Boolean);
 
   function unlock(){
@@ -2502,6 +2503,11 @@ function unfreezeIdle(){
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
+
+    // ↑ haz el LEFT más grande
+const BIG = 1.25;                    // 1.25 = 125% (ajusta a gusto)
+PORTRAITS.left.sFrom = BIG;
+PORTRAITS.left.sTo   = BIG;
 
   const first = PORTRAITS.script[0];
   const node0 = _nodeForSpeaker(first.speaker);
@@ -4847,7 +4853,7 @@ function update(dt){
     const fadeMs =
       (newZone && typeof newZone.musicFadeMs === 'number' && newZone.musicFadeMs >= 0)
         ? newZone.musicFadeMs
-        : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 650);
+        : (typeof AMBIENT.fadeMs === 'number' ? AMBIENT.fadeMs : 2000);
 
     if (newZone && newZone.music) {
       // entrar en zona con música propia
