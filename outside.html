@@ -999,13 +999,11 @@ const Music = (() => {
     _fadeReq = requestAnimationFrame(step);
   }
 
-  async function play(name, { volume = 0.5, fadeMs = 0 } = {}) {
-
+async function play(name, { volume = 0.5, fadeMs = 0 } = {}) {
   if (musicLockOnly && performance.now() < musicLockUntil && name !== musicLockOnly) {
     name = musicLockOnly;
   }
 
-  // bloqueo duro de arranque
   if (window.__lockToTown && name !== 'town') {
     name = 'town';
   }
@@ -1013,34 +1011,32 @@ const Music = (() => {
   await AudioGate.ready();
   const next = elements[name];
   if (!next) return;
-    const next = elements[name];
-    if (!next) return;
-    
-      next.loop = true;
 
-    if (current === next) {
-      if (fadeMs > 0) {
-        _fade(null, next, fadeMs, volume); // del vol actual → target
-      } else {
-        next.volume = volume;
-      }
-      currentName = name;
-      return;
-    }
+  next.loop = true;
 
-    // PISTA DISTINTA → crossfade normal
-    const prev = current || null;
-    if (!fadeMs) {
-      prev && (prev.pause(), prev.currentTime = 0);
-      next.volume = volume;
-      next.play().catch(()=>{});
+  if (current === next) {
+    if (fadeMs > 0) {
+      _fade(null, next, fadeMs, volume);
     } else {
-      if (next.volume === 0) { /* ok */ } else { next.volume = 0; }
-      _fade(prev, next, fadeMs, volume);
+      next.volume = volume;
     }
-    current = next;
     currentName = name;
+    return;
   }
+
+  const prev = current || null;
+  if (!fadeMs) {
+    prev && (prev.pause(), prev.currentTime = 0);
+    next.volume = volume;
+    next.play().catch(()=>{});
+  } else {
+    if (next.volume === 0) { /* ok */ } else { next.volume = 0; }
+    _fade(prev, next, fadeMs, volume);
+  }
+  current = next;
+  currentName = name;
+}
+
 
   function stop({ fadeMs = 0 } = {}) {
     if (!current) return;
