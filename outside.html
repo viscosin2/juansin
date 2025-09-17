@@ -3821,8 +3821,8 @@ function cine3_beginPortraits(){
         rBase: 38,
         rPeak: 48,
         y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)),
-        offsetL: 12,  // % → normalizado internamente si usas mi versión robusta
-        offsetR: 12
+        offsetL: 52,  // % → normalizado internamente si usas mi versión robusta
+        offsetR: 52
       }, ()=>{
         if (typeof _cine2_nudge === 'function'){
           _cine2_nudge(R, +(screenRect?.dw||60)*0.02, 1.00, 0.98, ()=>{ doneB = true; maybeNext(); });
@@ -3843,7 +3843,6 @@ function cine3_beginPortraits(){
       { speaker:'', text:'No puedes seguir luchando.'}
     ], true);
 
-    // ⚡ Golpe + bajar vida INMEDIATO en la 1ª línea (no en la 2ª)
     let hitDone = false;
     setTimeout(()=>{
       if (!hitDone && dialogOpen && dialogIndex === 0){
