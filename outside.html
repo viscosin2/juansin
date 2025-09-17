@@ -3810,29 +3810,30 @@ function cine3_beginPortraits(){
 
     // Coreografía SSJ
     cine3_attackSequence(()=>{ doneA = true; maybeNext(); });
+// Bola en overlay
+const L = PORTRAITS.left, R = PORTRAITS.right;
+const H = (screenRect?.dh || (getFXCanvasOnTop().height));
+if (typeof _cine4_fireballFromLtoR === 'function'){
+  _cine4_fireballFromLtoR({
+    startDelayMs: 120,
+    dur: 600,
+    rBase: 40,             // más grande
+    rPeak: 56,             // pico más grande
+    y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.68)), // un poco más abajo
+    // IMPORTANTE: si usas mi versión con normalización puedes poner 28 = 28%;
+    // si usas la antigua sin normalización, usa 0.28 y -0.08.
+    offsetL: 28,           // empieza mucho más a la derecha (≈28% de W desde L)
+    offsetR: -8,           // termina 8% MÁS ALLÁ de R (overshoot a la derecha)
+    debug: true
+  }, ()=>{
+    // ⚠️ Quitamos el nudge para no duplicar “recibir”
+    // if (typeof _cine2_nudge === 'function') { ... }  ← BORRADO
+    doneB = true; maybeNext();
+  });
+} else {
+  doneB = true; maybeNext();
+}
 
-    // Bola en overlay
-    const L = PORTRAITS.left, R = PORTRAITS.right;
-    const H = (screenRect?.dh || (getFXCanvasOnTop().height));
-    if (typeof _cine4_fireballFromLtoR === 'function'){
-      _cine4_fireballFromLtoR({
-        startDelayMs: 120,
-        dur: 600,
-        rBase: 38,
-        rPeak: 48,
-        y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)),
-        offsetL: 52,  // % → normalizado internamente si usas mi versión robusta
-        offsetR: 52
-      }, ()=>{
-        if (typeof _cine2_nudge === 'function'){
-          _cine2_nudge(R, +(screenRect?.dw||60)*0.02, 1.00, 0.98, ()=>{ doneB = true; maybeNext(); });
-        } else {
-          doneB = true; maybeNext();
-        }
-      });
-    } else {
-      doneB = true; maybeNext();
-    }
   }
 
   // ===== POST-ATAQUE =====
