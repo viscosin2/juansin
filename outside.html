@@ -4107,11 +4107,11 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
     // y explícito (si no, se calcula desde el portrait L)
     y: forcedY = null,
     // tamaño: radio base y pico
-    rBase = 12,
-    rPeak = 28,
+    rBase = 25,
+    rPeak = 40,
     // offsets horizontales desde cada portrait para no “nacer pegado”
-    offsetL = 0.06, // en % del ancho pantalla
-    offsetR = 0.06,
+    offsetL = 0.2, // en % del ancho pantalla
+    offsetR = 0.01,
   } = opts;
 
   const fx = getFXCanvasOnTop();
