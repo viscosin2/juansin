@@ -888,9 +888,13 @@ const SFX = (() => {
   const _lastByName = new Map();
 
   function _get(path) {
-    if (!_cache.has(path)) _cache.set(path, new Audio(path));
-    const base = _cache.get(path);
-    const a = base.cloneNode(true);
+    if (!_cache.has(path)) {
+      const base = new Audio(path);
+      base.preload = 'auto';
+      base.playsInline = true;
+      _cache.set(path, base);
+    }
+    const a = _cache.get(path).cloneNode(true);
     a.preload = 'auto';
     a.playsInline = true;
     return a;
@@ -900,23 +904,33 @@ const SFX = (() => {
     name,
     { volume = 1, start = 0, duration = null, folder = 'assets/sounds' } = {}
   ) {
-if (window.MUSIC_HARDLOCK && name !== window.MUSIC_HARDLOCK) {
-  name = window.MUSIC_HARDLOCK;
-}
+    // ⚠️ NO hardlock aquí: los SFX deben sonar aunque el BGM esté bloqueado
+    try { await AudioGate.ready(); } catch(_) {}
 
-    const a = _get(`${folder}/${name}.mp3`);
+    const path = `${folder}/${name}.mp3`;
+    const a = _get(path);
     a.volume = volume;
 
-    const startWhenReady = () => {
-      if (start > 0) a.currentTime = Math.max(0, start);
-      a.play().catch(()=>{});
-      if (duration && duration > 0) {
-        setTimeout(() => { try { a.pause(); a.currentTime = 0; } catch(e){} }, duration * 1000);
-      }
+    const startNow = () => {
+      try {
+        if (start > 0) a.currentTime = Math.max(0, start);
+        a.play().catch(()=>{});
+        if (duration && duration > 0) {
+          setTimeout(() => { try { a.pause(); a.currentTime = 0; } catch(e){} }, duration * 1000);
+        }
+      } catch(_) {}
     };
 
-    if (a.readyState >= 2) startWhenReady();
-    else a.addEventListener('loadedmetadata', startWhenReady, { once:true });
+    // Si aún no tiene metadata, fuerza carga y espera un evento fiable
+    if (a.readyState >= 2) {
+      startNow();
+    } else {
+      a.load();
+      const onReady = () => { a.removeEventListener('canplaythrough', onReady); startNow(); };
+      a.addEventListener('canplaythrough', onReady, { once:true });
+      // fallback por si canplaythrough no llega:
+      setTimeout(() => { if (!a.paused) return; startNow(); }, 300);
+    }
 
     _lastByName.set(name, a);
     return a;
@@ -931,8 +945,7 @@ if (window.MUSIC_HARDLOCK && name !== window.MUSIC_HARDLOCK) {
   function stop(name) {
     const a = _lastByName.get(name);
     if (!a) return;
-    a.pause();
-    a.currentTime = 0;
+    try { a.pause(); a.currentTime = 0; } catch(_) {}
   }
 
   function fadeOut(name, ms = 400) {
@@ -944,7 +957,7 @@ if (window.MUSIC_HARDLOCK && name !== window.MUSIC_HARDLOCK) {
       const k = Math.min(1, (now - t0) / ms);
       a.volume = Math.max(0, startVol * (1 - k));
       if (k < 1) requestAnimationFrame(step);
-      else { a.pause(); a.currentTime = 0; a.volume = startVol; }
+      else { try { a.pause(); a.currentTime = 0; a.volume = startVol; } catch(_) {} }
     })(performance.now());
   }
 
@@ -952,6 +965,7 @@ if (window.MUSIC_HARDLOCK && name !== window.MUSIC_HARDLOCK) {
 })();
 
 
+let _actGate = false;
 
 const Music = (() => {
   const elements = {
@@ -1054,7 +1068,10 @@ function advanceDialog(){
 }
 document.getElementById('btn-act').addEventListener('touchstart', async e => {
   e.preventDefault();
-
+if (_actGate) return;
+  _actGate = true;
+  setTimeout(()=>{ _actGate = false; }, 180);
+  
   if (!window._audioUnlocked) {
 
   window._audioUnlocked = true;
@@ -1062,6 +1079,9 @@ document.getElementById('btn-act').addEventListener('touchstart', async e => {
     await AudioGate.ready();          
     window.MUSIC_HARDLOCK = 'town';
     window.__lockToTown   = true;
+
+      musicLockOnly  = 'town';
+  musicLockUntil = performance.now() + 6000;
 
 const kill = (el) => {
   if (!el) return;
@@ -1101,9 +1121,11 @@ if (dialogOpen){
   advanceDialog(); 
 
   if (willFinishNow && wasIntro) {
-    window.__lockToTown = false;
-    musicLockUntil = performance.now() + 5000;
-    Music.play('town', { volume: 0.5, fadeMs: 400 });
+      window.__lockToTown = false;
+  musicLockOnly  = 'town';
+  musicLockUntil = performance.now() + 5000;
+
+  Music.play('town', { volume: 0.5, fadeMs: 400 });
   }
   return;
 }
