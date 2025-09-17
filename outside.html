@@ -4097,9 +4097,105 @@ function spawnAroundJuanFromList(list){
   }
 }
 
+  function _cine4_fireballFromLtoR(cb){
+  const fx = getFXCanvasOnTop();
+  const ctx = fx.getContext('2d');
+
+  // Coordenadas aproximadas a partir de los portraits
+  // Centramos la trayectoria en una línea horizontal “UI-height” (arriba del centro)
+  const uiY = Math.round((screenRect?.dh || fx.height) * 0.24);
+
+  // Start en el borde derecho de L, end en borde izquierdo de R
+  const L = PORTRAITS.left, R = PORTRAITS.right;
+  if (!L || !R){ cb && cb(); return; }
+
+  const startX = Math.round(L.inX + (screenRect?.dw || fx.width) * 0.06);
+  const endX   = Math.round(R.inX - (screenRect?.dw || fx.width) * 0.06);
+
+  // Parámetros de animación
+  const dur = 520;          // ms
+  const t0  = performance.now();
+  const r0  = 6;            // radio base
+  const r1  = 14;           // radio pico (al inicio)
+  const trail = [];          // estela simple
+
+  // SFX opcional:
+  try { SFX && SFX.play && SFX.play('fireball'); } catch(e){}
+
+  function ease(k){ // suavizado
+    return 1 - Math.pow(1-k, 3);
+  }
+
+  function loop(now){
+    const k = Math.min(1, (now - t0) / dur);
+    const e = ease(k);
+
+    ctx.clearRect(0, 0, fx.width, fx.height);
+
+    // Posición interpolada
+    const x = startX + (endX - startX) * e;
+    const y = uiY;
+
+    // Estela simple: guardamos últimas posiciones
+    trail.push({x, y, t: now});
+    // mantener ~10 muestras
+    while (trail.length > 10) trail.shift();
+
+    // Dibujar estela (alpha decreciente)
+    for (let i = 0; i < trail.length; i++){
+      const p = trail[i];
+      const lifeK = i / trail.length;
+      ctx.globalAlpha = 0.15 + 0.35 * lifeK;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r0 + 2*lifeK, 0, Math.PI*2);
+      ctx.fillStyle = '#ffca3a';
+      ctx.fill();
+    }
+
+    // Núcleo de la bola (con “glow” sencillo)
+    ctx.globalAlpha = 1;
+    // halo
+    ctx.beginPath();
+    ctx.arc(x, y, r0 + 6, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255, 202, 58, 0.25)';
+    ctx.fill();
+    // núcleo
+    const rNow = r0 + (r1 - r0) * (1 - Math.abs(0.5 - k)*2); // late un poco
+    ctx.beginPath();
+    ctx.arc(x, y, rNow, 0, Math.PI*2);
+    ctx.fillStyle = '#ff595e';
+    ctx.fill();
+
+    if (k < 1){
+      requestAnimationFrame(loop);
+    } else {
+      // pequeño “flash” en el impacto (sin fondo negro)
+      const flashT0 = performance.now();
+      const flashDur = 120;
+      function flash(now2){
+        const f = Math.min(1, (now2 - flashT0) / flashDur);
+        ctx.clearRect(0, 0, fx.width, fx.height);
+        ctx.globalAlpha = 0.45 * (1 - f);
+        ctx.beginPath();
+        ctx.arc(endX, uiY, 28, 0, Math.PI*2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        if (f < 1) requestAnimationFrame(flash);
+        else {
+          ctx.clearRect(0, 0, fx.width, fx.height);
+          cb && cb();
+        }
+      }
+      requestAnimationFrame(flash);
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+
 
 function _cine4_step1(){
-  // --- Setup básico de portraits y barras ---
   PORTRAITS.active = true;
   PORTRAITS.stage  = 'entering';
   PORTRAITS.idx    = 0;
@@ -4190,14 +4286,19 @@ function _cine4_step1(){
       } break;
 
       // Paso 3: secuencia de ataque de SSJ (cine3_attackSequence)
-      case 3: {
-        console.log('[cine4] SSJ attack sequence');
-        closeDialog();
-        cine3_attackSequence(()=>{
-          // Al terminar el ataque, seguimos
-          next();
-        });
-      } break;
+// Paso 3: secuencia de ataque de SSJ (cine3_attackSequence) + bola de energía
+case 3: {
+  console.log('[cine4] SSJ attack sequence');
+  closeDialog();
+  // Cuando termine la animación principal del SSJ, disparamos la fireball y luego seguimos.
+  cine3_attackSequence(()=>{
+    _cine4_fireballFromLtoR(()=>{
+      // Al terminar la bola, avanzamos al Paso 4 (narrador "bola de energía")
+      next();
+    });
+  });
+} break;
+
 
       // Paso 4: narrador — bola de energía
       case 4: {
