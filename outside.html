@@ -4534,7 +4534,12 @@ function goToEnd(){
   setTimeout(()=>{ window.location.href = 'end.html'; }, 650);
 }
 
-
+const Z = {
+  BG: 0,
+  PROPS: 10,
+  FG: 100,     
+  UI: 1000
+};
 
 function _cine4_end(){ 
   player.dir = 'down';
@@ -4578,24 +4583,19 @@ function _cine4_end(){
 
         closeDialog();
 
-        try {
-          const tilesUp = 12; 
-          const spawnX = player.x;
-          const spawnY = player.y - tilesUp;
-          await spawnTresorShinyAt(spawnX, spawnY);
-        } catch(e){
-          console.warn('tresor spawn fail', e);
-        }
+const tilesUp = 12;
+const spawnX = player.x;
+const spawnY = player.y - tilesUp;
+await spawnTresorShinyAt(spawnX, spawnY);
+SFX.play("shine", { volume: 0.4 });
 
-        // Esperar a que el/la jugadora pulse ACCIÓN para continuar
-        // (no cambiamos HTML hasta que pulsen)
+
         let armed = true;
         CUT.hijackAction = () => {
-          // no hay diálogo abierto, la primera pulsación nos vale
           if (!armed) return;
           armed = false;
           CUT.hijackAction = null;
-          goToEnd(); // aquí haces el cambio de HTML/escena
+          goToEnd();
         };
       };
     }; 
@@ -4869,15 +4869,28 @@ async function spawnTresorShinyAt(x, y){
   const img = spawnTresorShinyAt._img;
   if (!img) { console.warn('tresor.png no cargó'); return null; }
 
-  const spawnX = player.x;
-const spawnY = player.y;  
-await spawnTresorShinyAt(spawnX, spawnY);
+  // ⚠️ NO recalcular con player.x/y aquí: usamos los argumentos que te pasan
+  const prop = {
+    type: 'tresorShiny',
+    img,
+    x,                // mundo
+    y,                // mundo (arriba de Juan si le pasas player.y - tilesUp)
+    w: img.width,
+    h: img.height,
+    // anclaje para que "caiga" justo encima de la cabeza de Juan
+    anchorX: 0.5,
+    anchorY: 1.0,
+    // Fuerza dibujado por delante de otros props
+    z: Z.FG + 10,     // o layer: 'fg' si usas layers por string
+    alwaysOnTop: true // si tu renderer lo soporta
+  };
 
+  // Efecto y registro en escena
   SFX.play("shine", { volume: 0.4 });
   PROPS.push(prop);
+
   return prop;
 }
-
 
   
 /* ========== MEGADRAW ========== */
