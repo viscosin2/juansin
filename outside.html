@@ -74,7 +74,9 @@
 
 <audio id="bgTown"     src="assets/sounds/ambientepueblo.mp3" loop preload="auto" playsinline></audio>
 <audio id="bgBluehour" src="assets/sounds/bluehour.mp3"      loop preload="auto" playsinline></audio>
+<audio id="bgHell" src="assets/sounds/hell.mp3"      loop preload="auto" playsinline></audio>
 <audio id="bgCombat"   src="assets/sounds/combate.mp3"        loop preload="auto" playsinline></audio>
+<audio id="bgCombatDBZ"   src="assets/sounds/combatedbz.mp3"        loop preload="auto" playsinline></audio>
 
 
 <div class="gameboy">
@@ -171,16 +173,19 @@ const FOG = {
 
 const townMusic   = document.getElementById('bgTown');
 const combatMusic = document.getElementById('bgCombat');
+const combatMusicDBZ = document.getElementById('bgCombatDBZ');
 townMusic.volume = 0.5;
 combatMusic.volume = 0.5;
+combatMusicDBZ.volume = 0.5;
 
 townMusic.addEventListener('ended',  () => { townMusic.currentTime = 0; townMusic.play().catch(()=>{}); });
 combatMusic.addEventListener('ended',() => { combatMusic.currentTime = 0; combatMusic.play().catch(()=>{}); });
+combatMusicDBZ.addEventListener('ended',() => { combatMusicDBZ.currentTime = 0; combatMusicDBZ.play().catch(()=>{}); });
 
 /* ====== AUDIO GATE GLOBAL ====== */
 const AudioGate = (() => {
   let unlocked = false, primed = false, primingPromise = null;
-  const ids = ['bgTown','bgBluehour','bgCombat'];
+  const ids = ['bgTown','bgBluehour','bgCombat, bgCombatDBZ, bgHell'];
   const getAll = ()=> ids.map(id=>document.getElementById(id)).filter(Boolean);
 
   function unlock(){
@@ -368,8 +373,8 @@ const GAME_FLAGS = {
   talked_gunner: false,
   talked_patata1: false,
   juansin_other_halo: false,
-  need_potion:false,   // ← nuevo: SSJ bloqueado hasta tomarla
-  has_potion:true,
+  need_potion:false, 
+  has_potion:false,
   talked_faramir: false,
   talked_denethor:false
 };
@@ -406,8 +411,8 @@ async function preloadCinematicImages(){
 
   // ------------------------ ZONAS CINE
   const CINE_ZONES = [
-  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:true },
-  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:true },
+  { id:'cine1', rect:{type:'percent', x:10, y:50, w:10, h:5}, _done:false },
+  { id:'cine2', rect:{type:'percent', x:73, y:0, w:10, h:50}, _done:false },
   { id:'cine3', rect:{type:'percent', x:84, y:79, w:1, h:50}, _done:false }
 
 ];
@@ -453,7 +458,7 @@ const AMBIENT_ZONES = [
   },
   {
     name:'Infierno super', palette:'hell',
-    music: 'bluehour',
+    music: 'hell',
     musicFadeMs: 3000,
     rect:{type:'percent', x:60, y:35, w:50, h:100}
   }
@@ -947,7 +952,9 @@ const Music = (() => {
   const elements = {
     town:   document.getElementById('bgTown'),
     bluehour: document.getElementById('bgBluehour'),
-    combat: document.getElementById('bgCombat')
+    combat: document.getElementById('bgCombat'),
+    combatdbz: document.getElementById('bgCombatDBZ'),
+    hell: document.getElementById('bgHell')
   };
   let current = null, currentName = null, _fadeReq = null;
 
@@ -1004,8 +1011,6 @@ const Music = (() => {
       next.volume = volume;
       next.play().catch(()=>{});
     } else {
-      // ojo: NO pongas next.volume=0 si ya está sonando esa misma pista
-      // (aquí no lo está, porque current !== next)
       if (next.volume === 0) { /* ok */ } else { next.volume = 0; }
       _fade(prev, next, fadeMs, volume);
     }
@@ -1051,6 +1056,8 @@ document.getElementById('btn-act').addEventListener('touchstart', e => {
     const town = document.getElementById('bgTown');
     const blue = document.getElementById('bgBluehour');
     const comb = document.getElementById('bgCombat');
+    const combdbz = document.getElementById('bgCombatDBZ');
+    const hell = document.getElementById('bgHell');
 
     const p = town.play();
     if (p && p.then) {
@@ -1060,6 +1067,8 @@ document.getElementById('btn-act').addEventListener('touchstart', e => {
 
     try { blue.pause(); blue.currentTime = 0; } catch(_) {}
     try { comb.pause(); comb.currentTime = 0; } catch(_) {}
+    try { combdbz.pause(); comb.currentTime = 0; } catch(_) {}
+    try { hell.pause(); comb.currentTime = 0; } catch(_) {}
 
     musicLockOnly  = 'town';
     musicLockUntil = performance.now() + 5000;
@@ -4601,18 +4610,15 @@ function _cine4_end(){
       CUT.hijackAction = async ()=>{
         if (isTyping) return advanceDialog();
 
-        // ¿Queda diálogo?
         if (dialogIndex < dialogScript.length - 1){ 
           advanceDialog();
           return; 
         }
 
-        // Fin del diálogo → ahora spawneamos TRESOR por encima de Juan
         closeDialog();
 
         try {
-          // ajusta según si usas tiles o pixeles
-          const tilesUp = 10; // un poco más arriba de Juan
+          const tilesUp = 10; 
           const spawnX = player.x;
           const spawnY = player.y - tilesUp;
           await spawnTresorShinyAt(spawnX, spawnY);
@@ -4909,6 +4915,7 @@ async function spawnTresorShinyAt(x, y){
     scale: 0.16,
     _halo: { color:'255,255,160', radius:30, alpha:0.75, pulse:0.08, offsetY:0.62 } 
   };
+  SFX.play("shine", { volume: 0.35 });
   PROPS.push(prop);
   return prop;
 }
