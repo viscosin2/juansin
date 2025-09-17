@@ -172,6 +172,8 @@ const FOG = {
   areaH: 140
 };
 
+  window.MUSIC_HARDLOCK = null;
+
 const townMusic   = document.getElementById('bgTown');
 const combatMusic = document.getElementById('bgCombat');
 const combatMusicDBZ = document.getElementById('bgCombatDBZ');
@@ -899,6 +901,9 @@ const SFX = (() => {
   }
 
   async function play(
+    if (window.MUSIC_HARDLOCK && name !== window.MUSIC_HARDLOCK) {
+  name = window.MUSIC_HARDLOCK;
+}
     name,
     { volume = 1, start = 0, duration = null, folder = 'assets/sounds' } = {}
   ) {
@@ -1055,31 +1060,38 @@ document.getElementById('btn-act').addEventListener('touchstart', e => {
   e.preventDefault();
 
   if (!window._audioUnlocked) {
-    window._audioUnlocked = true;
 
-    const town = document.getElementById('bgTown');
-    const blue = document.getElementById('bgBluehour');
-    const comb = document.getElementById('bgCombat');
-    const happy = document.getElementById('bgHappiness');
-    const combdbz = document.getElementById('bgCombatDBZ');
-    const hell = document.getElementById('bgHell');
+// --- ACTIVAR CANDADO DEFINITIVO ---
+window.MUSIC_HARDLOCK = 'town';
 
-    const p = town.play();
-    if (p && p.then) {
-      p.then(() => { try { town.pause(); town.currentTime = 0; } catch(_) {} })
-       .catch(() => { try { town.pause(); town.currentTime = 0; } catch(_) {} });
-    }
+// pausa y blanquea todas menos 'town'
+const kill = (el) => {
+  if (!el) return;
+  try { el.pause(); } catch(_) {}
+  try { el.loop = false; } catch(_) {}
+  try { el.currentTime = 0; } catch(_) {}
+  // opcional “nuclear” para que nada externo pueda re-arrancarlas:
+  // el.src = ''; el.load();
+};
 
-    try { blue.pause(); blue.currentTime = 0; } catch(_) {}
-    try { comb.pause(); comb.currentTime = 0; } catch(_) {}
-    try { combdbz.pause(); comb.currentTime = 0; } catch(_) {}
-    try { hell.pause(); comb.currentTime = 0; } catch(_) {}
-    try { happy.pause(); comb.currentTime = 0; } catch(_) {}
+const town  = document.getElementById('bgTown');
+const blue  = document.getElementById('bgBluehour');
+const hell  = document.getElementById('bgHell');
+const comb  = document.getElementById('bgCombat');
+const dbz   = document.getElementById('bgCombatDBZ');
+const happy = document.getElementById('bgHappiness');
 
-    musicLockOnly  = 'town';
-    musicLockUntil = performance.now() + 5000;
+kill(blue); kill(hell); kill(comb); kill(dbz); kill(happy);
 
-    Music.play('town', { volume: 0.5, fadeMs: 0 });
+// por si alguna tuviera escuchas de 'ended' que re-lanzan play():
+[blue, hell, comb, dbz, happy].forEach(a=>{
+  if (!a) return;
+  a.onended = null;            // anula handler único
+  a.replaceWith(a.cloneNode()); // resetea listeners de forma limpia
+});
+
+// lanza town (sin fade si quieres inmediatez)
+Music.play('town', { volume: 0.5, fadeMs: 0 });
   }
 
   if (CUT.active && typeof CUT.hijackAction === 'function') {
@@ -1903,15 +1915,14 @@ function openSoloGandalfEpic(script){
   CUT.active = true; CUT.id = 'bush_epic';
   CUT.hijackAction = ()=>{
     if (dialogOpen){
-      if (isTyping){ // primero autocompletar
+      if (isTyping){ 
         advanceDialog();
         return;
       }
-      // si ya estaba completa, cerrar y continuar
       closeDialog();
       CUT.hijackAction = null;
       _endPortraits();
-      CUT.onEnd = ()=> startGandalfWhitePortraitChain(); // tu cadena de retratos subsiguiente
+      CUT.onEnd = ()=> startGandalfWhitePortraitChain(); 
     }
   };
 }
@@ -1919,11 +1930,10 @@ function openSoloGandalfEpic(script){
 
 function spawnGandalfWhiteAtPlayer(){
   // ===== knobs =====
-  const DROP_PX     = 40;    // distancia de bajada (px mundo)
-  const DURATION_MS = 4000;   // duración del slide
-  const AFTER_MS    = 1000;  // espera al llegar antes de mover a Juan
-  const WALK_MS     = 650;   // tiempo del autowalk de Juan hasta la X de Gandalf
-  // =================
+  const DROP_PX     = 40;   
+  const DURATION_MS = 4000;   
+  const AFTER_MS    = 1000;  
+  const WALK_MS     = 650;   
 
   const x     = player.x + 45;
   const yEnd  = player.y - 25;
@@ -1950,7 +1960,6 @@ function spawnGandalfWhiteAtPlayer(){
   BUSH_SCENE.yStart = yStart;
   BUSH_SCENE.yEnd = yEnd;
 
-  // Nube de niebla
   fogUseWorld({ x, y: yStart });
   fogStart();
   FOG.color = '255,255,255';
@@ -1979,26 +1988,21 @@ function spawnGandalfWhiteAtPlayer(){
         if (!dialogOpen){ return; }
         // MISMO TAP: cerrar “maricona…” y abrir las dos de Juan
         closeDialog();
-// tras cerrar "maricona..." abrimos las dos de Juan:
 openDialog([
   { speaker:'Juan', text:'??!!' },
   { speaker:'Juan', text:'¿Se puede saber dónde estabas? Llegas tarde.' }
 ], true);
 
-// handler correcto: 1º completa typing, 2º avanza a la 2ª línea, 3º lanza el solo
 CUT.hijackAction = () => {
   if (!dialogOpen) return;
 
-  // 1) si está escribiendo, completar
   if (isTyping){ advanceDialog(); return; }
 
-  // 2) si aún no estamos en la última línea, avanzar a la siguiente ("¿Se puede saber...?")
   if (dialogIndex < dialogScript.length - 1){
     advanceDialog();
     return;
   }
 
-  // 3) ya estamos en la última línea -> cerrar y abrir el solo épico
   closeDialog();
   CUT.hijackAction = null;
   openSoloGandalfEpic([
@@ -2501,14 +2505,19 @@ function unfreezeIdle(){
   PORTRAITS.stage = 'entering';
   PORTRAITS.soloEpic = false;
 
-  // Lados
   PORTRAITS.left  = _makeSide(gPortrait,    'left',  'GandalfW');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG, 'right', 'Juan');
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-    // ↑ haz el LEFT más grande
-const BIG = 1.25;                    // 1.25 = 125% (ajusta a gusto)
+      PORTRAITS.left.inX += 60;
+  PORTRAITS.left.x   += 60;
+  PORTRAITS.right.inX -= 60;
+PORTRAITS.right.x   -= 60;
+
+
+
+const BIG = 3;
 PORTRAITS.left.sFrom = BIG;
 PORTRAITS.left.sTo   = BIG;
 
@@ -3740,23 +3749,19 @@ function _cine3_getSSJ(){
 }
 
 function cine3_beginPortraits(){
-  // ===== Estado base =====
   PORTRAITS.forceBlurFallback = !supportsCanvasFilter();
   PORTRAITS.active = true;
   PORTRAITS.blurK = 0;
   PORTRAITS.forceBlurFallback = false;
   PORTRAITS.stage = 'entering';
 
-  // Retratos
   PORTRAITS.left  = _makeSide(IMG_JUAN_SSJ || IMG_JUAN_BIG, 'left',  'SSJ');
   PORTRAITS.right = _makeSide(IMG_JUAN_BIG,                  'right', 'Juan');
   PORTRAITS.left.flipX = true;
 
-  // Parten fuera (simultáneos)
   PORTRAITS.left.x  = PORTRAITS.left.outX;
   PORTRAITS.right.x = PORTRAITS.right.outX;
 
-  // Barras de vida
   HPBARS.leftName  = 'SSJ';
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0; 
@@ -3764,7 +3769,6 @@ function cine3_beginPortraits(){
   
   Music.play('combatdbz', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:1) });
 
-  // Fade-in de barras
   {
     const t0 = performance.now(), dur = 400;
     (function step(t){ 
@@ -3814,10 +3818,8 @@ function cine3_beginPortraits(){
   // Guards
   let attackPhaseStarted = false;
 
-  // Bloquear acción durante la coreografía inicial
   CUT.hijackAction = ()=>{};
 
-  // ===== ENTRADA SIMULTÁNEA L y R =====
   let pend = 2;
   const doneEnter = ()=>{
     if (--pend === 0){
@@ -3828,7 +3830,6 @@ function cine3_beginPortraits(){
   _startSlide(PORTRAITS.left,  PORTRAITS.left.inX,  doneEnter);
   _startSlide(PORTRAITS.right, PORTRAITS.right.inX, doneEnter);
 
-  // ===== FASE DE ATAQUE (SSJ + bola en paralelo) =====
   function startAttackPhase(){
     if (attackPhaseStarted) return;
     attackPhaseStarted = true;
@@ -3836,9 +3837,7 @@ function cine3_beginPortraits(){
     let doneA = false, doneB = false;
     const maybeNext = ()=>{ if (doneA && doneB) afterAttack(); };
 
-    // Coreografía SSJ
     cine3_attackSequence(()=>{ doneA = true; maybeNext(); });
-// Bola en overlay
 const L = PORTRAITS.left, R = PORTRAITS.right;
 const H = (screenRect?.dh || (getFXCanvasOnTop().height));
 if (typeof _cine4_fireballFromLtoR === 'function'){
@@ -3846,13 +3845,11 @@ if (typeof _cine4_fireballFromLtoR === 'function'){
   _cine4_fireballFromLtoR({
     startDelayMs: 120,
     dur: 600,
-    rBase: 40,             // más grande
-    rPeak: 56,             // pico más grande
-    y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.68)), // un poco más abajo
-    // IMPORTANTE: si usas mi versión con normalización puedes poner 28 = 28%;
-    // si usas la antigua sin normalización, usa 0.28 y -0.08.
-    offsetL: 35,           // empieza mucho más a la derecha (≈28% de W desde L)
-    offsetR: -30,           // termina 8% MÁS ALLÁ de R (overshoot a la derecha)
+    rBase: 40,  
+    rPeak: 56,   
+    y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.68)), 
+    offsetL: 35,    
+    offsetR: -30,   
     debug: true
   }, ()=>{
     doneB = true; maybeNext();
@@ -3882,20 +3879,17 @@ if (typeof _cine4_fireballFromLtoR === 'function'){
     CUT.hijackAction = ()=>{
       if (isTyping) return advanceDialog();
 
-      // Primer tap: pasar a la 2ª línea (sin repetir golpe)
       if (dialogIndex === 0){
         advanceDialog();
         return;
       }
 
-      // Segundo tap (estamos en la 2ª): cerrar diálogo, cerrar overlays y entregar a tu cine3_openNarrator
       if (dialogIndex === 1){
         closeDialog();
 
         closePortraitsAndBars(()=>{
           openDialog([{ speaker:'', text:'¡Rápido! ¡Escóndete en algún sitio!'}], true);
           try { cine3_openNarrator(); } catch(e){
-            // Fallback MUY básico si no existe cine3_openNarrator
             CUT.hijackAction = ()=>{
               if (isTyping) return advanceDialog();
               closeDialog();
@@ -3916,7 +3910,6 @@ if (typeof _cine4_fireballFromLtoR === 'function'){
 
 
 function cine3_attackSequence(done){
-  // Dash de SSJ hacia el centro y atrás
   const L = PORTRAITS.left;
   const mid = L.inX + Math.round(screenRect.dw*0.04);
   const back = L.inX;
@@ -3930,7 +3923,6 @@ function cine3_attackSequence(done){
 }
 
 function cine3_hitReaction(node){
-  // pequeño temblor/retroceso
   const orig = node.inX;
   const kick = orig + Math.round(screenRect.dw*0.02);
   node.sFrom=1.00; node.sTo=0.96;
@@ -3946,7 +3938,7 @@ function cine3_openNarrator(){
     if (isTyping){ advanceDialog(); return; }
 
     if (dialogIndex < dialogScript.length - 1){
-      advanceDialog();  // -> muestra "¡Rápido! Escóndete en algún sitio."
+      advanceDialog();  
       return;
     }
 
@@ -3971,7 +3963,6 @@ function cine3_openNarrator(){
 
 
 async function swapOtherJuanToSSJ(){
-  // Busca el NPC con id fijo
   const other = NPCS.find(n => n.id === 'juansin_other');
   if(!other){
     console.warn('cine3: no se encontró el NPC juansin_other');
@@ -3979,7 +3970,6 @@ async function swapOtherJuanToSSJ(){
     return;
   }
 
-  // Carga el nuevo PNG y aplica (actualiza tamaño si cambia)
   const img = await loadImage('assets/npcs/juan_ssj.png');
   if (img){
     other.img = img;
@@ -3987,27 +3977,22 @@ async function swapOtherJuanToSSJ(){
     other.ih  = img.naturalHeight || other.ih;
   }
 
-  // (Opcional) pequeño destello para remarcar el cambio
   other._fxActive = true;
   other._fxUntil  = performance.now() + 300;
 
-  // asegúrate de que el halo quede permanente tras el cambio de sprite
 if (!GAME_FLAGS.juansin_other_halo){
   other.halo = { color:'255,255,160', radius:30, alpha:0.6, pulse:0.05, offsetY:0.62 };
   GAME_FLAGS.juansin_other_halo = true;
 }
 
-  // Termina la cine
   endCine3();
 }
 
 function _cine3_removeVoldFromMap(){
-  // 1) quitar del array de NPCs
   const idx = NPCS.findIndex(n => n?.id === 'voldemort_perfil');
   let removedNpc = null;
   if (idx >= 0) removedNpc = NPCS.splice(idx, 1)[0];
 
-  // 2) quitar colliders (si existen)
   if (typeof COLLIDERS !== 'undefined' && Array.isArray(COLLIDERS)){
     for (let i = COLLIDERS.length - 1; i >= 0; i--){
       const c = COLLIDERS[i];
@@ -4017,7 +4002,6 @@ function _cine3_removeVoldFromMap(){
     }
   }
 
-  // 3) quitar de OBSTACLES (aquí es donde realmente lo guardaste)
   if (typeof OBSTACLES !== 'undefined' && Array.isArray(OBSTACLES)){
     for (let i = OBSTACLES.length - 1; i >= 0; i--){
       const o = OBSTACLES[i];
@@ -4031,7 +4015,6 @@ function _cine3_removeVoldFromMap(){
     }
   }
 
-  // 4) quitar interact zones
   if (typeof INTERACTS !== 'undefined' && Array.isArray(INTERACTS)){
     for (let i = INTERACTS.length - 1; i >= 0; i--){
       const it = INTERACTS[i];
@@ -4045,14 +4028,12 @@ function _cine3_removeVoldFromMap(){
 
 
 function endCine3(){
-  // Cierre limpio de la cinematica 3 (sin arrancar el latido aquí)
   CUT.active = false;
   CUT.id = null;
   CUT.phase = null;
   CUT.hijackAction = null;
   CUT.onEnd = null;
 
-  // Devuelve el control al jugador
   ambientLock = false;
 }
 
@@ -4074,9 +4055,7 @@ function _cine4_removeSSJFromMap(){
   if (typeof OBSTACLES !== 'undefined' && Array.isArray(OBSTACLES)){
     for (let i = OBSTACLES.length - 1; i >= 0; i--){
       const o = OBSTACLES[i];
-      // por name del tipo
       const isNpcObstacle = o?.name === 'npc:juansin_idle';
-      // o por cercanía a la posición del NPC eliminado (si lo teníamos)
       const nearRemoved = removedNpc
         ? Math.abs((o.x||0) - (removedNpc.x||0)) < 2 && Math.abs((o.y||0) - (removedNpc.y||0)) < 20
         : false;
