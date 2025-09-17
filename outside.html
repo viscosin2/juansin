@@ -3917,37 +3917,36 @@ function cine3_hitReaction(node){
 }
 
 function cine3_openNarrator(){
-CUT.hijackAction = ()=> {
-  if (!dialogOpen) return;
+  CUT.hijackAction = ()=> {
+    if (!dialogOpen) return;
+    if (isTyping){ advanceDialog(); return; }
 
-  if (isTyping){ advanceDialog(); return; }
+    if (dialogIndex < dialogScript.length - 1){
+      advanceDialog();  // -> muestra "¡Rápido! Escóndete en algún sitio."
+      return;
+    }
 
-  if (dialogIndex < dialogScript.length - 1){
-    advanceDialog();  // -> muestra "¡Rápido! Escóndete en algún sitio."
-    return;
-  }
-  closeDialog();
-  CUT.hijackAction = null;
+    // === Aquí se cierra el texto ===
+    closeDialog();
+    CUT.hijackAction = null;
 
-  HPBARS.hide();
+    // Oculta barras y retratos (no esperamos a callbacks)
+    try { HPBARS.hide(); } catch(e){}
+    try { _endPortraits(); } catch(e){}
 
-CUT.onEnd = ()=>{
-  ambientLock = true;
-  ambientLockOwner = 'hide_bush';
-  // por si quedó alguna tecla “pegada”
-  if (typeof KEYS !== 'undefined'){ KEYS.up=KEYS.down=KEYS.left=KEYS.right=false; }
-  player.moving = false; player.vx = 0; player.vy = 0;
+    // === Pulso y desbloqueo INMEDIATOS ===
+    try { ambientLock = true; ambientLockOwner = 'hide_bush'; } catch(e){}
+    if (typeof KEYS !== 'undefined'){ KEYS.up=KEYS.down=KEYS.left=KEYS.right=false; }
+    try { player.moving = false; player.vx = 0; player.vy = 0; } catch(e){}
 
-  startBushPulse('bush_hideout');
-  endCine3();
-};
+    // Lanza el pulso YA
+    try { startBushPulse('bush_hideout'); } catch(e){}
 
-
-  _endPortraits();
-};
-
-
+    // Cierra la cine (esto te deja ambientLock=false según tu endCine3)
+    try { endCine3(); } catch(e){}
+  };
 }
+
 
 
 async function swapOtherJuanToSSJ(){
@@ -4215,11 +4214,14 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
     startDelayMs = 0,
     dur = 600,
     y: forcedY = null,
-    rBase = 28,
-    rPeak = 46,
-    // Ahora aceptan tanto 0.06 (=6%) como 6 (=6%)
-    offsetL = 12,   // % hacia la derecha desde L
-    offsetR = -6,   // % antes de R (negativo = overshoot a la derecha de R)
+    rBase = 25,
+    rPeak = 40,
+    // offsets como fracción (0.06) o % (6)
+    offsetL = 0.06,
+    offsetR = 0.06,
+    // OVERRIDES ABSOLUTOS EN PX (CSS). Si los pones, ignoran los offsets.
+    xStart = null,
+    xEnd   = null,
     clipToScreen = true,
     debug = false,
   } = opts;
@@ -4230,26 +4232,33 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
   const L = PORTRAITS.left, R = PORTRAITS.right;
   if (!L || !R){ cb && cb(); return; }
 
-  // === MEDIDAS EN CSS PX (coinciden con el sistema tras setTransform(dpr,...)) ===
+  // Medidas en CSS px (tenemos setTransform(dpr,...))
   const Wcss = fx.clientWidth  || fx.width;
   const Hcss = fx.clientHeight || fx.height;
 
-  // Normaliza offsets: si te pasan 6 => 6% => 0.06
+  // Normaliza offsets: 28 -> 0.28
   const norm = v => (Math.abs(v) >= 1 ? v/100 : v);
   const oL = norm(offsetL);
   const oR = norm(offsetR);
 
-  // Si tienes letterbox con desplazamiento, usa screenRect.dx/dy si existen
+  // Letterbox
   const dx = (screenRect && screenRect.dx) ? screenRect.dx : 0;
   const dy = (screenRect && screenRect.dy) ? screenRect.dy : 0;
   const W  = (screenRect && screenRect.dw) ? screenRect.dw : Wcss;
   const H  = (screenRect && screenRect.dh) ? screenRect.dh : Hcss;
 
-  // Y en CSS px
+  // Y
   const baseY = forcedY != null ? forcedY : (typeof L.y === 'number' ? L.y : Math.round(dy + H * 0.62));
-  let startX = Math.round(dx + L.inX + W * oL);
-  let endX   = Math.round(dx + R.inX - W * oR);
-  const y    = Math.max(0, Math.min(dy + H - 1, baseY));
+  const y = Math.max(0, Math.min(dy + H - 1, baseY));
+
+  // X (con overrides)
+  let startX = (xStart != null)
+    ? xStart
+    : Math.round(dx + L.inX + W * oL);
+
+  let endX = (xEnd != null)
+    ? xEnd
+    : Math.round(dx + R.inX - W * oR);
 
   if (clipToScreen){
     startX = Math.max(0, Math.min(dx + W, startX));
@@ -4257,8 +4266,7 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
   }
 
   if (debug){
-    console.log('[fireball]',
-      {offsetL, offsetR, oL, oR, dx, dy, W, H, L_inX: L.inX, R_inX: R.inX, startX, endX, y});
+    console.log('[fireball]', {xStart, xEnd, offsetL, offsetR, oL, oR, dx, dy, W, H, L_inX:L.inX, R_inX:R.inX, startX, endX, y});
   }
 
   try { SFX && SFX.play && SFX.play('fireball'); } catch(e){}
@@ -4271,7 +4279,6 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
     ctx.arc(cx, cy, r + 10, 0, Math.PI*2);
     ctx.fillStyle = 'rgba(255, 220, 130, 0.25)';
     ctx.fill();
-
     const g = ctx.createRadialGradient(cx, cy, r*0.2, cx, cy, r);
     g.addColorStop(0, '#ffffff');
     g.addColorStop(0.45, colors[0]);
@@ -4283,7 +4290,7 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
     ctx.fill();
   }
 
-  const ease = k => 1 - Math.pow(1-k, 3); // out-cubic
+  const ease = k => 1 - Math.pow(1-k, 3);
 
   const start = () => {
     const t0 = performance.now();
@@ -4291,10 +4298,10 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
       const k = Math.min(1, (now - t0) / dur);
       const e = ease(k);
 
-      ctx.clearRect(0, 0, fx.width, fx.height); // limpia SOLO overlay (en device px, ok)
+      ctx.clearRect(0, 0, fx.width, fx.height);
 
       const x = startX + (endX - startX) * e;
-      const size = rBase + (rPeak - rBase) * (1 - Math.abs(0.5 - k) * 2); // pulso
+      const size = rBase + (rPeak - rBase) * (1 - Math.abs(0.5 - k) * 2);
 
       trail.push({x, y, r: size});
       while (trail.length > 12) trail.shift();
@@ -4310,8 +4317,7 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
       if (k < 1){
         requestAnimationFrame(loop);
       } else {
-        const t1 = performance.now();
-        const flashDur = 130;
+        const t1 = performance.now(), flashDur = 130;
         function flash(now2){
           const f = Math.min(1, (now2 - t1) / flashDur);
           ctx.clearRect(0,0,fx.width,fx.height);
