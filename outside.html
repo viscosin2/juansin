@@ -74,6 +74,7 @@
 
 <audio id="bgTown"     src="assets/sounds/ambientepueblo.mp3" loop preload="auto" playsinline></audio>
 <audio id="bgBluehour" src="assets/sounds/bluehour.mp3"      loop preload="auto" playsinline></audio>
+  <audio id="bgHappiness" src="assets/sounds/happiness.mp3"      loop preload="auto" playsinline></audio>
 <audio id="bgHell" src="assets/sounds/hell.mp3"      loop preload="auto" playsinline></audio>
 <audio id="bgCombat"   src="assets/sounds/combate.mp3"        loop preload="auto" playsinline></audio>
 <audio id="bgCombatDBZ"   src="assets/sounds/combatedbz.mp3"        loop preload="auto" playsinline></audio>
@@ -185,7 +186,7 @@ combatMusicDBZ.addEventListener('ended',() => { combatMusicDBZ.currentTime = 0; 
 /* ====== AUDIO GATE GLOBAL ====== */
 const AudioGate = (() => {
   let unlocked = false, primed = false, primingPromise = null;
-  const ids = ['bgTown','bgBluehour','bgCombat, bgCombatDBZ, bgHell'];
+  const ids = ['bgTown','bgBluehour','bgCombat, bgHappiness, bgCombatDBZ, bgHell'];
   const getAll = ()=> ids.map(id=>document.getElementById(id)).filter(Boolean);
 
   function unlock(){
@@ -880,7 +881,6 @@ function stopTownMusic(){
 }
 
 /* ========= MINI AUDIO MANAGER ========= */
-/* ========= MINI AUDIO MANAGER ========= */
 const SFX = (() => {
   const _cache = new Map();
   const _lastByName = new Map();
@@ -952,6 +952,7 @@ const Music = (() => {
   const elements = {
     town:   document.getElementById('bgTown'),
     bluehour: document.getElementById('bgBluehour'),
+    happy: document.getElementById('bgHappiness'),
     combat: document.getElementById('bgCombat'),
     combatdbz: document.getElementById('bgCombatDBZ'),
     hell: document.getElementById('bgHell')
@@ -993,7 +994,6 @@ const Music = (() => {
     const next = elements[name];
     if (!next) return;
 
-    // MISMA PISTA → solo tween de volumen (nada de mute/pausa)
     if (current === next) {
       if (fadeMs > 0) {
         _fade(null, next, fadeMs, volume); // del vol actual → target
@@ -1056,6 +1056,7 @@ document.getElementById('btn-act').addEventListener('touchstart', e => {
     const town = document.getElementById('bgTown');
     const blue = document.getElementById('bgBluehour');
     const comb = document.getElementById('bgCombat');
+    const happy = document.getElementById('bgHappiness');
     const combdbz = document.getElementById('bgCombatDBZ');
     const hell = document.getElementById('bgHell');
 
@@ -3002,7 +3003,7 @@ function _cine1_startFakeFightUI(){
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
   HPBARS.show(100, 100);
-  Music.play('combat', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:650) });
+  Music.play('combat', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
 
   const t0 = performance.now();
   const dur = 400;
@@ -3768,6 +3769,8 @@ function cine3_beginPortraits(){
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0; 
   HPBARS.show(10, 100);
+  
+  Music.play('combatdbz', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
 
   // Fade-in de barras
   {
@@ -4395,8 +4398,9 @@ function _cine4_step1(){
   HPBARS.rightName = 'Juan';
   HPBARS.alpha = 0;
   HPBARS.show(150, 100);
+  
+  Music.play('combatdbz', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
 
-  // Fade-in de barras
   {
     const t0 = performance.now(), dur = 400;
     const step = (t)=>{ 
@@ -4583,15 +4587,15 @@ function _cine4_end(){
   try{ spawnAroundJuanFromList(CINE4_AROUND); }catch(e){}
 
   _cine2_closePortraitsAndOverlay(() => {
+     Music.play('happiness', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:450) });
+
     const game = document.getElementById('game');
 
-    // Confeti encima de todo (después de cerrar overlays)
     confettiExplosionFX({ 
       x: game.clientWidth / 2, 
       y: game.clientHeight / 2 
     });
 
-    // Primer “Bravoooo”
     openDialog([{ speaker:'Pueblo', text:'Bravoooo' }], true);
 
     CUT.hijackAction = () => { 
