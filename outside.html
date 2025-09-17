@@ -3850,6 +3850,7 @@ function cine3_beginPortraits(){
 const L = PORTRAITS.left, R = PORTRAITS.right;
 const H = (screenRect?.dh || (getFXCanvasOnTop().height));
 if (typeof _cine4_fireballFromLtoR === 'function'){
+  SFX.play("ataquessj", { volume: 0.35 });
   _cine4_fireballFromLtoR({
     startDelayMs: 120,
     dur: 600,
@@ -3862,8 +3863,6 @@ if (typeof _cine4_fireballFromLtoR === 'function'){
     offsetR: -30,           // termina 8% MÁS ALLÁ de R (overshoot a la derecha)
     debug: true
   }, ()=>{
-    // ⚠️ Quitamos el nudge para no duplicar “recibir”
-    // if (typeof _cine2_nudge === 'function') { ... }  ← BORRADO
     doneB = true; maybeNext();
   });
 } else {
@@ -3872,7 +3871,6 @@ if (typeof _cine4_fireballFromLtoR === 'function'){
 
   }
 
-  // ===== POST-ATAQUE =====
   function afterAttack(){
     // 1ª y 2ª línea.
     openDialog([
@@ -3903,8 +3901,6 @@ if (typeof _cine4_fireballFromLtoR === 'function'){
         closeDialog();
 
         closePortraitsAndBars(()=>{
-          // Abro el mensaje final y cedo el control a tu función original,
-          // que se encarga del bush pulse, desbloqueo, CUT.onEnd → startBushPulse(...) → endCine3(), etc.
           openDialog([{ speaker:'', text:'¡Rápido! ¡Escóndete en algún sitio!'}], true);
           try { cine3_openNarrator(); } catch(e){
             // Fallback MUY básico si no existe cine3_openNarrator
@@ -3962,23 +3958,20 @@ function cine3_openNarrator(){
       return;
     }
 
-    // === Aquí se cierra el texto ===
     closeDialog();
     CUT.hijackAction = null;
 
-    // Oculta barras y retratos (no esperamos a callbacks)
     try { HPBARS.hide(); } catch(e){}
+    Music.play('hell', { volume: 0.5, fadeMs: (typeof AMBIENT?.fadeMs==='number'?AMBIENT.fadeMs:100) });
+
     try { _endPortraits(); } catch(e){}
 
-    // === Pulso y desbloqueo INMEDIATOS ===
     try { ambientLock = true; ambientLockOwner = 'hide_bush'; } catch(e){}
     if (typeof KEYS !== 'undefined'){ KEYS.up=KEYS.down=KEYS.left=KEYS.right=false; }
     try { player.moving = false; player.vx = 0; player.vy = 0; } catch(e){}
 
-    // Lanza el pulso YA
     try { startBushPulse('bush_hideout'); } catch(e){}
 
-    // Cierra la cine (esto te deja ambientLock=false según tu endCine3)
     try { endCine3(); } catch(e){}
   };
 }
@@ -4250,11 +4243,11 @@ function _cine4_fireballFromLtoR(opts = {}, cb){
     startDelayMs = 0,
     dur = 600,
     y: forcedY = null,
-    rBase = 25,
-    rPeak = 40,
+    rBase = 40,
+    rPeak = 56,
     // offsets como fracción (0.06) o % (6)
-    offsetL = 0.06,
-    offsetR = 0.06,
+    offsetL = 35,
+    offsetR = -30,
     // OVERRIDES ABSOLUTOS EN PX (CSS). Si los pones, ignoran los offsets.
     xStart = null,
     xEnd   = null,
@@ -4484,14 +4477,15 @@ case 3: {
   const L = PORTRAITS.left, R = PORTRAITS.right;
   const H = (screenRect?.dh || getFXCanvasOnTop().height);
 
+  SFX.play("ataquessj", { volume: 0.35 });
   _cine4_fireballFromLtoR({
-    startDelayMs: 120,          // <-- sincroniza con el golpe del SSJ
+    startDelayMs: 120,      
     dur: 600,
-    rBase: 28,                   // más grande
-    rPeak: 48,                   // pico más grande
-    y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)), // más abajo
-    offsetL:1.5,               // sale un pelín más desde L
-    offsetR: 1.5
+    rBase: 40,                  
+    rPeak: 56,             
+    y: (typeof L.y === 'number' ? L.y : Math.round(H * 0.62)), 
+    offsetL: 35,           
+    offsetR: -30
   }, ()=>{
     // pequeño “nudge” de impacto en Juan si quieres
     _cine2_nudge && _cine2_nudge(R, +(screenRect?.dw||60)*0.02, 1.00, 0.98, ()=>{
@@ -4889,6 +4883,8 @@ function update(dt){
         const idx = PROPS.indexOf(pot);
         if (idx >= 0) PROPS.splice(idx, 1);
 
+        SFX.play("potion", { volume: 0.35 });
+
         GAME_FLAGS.has_potion = true;
         GAME_FLAGS.need_potion = false;
 
@@ -4897,7 +4893,7 @@ function update(dt){
         startJuanBlueHalo(0, { permanent:true });
         setTimeout(()=>{
           ambientLock = false; ambientLockOwner = null;
-          openDialog([{ speaker:'Juan', text:'¡Ahora sí!' }], true);
+          openDialog([{ speaker:'Juan', text:'¡Vamos niño!' }], true);
         }, 1000);
       }
     }
