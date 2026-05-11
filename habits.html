@@ -183,13 +183,12 @@ body{
   bottom:0;
   left:0;
   right:0;
-  height:55%;
+  height:50%;
   background:linear-gradient(180deg, #c8a878 0%, #b08050 100%);
 }
-
 .garden-grass{
   position:absolute;
-  bottom:48%;
+  bottom:50%;
   left:0;
   right:0;
   height:22px;
@@ -216,8 +215,8 @@ body{
   cursor:pointer;
   transition:transform 0.3s;
   min-width:42px;
+  position:relative;
 }
-
 .plant:active{
   transform:scale(0.95);
 }
@@ -238,16 +237,19 @@ body{
 @keyframes waterDrop{
   0%{
     opacity:1;
-    transform:translateY(0) scale(1);
+    transform:translateX(-50%) translateY(-18px) scale(1);
   }
   100%{
     opacity:0;
-    transform:translateY(30px) scale(0.5);
+    transform:translateX(-50%) translateY(24px) scale(0.5);
   }
 }
 
 .water-drop{
   position:absolute;
+  top:4px;
+  left:50%;
+  transform:translateX(-50%);
   font-size:16px;
   pointer-events:none;
   animation:waterDrop 0.8s ease-out forwards;
@@ -1611,21 +1613,20 @@ function renderGarden(){
 }
 
 function showWaterDrops(plantEl){
-  for(let i=0;i<3;i++){
+  const plant = plantEl.closest('.plant');
+  if(!plant) return;
+
+  for(let i=0;i<4;i++){
     setTimeout(()=>{
       const drop=document.createElement('div');
       drop.className='water-drop';
       drop.textContent='💧';
+      drop.style.left=(42 + Math.random()*16 - 8) + '%';
 
-      const rect=plantEl.getBoundingClientRect();
-
-      drop.style.left=(rect.left + rect.width/2 - 10 + Math.random()*20 - 10) + 'px';
-      drop.style.top=(rect.top - 10) + 'px';
-
-      document.body.appendChild(drop);
+      plant.appendChild(drop);
 
       setTimeout(()=>drop.remove(),900);
-    },i*150);
+    },i*120);
   }
 }
 
