@@ -272,14 +272,14 @@ body{
 .floating-menu-btn{
   position:fixed;
   right:18px;
-  bottom:calc(22px + env(safe-area-inset-bottom,0px));
+  bottom:calc(28px + env(safe-area-inset-bottom,0px));
   width:56px;
   height:56px;
   border-radius:50%;
   border:1.5px solid var(--border);
   background:var(--green4);
   box-shadow:0 8px 26px rgba(63,112,38,0.28);
-  z-index:250;
+  z-index:500;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -1163,7 +1163,7 @@ body{
     <div id="listPending"></div>
 
     <div id="doneSection" style="display:none">
-      <div class="section-label" style="margin-top:16px">completados 🌿</div>
+      <div class="section-label" style="margin-top:16px">completados</div>
       <div id="listDone"></div>
     </div>
   </div>
@@ -1200,8 +1200,7 @@ body{
 </div>
 
   <div class="menu-overlay" id="menuOverlay">
-  <div class="menu-panel">
-  </div>
+  <div class="menu-panel" id="menuPanel"></div>
 </div>
   
 <div class="modal-overlay" id="modalHabit">
@@ -1654,6 +1653,8 @@ function openMenu(){
   closeAllModals();
 
   const panel=document.getElementById('menuPanel');
+  if(!panel)return;
+
   let items=[];
 
   if(currentScreen!=='today'){
