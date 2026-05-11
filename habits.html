@@ -231,6 +231,7 @@ body{
   height:50%;
   z-index:3;
   pointer-events:auto;
+  overflow:hidden;
 }
 
 .plant{
@@ -238,24 +239,14 @@ body{
   z-index:4;
   pointer-events:auto;
   overflow:visible;
-  min-width:42px;
+  min-width:34px;
+  display:block;
+  cursor:pointer;
+  transition:scale 0.25s;
 }
 
-/* PLANTS */
-.plant{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  cursor:pointer;
-  transition:transform 0.3s;
-  min-width:42px;
-  position:relative;
-  z-index:4;
-  pointer-events:auto;
-  overflow:visible;
-}
 .plant:active{
-  transform:scale(0.95);
+  scale:0.95;
 }
 
 .plant-svg{
@@ -264,6 +255,7 @@ body{
   z-index:2;
   filter:drop-shadow(0 7px 7px rgba(48,72,34,0.20));
 }
+
 
 /* WATER ANIMATION */
 @keyframes waterDrop{
@@ -1609,26 +1601,30 @@ function renderGarden(){
   }
 
   const due=habits.filter(h=>dueToday(h));
-  const show=due.length ? due : habits.slice(0,8);
+const show=due.length ? due : habits.slice(0,8);
+
+const total=show.length;
+const cols=Math.min(5, Math.max(1, Math.ceil(Math.sqrt(total * 1.4))));
+const rows=Math.ceil(total / cols);
 
 content.innerHTML=show.map((h,i)=>{
   const isDoneToday=doneToday(h);
   const isComplete=complete(h);
   const stage=(isDoneToday || isComplete) ? habitStage(h)+1 : habitStage(h);
   const clamped=Math.min(stage,4);
-  const size=44+clamped*8;
+  const size=38+clamped*7;
 
-  const cols=4;
   const col=i % cols;
   const row=Math.floor(i / cols);
 
-  const left=10 + col * 26 + (row % 2) * 6;
-const bottom=8 + row * 14;
+  const left=((col + 0.5) / cols) * 100;
+  const bottom=8 + ((rows - 1 - row) / Math.max(rows,1)) * 42;
 
-  return `<div class="plant" onclick="toggle('${h.id}')" title="${h.name}" style="left:${left}%;bottom:${bottom}px;transform:translateX(-50%);">
-  <div class="plant-svg" id="psv_${h.id}">${plantSVG(clamped,h.color,size)}</div>
-</div>`;
+  return `<div class="plant" onclick="toggle('${h.id}')" title="${h.name}" style="left:${left}%;bottom:${bottom}%;transform:translateX(-50%);">
+    <div class="plant-svg" id="psv_${h.id}">${plantSVG(clamped,h.color,size)}</div>
+  </div>`;
 }).join('');
+}
 }
 
 function showWaterDrops(plantEl){
