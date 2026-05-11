@@ -269,12 +269,17 @@ body{
   z-index:20;
 }
 
-.menu-btn{
-  width:42px;
-  height:42px;
-  border-radius:14px;
+.floating-menu-btn{
+  position:fixed;
+  right:18px;
+  bottom:calc(22px + env(safe-area-inset-bottom,0px));
+  width:56px;
+  height:56px;
+  border-radius:50%;
   border:1.5px solid var(--border);
-  background:var(--surface);
+  background:var(--green4);
+  box-shadow:0 8px 26px rgba(63,112,38,0.28);
+  z-index:250;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -284,23 +289,23 @@ body{
   -webkit-appearance:none;
 }
 
-.menu-btn span{
-  width:18px;
+.floating-menu-btn span{
+  width:20px;
   height:2px;
   border-radius:2px;
-  background:var(--green5);
+  background:#fff;
 }
 
 .menu-overlay{
   position:fixed;
   inset:0;
-  background:rgba(60,80,45,0.35);
+  background:rgba(60,80,45,0.22);
   z-index:300;
   display:none;
-  align-items:flex-start;
+  align-items:flex-end;
   justify-content:flex-end;
-  padding:calc(env(safe-area-inset-top,0px) + 66px) 16px 0;
-  backdrop-filter:blur(4px);
+  padding:0 18px calc(88px + env(safe-area-inset-bottom,0px)) 18px;
+  backdrop-filter:blur(3px);
 }
 
 .menu-overlay.open{
@@ -308,10 +313,10 @@ body{
 }
 
 .menu-panel{
-  width:210px;
+  width:220px;
   background:var(--surface);
   border:1.5px solid var(--border);
-  border-radius:22px;
+  border-radius:24px;
   padding:8px;
   box-shadow:0 12px 40px rgba(60,80,45,0.18);
 }
@@ -325,7 +330,7 @@ body{
   font-size:16px;
   text-align:left;
   padding:14px 14px;
-  border-radius:14px;
+  border-radius:16px;
   cursor:pointer;
   -webkit-appearance:none;
 }
@@ -1139,12 +1144,6 @@ body{
     <div class="topbar-title">mi <span>huerto</span> 🌱</div>
     <div class="streak-badge" id="streakBadge">🌸 0 días</div>
   </div>
-
-  <button class="menu-btn" onclick="openMenu()">
-    <span></span>
-    <span></span>
-    <span></span>
-  </button>
 </div>
 
   <div class="scroll-area screen active" id="screenToday">
@@ -1193,15 +1192,15 @@ body{
     <div class="filter-row" id="statsFilter"></div>
     <div class="cal-grid" id="statsCal"></div>
   </div>
+    <button class="floating-menu-btn" onclick="openMenu()">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
 </div>
 
   <div class="menu-overlay" id="menuOverlay">
   <div class="menu-panel">
-    <button onclick="showScreen('today');closeMenu()">Hoy</button>
-    <button onclick="showScreen('habits');closeMenu()">Hábitos</button>
-    <button onclick="openHabitModal(null);closeMenu()">Nuevo hábito</button>
-    <button onclick="showScreen('stats');closeMenu()">Estadísticas</button>
-    <button onclick="openNotifModal();closeMenu()">Notificaciones</button>
   </div>
 </div>
   
@@ -1389,6 +1388,7 @@ let days=[];
 
 let statsMon=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let statsFilt=null;
+  let currentScreen='today';
 
 const load=()=>{
   habits=JSON.parse(localStorage.getItem('hv5') || '[]');
@@ -1626,6 +1626,7 @@ function showWaterDrops(plantEl){
 
 function showScreen(name){
   closeAllModals();
+  currentScreen=name;
 
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
 
@@ -1651,6 +1652,27 @@ if(ids[name]){
 }
 function openMenu(){
   closeAllModals();
+
+  const panel=document.getElementById('menuPanel');
+  let items=[];
+
+  if(currentScreen!=='today'){
+    items.push(`<button onclick="showScreen('today');closeMenu()">Hoy</button>`);
+  }
+
+  if(currentScreen!=='habits'){
+    items.push(`<button onclick="showScreen('habits');closeMenu()">Hábitos</button>`);
+  }
+
+  if(currentScreen!=='stats'){
+    items.push(`<button onclick="showScreen('stats');closeMenu()">Estadísticas</button>`);
+  }
+
+  items.push(`<button onclick="closeMenu();openHabitModal(null)">Nuevo hábito</button>`);
+  items.push(`<button onclick="closeMenu();openNotifModal()">Notificaciones</button>`);
+
+  panel.innerHTML=items.join('');
+
   document.getElementById('menuOverlay').classList.add('open');
 }
 
