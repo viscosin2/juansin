@@ -154,7 +154,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 .toggle.on::after{transform:translateX(18px);}
 .btn-primary{width:100%;padding:15px;border-radius:14px;background:var(--accent);color:#0a0a0a;font-family:inherit;font-size:15px;font-weight:600;border:none;cursor:pointer;margin-top:10px;-webkit-appearance:none;}
 .btn-danger{width:100%;padding:15px;border-radius:14px;background:rgba(255,71,87,0.1);color:var(--danger);font-family:inherit;font-size:15px;font-weight:600;border:1px solid rgba(255,71,87,0.25);cursor:pointer;margin-top:8px;-webkit-appearance:none;}
+.modal-title-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:20px;
+}
 
+.modal-title-row .modal-title{
+  margin-bottom:0;
+}
+
+.modal-close{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  border:1px solid var(--border);
+  background:var(--surface2);
+  color:var(--text-muted);
+  font-size:20px;
+  line-height:1;
+  cursor:pointer;
+}
 #modalNotif .modal-title{
   text-align:center;
   margin-bottom:22px;
@@ -269,9 +290,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 <!-- MODAL HÁBITO -->
 <div class="modal-overlay" id="modalHabit">
   <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title" id="modalTitle">Nuevo hábito</div>
+<div class="modal-handle"></div>
 
+<div class="modal-title-row">
+  <div class="modal-title" id="modalTitle">Nuevo hábito</div>
+  <button class="modal-close" onclick="closeModal('modalHabit')">×</button>
+</div>
     <div class="field">
       <label>Emoji</label>
       <div class="emoji-trigger" onclick="openEmojiPopup()">
@@ -345,8 +369,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-seri
 <!-- MODAL NOTIFS -->
 <div class="modal-overlay" id="modalNotif">
   <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Notificaciones</div>
+<div class="modal-handle"></div>
+
+<div class="modal-title-row">
+  <div class="modal-title">Notificaciones</div>
+  <button class="modal-close" onclick="closeModal('modalNotif')">×</button>
+</div>
+
     <div id="notifList"></div>
     <button class="btn-primary" onclick="closeModal('modalNotif')">Cerrar</button>
   </div>
