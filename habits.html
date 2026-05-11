@@ -116,7 +116,7 @@ body{
 .scroll-area{
   flex:1;
   overflow-y:auto;
-  padding:16px 18px calc(150px + env(safe-area-inset-bottom,0px));
+  padding:16px 18px calc(28px + env(safe-area-inset-bottom,0px));
   -webkit-overflow-scrolling:touch;
 }
 
@@ -133,22 +133,21 @@ body{
 }
 
 /* GARDEN HEADER */
-.garden-head div:first-child{
+.garden-row-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  margin:2px 2px 8px;
+}
+
+.garden-row-head div:first-child{
   font-family:'Lora',serif;
   font-size:15px;
   font-style:italic;
   color:rgba(63,112,38,0.62);
-  text-transform:none;
 }
 
-.garden-head div:first-child{
-  font-family:'Lora',serif;
-  font-size:15px;
-  font-style:italic;
-  color:var(--green5);
-}
-
-.garden-head div:last-child{
+.garden-row-head div:last-child{
   font-size:13px;
   font-weight:500;
   color:var(--green5);
@@ -270,69 +269,69 @@ body{
   z-index:20;
 }
 
-/* NAV */
-.nav{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
-  height:calc(118px + env(safe-area-inset-bottom, 0px));
+.menu-btn{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  border:1.5px solid var(--border);
   background:var(--surface);
-  border-top:1.5px solid var(--border);
-  display:flex;
-  align-items:flex-start;
-  padding:18px 8px 0;
-  gap:4px;
-  z-index:999;
-}
-
-.nav-btn{
-  flex:1;
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:5px;
-  padding:10px 2px 8px;
-  border:none;
-  background:none;
-  color:var(--text-muted);
-  font-family:'DM Sans',sans-serif;
-  font-size:10px;
-  font-weight:500;
-  cursor:pointer;
-  border-radius:12px;
-  -webkit-appearance:none;
-}
-
-.nav-btn.active{
-  color:var(--green4);
-}
-
-.nav-btn svg{
-  width:20px;
-  height:20px;
-}
-
-.nav-add{
-  width:52px;
-  height:52px;
-  border-radius:50%;
-  background:var(--green4);
-  border:none;
-  display:flex;
-  align-items:center;
   justify-content:center;
+  gap:5px;
   cursor:pointer;
-  flex-shrink:0;
   -webkit-appearance:none;
-  box-shadow:0 4px 12px rgba(95,159,58,0.35);
-  margin-top:-10px;
 }
 
-.nav-add svg{
-  width:22px;
-  height:22px;
-  color:#fff;
+.menu-btn span{
+  width:18px;
+  height:2px;
+  border-radius:2px;
+  background:var(--green5);
+}
+
+.menu-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(60,80,45,0.35);
+  z-index:300;
+  display:none;
+  align-items:flex-start;
+  justify-content:flex-end;
+  padding:calc(env(safe-area-inset-top,0px) + 66px) 16px 0;
+  backdrop-filter:blur(4px);
+}
+
+.menu-overlay.open{
+  display:flex;
+}
+
+.menu-panel{
+  width:210px;
+  background:var(--surface);
+  border:1.5px solid var(--border);
+  border-radius:22px;
+  padding:8px;
+  box-shadow:0 12px 40px rgba(60,80,45,0.18);
+}
+
+.menu-panel button{
+  width:100%;
+  border:none;
+  background:transparent;
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  font-size:16px;
+  text-align:left;
+  padding:14px 14px;
+  border-radius:14px;
+  cursor:pointer;
+  -webkit-appearance:none;
+}
+
+.menu-panel button:active{
+  background:var(--surface2);
 }
 
 /* SECTION */
@@ -559,6 +558,12 @@ body{
   max-height:92dvh;
   overflow-y:auto;
   padding:24px 22px calc(env(safe-area-inset-bottom,0px) + 34px);
+  transform:translateY(100%);
+  transition:transform 0.28s ease;
+}
+
+.modal-overlay.open .modal{
+  transform:translateY(0);
 }
 
 .modal::-webkit-scrollbar{
@@ -616,7 +621,7 @@ body{
   border-radius:14px;
   color:var(--text);
   font-family:'DM Sans',sans-serif;
-  font-size:15px;
+  font-size:16px;
   padding:12px 14px;
   outline:none;
   -webkit-appearance:none;
@@ -867,7 +872,7 @@ body{
   border-radius:14px;
   color:var(--text);
   font-family:'DM Sans',sans-serif;
-  font-size:15px;
+  font-size:16px;
   padding:12px 14px;
   outline:none;
   margin-bottom:12px;
@@ -1130,23 +1135,25 @@ body{
 <body>
 <div class="app">
   <div class="topbar">
+  <div>
     <div class="topbar-title">mi <span>huerto</span> 🌱</div>
-    <div class="streak-badge" id="streakBadge"></div>
+    <div class="streak-badge" id="streakBadge">🌸 0 días</div>
   </div>
 
+  <button class="menu-btn" onclick="openMenu()">
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+</div>
+
   <div class="scroll-area screen active" id="screenToday">
-    <div class="install-banner" id="installBanner">
-      <span style="font-size:20px">📲</span>
-      <p><strong>Instalar app</strong><br>Compartir → "Añadir a pantalla de inicio"</p>
-      <button onclick="dismissInstall()">OK</button>
-    </div>
+    <div class="garden-row-head">
+  <div id="gardenLabel">tu huertito</div>
+  <div id="gardenPct">0%</div>
+</div>
 
-    <div class="garden-head">
-      <div id="gardenLabel">Tu huertito</div>
-      <div id="gardenPct">0%</div>
-    </div>
-
-    <div class="garden-wrap" id="gardenWrap">
+<div class="garden-wrap" id="gardenWrap">
       <div class="garden-sky"></div>
       <div class="garden-grass"></div>
       <div class="garden-ground"></div>
@@ -1186,52 +1193,18 @@ body{
     <div class="filter-row" id="statsFilter"></div>
     <div class="cal-grid" id="statsCal"></div>
   </div>
-
-  <nav class="nav">
-    <button class="nav-btn active" id="navToday" onclick="showScreen('today')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-        <polyline points="9 22 9 12 15 12 15 22"/>
-      </svg>
-      Hoy
-    </button>
-
-    <button class="nav-btn" id="navHabits" onclick="showScreen('habits')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="8" y1="6" x2="21" y2="6"/>
-        <line x1="8" y1="12" x2="21" y2="12"/>
-        <line x1="8" y1="18" x2="21" y2="18"/>
-        <circle cx="3" cy="6" r="1" fill="currentColor"/>
-        <circle cx="3" cy="12" r="1" fill="currentColor"/>
-        <circle cx="3" cy="18" r="1" fill="currentColor"/>
-      </svg>
-      Hábitos
-    </button>
-
-    <button class="nav-add" onclick="openHabitModal(null)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <line x1="12" y1="5" x2="12" y2="19"/>
-        <line x1="5" y1="12" x2="19" y2="12"/>
-      </svg>
-    </button>
-
-    <button class="nav-btn" id="navStats" onclick="showScreen('stats')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-      </svg>
-      Stats
-    </button>
-
-    <button class="nav-btn" onclick="closeAllModals();openNotifModal()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-      Notifs
-    </button>
-  </nav>
 </div>
 
+  <div class="menu-overlay" id="menuOverlay">
+  <div class="menu-panel">
+    <button onclick="showScreen('today');closeMenu()">Hoy</button>
+    <button onclick="showScreen('habits');closeMenu()">Hábitos</button>
+    <button onclick="openHabitModal(null);closeMenu()">Nuevo hábito</button>
+    <button onclick="showScreen('stats');closeMenu()">Estadísticas</button>
+    <button onclick="openNotifModal();closeMenu()">Notificaciones</button>
+  </div>
+</div>
+  
 <div class="modal-overlay" id="modalHabit">
   <div class="modal">
     <div class="modal-title-row">
@@ -1287,7 +1260,7 @@ body{
 
     <div class="field">
       <div class="toggle-row">
-        <span style="font-size:14px">🔔 Notificación</span>
+        <span style="font-size:14px">Notificación</span>
         <div class="toggle" id="notifToggle" onclick="toggleNotif()"></div>
       </div>
     </div>
@@ -1297,7 +1270,7 @@ body{
       <input type="time" class="input" id="notifTime" value="08:00">
     </div>
 
-    <button class="btn-primary" onclick="saveHabit()">Guardar hábito 🌱</button>
+    <button class="btn-primary" onclick="saveHabit()">Guardar hábito</button>
     <button class="btn-danger" id="btnDelete" style="display:none" onclick="deleteEditing()">Eliminar hábito</button>
     <button class="btn-secondary" onclick="closeModal('modalHabit')">Cancelar</button>
   </div>
@@ -1655,7 +1628,6 @@ function showScreen(name){
   closeAllModals();
 
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
 
   const ids={
     today:'screenToday',
@@ -1663,16 +1635,10 @@ function showScreen(name){
     stats:'screenStats'
   };
 
-  const navs={
-    today:'navToday',
-    habits:'navHabits',
-    stats:'navStats'
-  };
 
-  if(ids[name]){
-    document.getElementById(ids[name]).classList.add('active');
-    document.getElementById(navs[name]).classList.add('active');
-  }
+if(ids[name]){
+  document.getElementById(ids[name]).classList.add('active');
+}
 
   if(name==='today'){
     renderToday();
@@ -1683,7 +1649,15 @@ function showScreen(name){
     renderStats();
   }
 }
+function openMenu(){
+  closeAllModals();
+  document.getElementById('menuOverlay').classList.add('open');
+}
 
+function closeMenu(){
+  document.getElementById('menuOverlay').classList.remove('open');
+}
+  
 function closeAllModals(){
   document.getElementById('modalHabit').classList.remove('open');
   document.getElementById('modalNotif').classList.remove('open');
@@ -2279,6 +2253,10 @@ document.getElementById('modalNotif').addEventListener('click',function(e){
 
 document.getElementById('emojiPopup').addEventListener('click',function(e){
   if(e.target===this) this.classList.remove('open');
+});
+
+  document.getElementById('menuOverlay').addEventListener('click',function(e){
+  if(e.target===this)closeMenu();
 });
 
 load();
