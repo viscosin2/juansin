@@ -254,18 +254,16 @@ body{
 @keyframes waterDrop{
   0%{
     opacity:1;
-    transform:translateX(-50%) translateY(-8px) scale(1);
+    transform:translateY(-12px) scale(1);
   }
   100%{
     opacity:0;
-    transform:translateX(-50%) translateY(34px) scale(0.5);
+    transform:translateY(34px) scale(0.5);
   }
 }
 
 .water-drop{
   position:absolute;
-  top:-10px;
-  left:50%;
   font-size:16px;
   pointer-events:none;
   animation:waterDrop 0.8s ease-out forwards;
@@ -1598,7 +1596,7 @@ function renderGarden(){
     'Creciendo poco a poco',
     'Floreciendo',
     '¡Precioso huerto!',
-    '🌻Huerto de ensueño🌻'
+    'Huerto de ensueño...'
   ];
 
   const idx=pct===100 ? 4 : pct>75 ? 3 : pct>50 ? 2 : pct>25 ? 1 : 0;
@@ -1607,7 +1605,7 @@ function renderGarden(){
   const content=document.getElementById('gardenContent');
 
   if(!habits.length){
-    content.innerHTML=`<div style="text-align:center;padding:20px 0;color:rgba(60,80,40,0.5);font-family:'Lora',serif;font-style:italic;font-size:13px;z-index:2;position:relative;">añade tu primer hábito<br>para plantar una semilla 🌱</div>`;
+    content.innerHTML=`<div style="text-align:center;padding:20px 0;color:rgba(60,80,40,0.5);font-family:'Lora',serif;font-style:italic;font-size:13px;z-index:2;position:relative;">Añade tu primer hábito<br>para plantar una semilla</div>`;
     return;
   }
 
@@ -1628,20 +1626,28 @@ function renderGarden(){
 }
 
 function showWaterDrops(plantEl){
-  const plant=plantEl.closest('.plant');
-  if(!plant)return;
+  const wrap=document.getElementById('gardenWrap');
+  if(!wrap || !plantEl)return;
 
-  for(let i=0;i<4;i++){
+  const plantRect=plantEl.getBoundingClientRect();
+  const wrapRect=wrap.getBoundingClientRect();
+
+  const baseLeft=plantRect.left - wrapRect.left + plantRect.width / 2;
+  const baseTop=plantRect.top - wrapRect.top + 8;
+
+  for(let i=0;i<5;i++){
     setTimeout(()=>{
       const drop=document.createElement('div');
       drop.className='water-drop';
       drop.textContent='💧';
-      drop.style.left=(50 + Math.random()*30 - 15) + '%';
 
-      plant.appendChild(drop);
+      drop.style.left=(baseLeft + Math.random()*26 - 13) + 'px';
+      drop.style.top=(baseTop + Math.random()*8 - 4) + 'px';
+
+      wrap.appendChild(drop);
 
       setTimeout(()=>drop.remove(),900);
-    },i*120);
+    },i*110);
   }
 }
 
@@ -1782,7 +1788,7 @@ function toggle(id){
       delete logs[t][id];
     }else{
       if(weekCount(h.id) >= h.weeklyTimes){
-        toast('Ya has completado las veces de esta semana 🌿');
+      
         return;
       }
 
@@ -1791,7 +1797,6 @@ function toggle(id){
       const plantEl=document.getElementById('psv_'+id);
       if(plantEl) showWaterDrops(plantEl);
 
-      toast(`${h.emoji} ¡${h.name} regado! 💧`);
     }
   }else{
     if(doneToday(h)){
@@ -1803,7 +1808,6 @@ function toggle(id){
       const plantEl=document.getElementById('psv_'+id);
       if(plantEl) showWaterDrops(plantEl);
 
-      toast(`${h.emoji} ¡${h.name} regado! 💧`);
     }
   }
 
@@ -1978,12 +1982,12 @@ function saveHabit(){
   const name=document.getElementById('habitName').value.trim();
 
   if(!name){
-    toast('Ponle un nombre al hábito 🌱');
+    toast('Ponle un nombre al hábito');
     return;
   }
 
   if(freq==='days' && !days.length){
-    toast('Elige al menos un día 🌿');
+    toast('Elige al menos un día');
     return;
   }
 
@@ -2011,8 +2015,6 @@ function saveHabit(){
 
   save();
   closeModal('modalHabit');
-
-  toast(eId ? '✅ Actualizado' : '🌱 ¡Nueva semilla plantada!');
 
   renderToday();
   renderGarden();
