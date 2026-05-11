@@ -137,7 +137,16 @@ body{
 
 .nav-add{width:48px;height:48px;border-radius:50%;background:var(--accent);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-appearance:none;}
 .nav-add svg{width:22px;height:22px;color:#0a0a0a;}
-
+.nav::after {
+  content: '';
+  position: absolute;
+  bottom: calc(-1 * env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-bottom, 0px);
+  background: var(--surface);
+}
+  
 /* SECTION */
 .section-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin:16px 0 10px;}
 .empty-msg{color:var(--text-muted);font-size:14px;padding:12px 0;}
