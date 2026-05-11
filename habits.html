@@ -1657,19 +1657,21 @@ function openMenu(){
 
   let items=[];
 
+
   if(currentScreen!=='today'){
     items.push(`<button onclick="showScreen('today');closeMenu()">Hoy</button>`);
   }
+  
+  items.push(`<button onclick="closeMenu();openHabitModal(null)">Nuevo hábito</button>`);
 
   if(currentScreen!=='habits'){
-    items.push(`<button onclick="showScreen('habits');closeMenu()">Hábitos</button>`);
+    items.push(`<button onclick="showScreen('habits');closeMenu()">Mis hábitos</button>`);
   }
 
   if(currentScreen!=='stats'){
     items.push(`<button onclick="showScreen('stats');closeMenu()">Estadísticas</button>`);
   }
 
-  items.push(`<button onclick="closeMenu();openHabitModal(null)">Nuevo hábito</button>`);
   items.push(`<button onclick="closeMenu();openNotifModal()">Notificaciones</button>`);
 
   panel.innerHTML=items.join('');
