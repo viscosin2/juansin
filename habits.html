@@ -224,10 +224,12 @@ body{
 }
 
 .garden-content{
-  position:relative;
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:50%;
   z-index:3;
-  min-height:148px;
-  height:148px;
   pointer-events:auto;
 }
 
@@ -1621,11 +1623,11 @@ content.innerHTML=show.map((h,i)=>{
   const row=Math.floor(i / cols);
 
   const left=10 + col * 26 + (row % 2) * 6;
-  const bottom=8 + row * 18;
+const bottom=8 + row * 14;
 
-  return `<div class="plant" onclick="toggle('${h.id}')" title="${h.name}" style="left:${left}%;bottom:${bottom}px;">
-    <div class="plant-svg" id="psv_${h.id}">${plantSVG(clamped,h.color,size)}</div>
-  </div>`;
+  return `<div class="plant" onclick="toggle('${h.id}')" title="${h.name}" style="left:${left}%;bottom:${bottom}px;transform:translateX(-50%);">
+  <div class="plant-svg" id="psv_${h.id}">${plantSVG(clamped,h.color,size)}</div>
+</div>`;
 }).join('');
 }
 
