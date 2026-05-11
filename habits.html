@@ -1618,7 +1618,7 @@ content.innerHTML=show.map((h,i)=>{
   const row=Math.floor(i / cols);
 
   const left=((col + 0.5) / cols) * 100;
-  const top=12 + row * 28;
+  const top=6 + row * 28;
 
 return `<div class="plant" onclick="toggle('${h.id}')" title="${h.name}" style="left:${left}%;top:${top}%;transform:translateX(-50%);">
   <div class="plant-svg" id="psv_${h.id}">${plantSVG(clamped,h.color,size)}</div>
