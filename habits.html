@@ -226,14 +226,17 @@ body{
 .garden-content{
   position:relative;
   z-index:3;
-  display:flex;
-  align-items:flex-end;
-  justify-content:center;
-  gap:14px;
   min-height:148px;
-  padding-bottom:8px;
-  flex-wrap:wrap;
+  height:148px;
   pointer-events:auto;
+}
+
+.plant{
+  position:absolute;
+  z-index:4;
+  pointer-events:auto;
+  overflow:visible;
+  min-width:42px;
 }
 
 /* PLANTS */
@@ -1606,16 +1609,23 @@ function renderGarden(){
   const due=habits.filter(h=>dueToday(h));
   const show=due.length ? due : habits.slice(0,8);
 
-  content.innerHTML=show.map(h=>{
+content.innerHTML=show.map((h,i)=>{
     const isDoneToday=doneToday(h);
     const isComplete=complete(h);
     const stage=(isDoneToday || isComplete) ? habitStage(h)+1 : habitStage(h);
     const clamped=Math.min(stage,4);
     const size=44+clamped*8;
 
-    return `<div class="plant" onclick="toggle('${h.id}')" title="${h.name}">
-      <div class="plant-svg" id="psv_${h.id}">${plantSVG(clamped,h.color,size)}</div>
-    </div>`;
+    const cols=4;
+const col=i % cols;
+const row=Math.floor(i / cols);
+
+const left=12 + col * 25 + (row % 2) * 8;
+const top=70 + row * 22;
+
+return `<div class="plant" onclick="toggle('${h.id}')" title="${h.name}" style="left:${left}%;top:${top}px;">
+  <div class="plant-svg" id="psv_${h.id}">${plantSVG(clamped,h.color,size)}</div>
+</div>`;
   }).join('');
 }
 
