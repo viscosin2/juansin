@@ -97,15 +97,15 @@ body{
   position:fixed;
   left:0;
   right:0;
-  bottom:0;
+  bottom:calc(env(safe-area-inset-bottom, 0px) * -1);
   background:var(--surface);
   border-top:1px solid var(--border);
   display:flex;
   align-items:center;
-  padding:14px 8px calc(env(safe-area-inset-bottom, 0px) + 18px);
+  padding:14px 8px calc(env(safe-area-inset-bottom, 0px) + 22px);
   gap:4px;
   z-index:999;
-  min-height:92px;
+  min-height:96px;
 }
 .nav-btn{
   flex:1;
