@@ -6,39 +6,39 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Huerto">
-<meta name="theme-color" content="#eef6e8">
+<meta name="theme-color" content="#f3f1e7">
 <title>Huerto</title>
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
 :root{
-  --bg:#eef6e8;
-  --surface:#fbfff7;
-  --surface2:#e5f0dc;
-  --border:#cbdcbd;
-  --text:#2f3a28;
-  --text-muted:#748567;
-  --text-dim:#b4c4a8;
+  --bg:#f3f1e7;
+  --surface:rgba(255,253,244,0.86);
+  --surface2:rgba(232,239,221,0.72);
+  --border:rgba(126,142,104,0.24);
+  --text:#35412d;
+  --text-muted:#718066;
+  --text-dim:#b2bea5;
 
-  --green1:#edf8e7;
-  --green2:#d5edc6;
-  --green3:#9ccb75;
-  --green4:#5f9f3a;
-  --green5:#3f7026;
+  --green1:#e8f1dc;
+  --green2:#ccdfb6;
+  --green3:#8bb76a;
+  --green4:#4f8430;
+  --green5:#2f5b20;
 
-  --brown1:#f0e8d8;
-  --brown2:#c8a878;
-  --brown3:#8b6840;
+  --brown1:#efe3ce;
+  --brown2:#c5a575;
+  --brown3:#76593a;
 
-  --accent:#5f9f3a;
-  --water:#7ec8d8;
-  --water-light:#e0f4f8;
+  --accent:#4f8430;
+  --water:#82bcc8;
+  --water-light:#e3f3f2;
 
-  --radius:20px;
-  --danger:#d45a4a;
-  --morning:#f4c678;
-  --afternoon:#e8916a;
-  --night:#7a8dc8;
+  --radius:24px;
+  --danger:#c85b4b;
+  --morning:#e9bd73;
+  --afternoon:#dc8d69;
+  --night:#7886bd;
 
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
@@ -61,7 +61,11 @@ body{
 
 body{
   font-family:'DM Sans',sans-serif;
-  background:var(--bg);
+  background:
+    radial-gradient(circle at 20% 8%, rgba(255,255,255,0.72), transparent 28%),
+    radial-gradient(circle at 80% 18%, rgba(198,221,177,0.36), transparent 34%),
+    radial-gradient(circle at 50% 90%, rgba(198,168,120,0.20), transparent 40%),
+    var(--bg);
   color:var(--text);
   user-select:none;
   position:fixed;
@@ -75,17 +79,20 @@ body{
   flex-direction:column;
   height:100svh;
   overflow:hidden;
-  background:var(--bg);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.34), rgba(243,241,231,0.86)),
+    var(--bg);
 }
 
 /* TOP BAR */
 .topbar{
   padding:calc(var(--safe-top) + 18px) 20px 14px;
-  background:var(--bg);
+  background:rgba(243,241,231,0.78);
+  backdrop-filter:blur(14px);
   display:flex;
   align-items:center;
   justify-content:space-between;
-  border-bottom:1px solid var(--border);
+  border-bottom:1px solid rgba(126,142,104,0.18);
   position:sticky;
   top:0;
   z-index:10;
@@ -106,10 +113,13 @@ body{
 .streak-badge{
   font-size:13px;
   color:var(--green5);
-  background:var(--green1);
+  background:rgba(232,241,220,0.76);
   padding:4px 10px;
   border-radius:20px;
   font-weight:500;
+  display:inline-block;
+  margin-top:5px;
+  border:1px solid rgba(126,142,104,0.14);
 }
 
 /* SCROLL */
@@ -144,28 +154,35 @@ body{
   font-family:'Lora',serif;
   font-size:15px;
   font-style:italic;
-  color:rgba(63,112,38,0.62);
+  color:rgba(63,112,38,0.66);
 }
 
 .garden-row-head div:last-child{
   font-size:13px;
   font-weight:500;
   color:var(--green5);
-  background:var(--green1);
+  background:rgba(232,241,220,0.72);
   padding:4px 10px;
   border-radius:20px;
+  border:1px solid rgba(126,142,104,0.14);
 }
 
 /* GARDEN VISUALIZATION */
 .garden-wrap{
-  background:linear-gradient(180deg, #d4efc8 0%, #b8d99a 40%, #c8a878 70%, #b89060 100%);
-  border-radius:var(--radius);
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,0.56), transparent 26%),
+    radial-gradient(circle at 76% 24%, rgba(182,218,164,0.42), transparent 28%),
+    linear-gradient(180deg, #cfe8d4 0%, #dde9c4 40%, #e9d2ac 68%, #c6a170 100%);
+  border-radius:30px;
   padding:16px;
   margin-bottom:18px;
   position:relative;
   overflow:hidden;
   min-height:180px;
-  border:1.5px solid rgba(95,159,58,0.18);
+  border:1.5px solid rgba(95,132,70,0.18);
+  box-shadow:
+    inset 0 0 34px rgba(255,255,255,0.42),
+    0 14px 36px rgba(91,111,70,0.14);
 }
 
 .garden-sky{
@@ -174,8 +191,11 @@ body{
   left:0;
   right:0;
   height:50%;
-  background:linear-gradient(180deg, #c8e8f8 0%, #d4efc8 100%);
-  border-radius:var(--radius) var(--radius) 0 0;
+  background:
+    radial-gradient(circle at 26% 22%, rgba(255,255,255,0.82), transparent 22%),
+    radial-gradient(circle at 72% 10%, rgba(255,244,198,0.38), transparent 18%),
+    linear-gradient(180deg, #c9e5e5 0%, #dce9c8 100%);
+  border-radius:30px 30px 0 0;
 }
 
 .garden-ground{
@@ -184,7 +204,10 @@ body{
   left:0;
   right:0;
   height:50%;
-  background:linear-gradient(180deg, #ead8b8 0%, #dcc39d 100%);
+  background:
+    radial-gradient(circle at 18% 58%, rgba(255,255,255,0.18), transparent 18%),
+    radial-gradient(circle at 70% 72%, rgba(138,104,62,0.16), transparent 22%),
+    linear-gradient(180deg, #ead7b5 0%, #d3b284 100%);
 }
 
 .garden-grass{
@@ -192,13 +215,22 @@ body{
   bottom:50%;
   left:0;
   right:0;
-  height:22px;
-  background:linear-gradient(180deg, #8abe5c 0%, #5a9632 100%);
+  height:24px;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0.22), transparent 20%, rgba(255,255,255,0.16), transparent 70%),
+    linear-gradient(180deg, #8fbd69 0%, #547f35 100%);
+  filter:blur(0.15px);
+}
+
+.garden-sky,
+.garden-ground,
+.garden-grass{
+  pointer-events:none;
 }
 
 .garden-content{
   position:relative;
-  z-index:2;
+  z-index:3;
   display:flex;
   align-items:flex-end;
   justify-content:center;
@@ -206,6 +238,7 @@ body{
   min-height:148px;
   padding-bottom:8px;
   flex-wrap:wrap;
+  pointer-events:auto;
 }
 
 /* PLANTS */
@@ -229,24 +262,7 @@ body{
   transition:all 0.6s ease;
   position:relative;
   z-index:2;
-}
-
-  .garden-sky,
-.garden-ground,
-.garden-grass{
-  pointer-events:none;
-}
-
-.garden-content{
-  position:relative;
-  z-index:3;
-  pointer-events:auto;
-}
-
-.plant{
-  position:relative;
-  z-index:4;
-  pointer-events:auto;
+  filter:drop-shadow(0 7px 7px rgba(48,72,34,0.20));
 }
 
 /* WATER ANIMATION */
@@ -276,9 +292,9 @@ body{
   width:56px;
   height:56px;
   border-radius:50%;
-  border:1.5px solid var(--border);
-  background:var(--green4);
-  box-shadow:0 8px 26px rgba(63,112,38,0.28);
+  border:1.5px solid rgba(63,116,40,0.5);
+  background:linear-gradient(180deg, #5f9440, #3f7428);
+  box-shadow:0 12px 30px rgba(63,112,38,0.26);
   z-index:500;
   display:flex;
   flex-direction:column;
@@ -305,7 +321,7 @@ body{
   align-items:flex-end;
   justify-content:flex-end;
   padding:0 18px calc(88px + env(safe-area-inset-bottom,0px)) 18px;
-  backdrop-filter:blur(3px);
+  backdrop-filter:blur(4px);
 }
 
 .menu-overlay.open{
@@ -315,7 +331,8 @@ body{
 .menu-panel{
   width:220px;
   background:var(--surface);
-  border:1.5px solid var(--border);
+  backdrop-filter:blur(12px);
+  border:1.5px solid rgba(126,142,104,0.22);
   border-radius:24px;
   padding:8px;
   box-shadow:0 12px 40px rgba(60,80,45,0.18);
@@ -336,14 +353,14 @@ body{
 }
 
 .menu-panel button:active{
-  background:var(--surface2);
+  background:rgba(232,239,221,0.72);
 }
 
 /* SECTION */
 .section-label{
   font-size:11px;
-  font-weight:500;
-  letter-spacing:0.06em;
+  font-weight:600;
+  letter-spacing:0.07em;
   text-transform:uppercase;
   color:var(--text-muted);
   margin:14px 0 10px;
@@ -362,7 +379,8 @@ body{
 /* HABIT CARD */
 .habit-card{
   background:var(--surface);
-  border:1.5px solid var(--border);
+  backdrop-filter:blur(12px);
+  border:1.5px solid rgba(126,142,104,0.22);
   border-radius:var(--radius);
   padding:14px;
   margin-bottom:10px;
@@ -370,10 +388,11 @@ body{
   align-items:center;
   gap:12px;
   transition:opacity 0.3s, transform 0.2s;
+  box-shadow:0 10px 28px rgba(81,99,63,0.08);
 }
 
 .habit-card.done{
-  opacity:0.55;
+  opacity:0.58;
 }
 
 .habit-card.done .habit-name{
@@ -384,13 +403,14 @@ body{
 .habit-emoji{
   width:44px;
   height:44px;
-  border-radius:14px;
+  border-radius:15px;
   display:flex;
   align-items:center;
   justify-content:center;
   font-size:22px;
   flex-shrink:0;
-  background:var(--green1);
+  background:rgba(232,239,221,0.66);
+  box-shadow:inset 0 0 14px rgba(255,255,255,0.34);
 }
 
 .habit-info{
@@ -422,18 +442,18 @@ body{
 }
 
 .badge-morning{
-  background:rgba(244,198,120,0.2);
-  color:#a06820;
+  background:rgba(233,189,115,0.22);
+  color:#966323;
 }
 
 .badge-afternoon{
-  background:rgba(232,145,106,0.2);
-  color:#a04830;
+  background:rgba(220,141,105,0.22);
+  color:#984e34;
 }
 
 .badge-night{
-  background:rgba(122,141,200,0.2);
-  color:#4858a0;
+  background:rgba(120,134,189,0.22);
+  color:#4a589a;
 }
 
 .habit-prog{
@@ -451,7 +471,7 @@ body{
   width:38px;
   height:38px;
   border-radius:50%;
-  border:2px solid var(--border);
+  border:2px solid rgba(126,142,104,0.34);
   background:none;
   cursor:pointer;
   display:flex;
@@ -464,8 +484,8 @@ body{
 }
 
 .check-btn.checked{
-  background:var(--green4);
-  border-color:var(--green4);
+  background:linear-gradient(180deg, #5f9440, #3f7428);
+  border-color:rgba(63,116,40,0.8);
   color:#fff;
 }
 
@@ -477,13 +497,15 @@ body{
 /* HABITS LIST */
 .habit-list-item{
   background:var(--surface);
-  border:1.5px solid var(--border);
+  backdrop-filter:blur(12px);
+  border:1.5px solid rgba(126,142,104,0.22);
   border-radius:var(--radius);
   padding:14px 16px;
   margin-bottom:10px;
   display:flex;
   align-items:center;
   gap:12px;
+  box-shadow:0 10px 28px rgba(81,99,63,0.08);
 }
 
 .hi-emoji{
@@ -520,9 +542,9 @@ body{
 .icon-btn{
   width:34px;
   height:34px;
-  border-radius:10px;
-  border:1.5px solid var(--border);
-  background:var(--surface2);
+  border-radius:11px;
+  border:1.5px solid rgba(126,142,104,0.24);
+  background:rgba(232,239,221,0.66);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -532,7 +554,7 @@ body{
 }
 
 .icon-btn.del{
-  border-color:rgba(212,90,74,0.25);
+  border-color:rgba(200,91,75,0.25);
   color:var(--danger);
 }
 
@@ -558,13 +580,16 @@ body{
 
 .modal{
   background:var(--surface);
-  border-radius:28px 28px 0 0;
+  backdrop-filter:blur(18px);
+  border-radius:30px 30px 0 0;
   width:100%;
   max-height:92dvh;
   overflow-y:auto;
   padding:24px 22px calc(env(safe-area-inset-bottom,0px) + 34px);
   transform:translateY(100%);
   transition:transform 0.28s ease;
+  border:1px solid rgba(126,142,104,0.18);
+  box-shadow:0 -18px 40px rgba(60,80,45,0.18);
 }
 
 .modal-overlay.open .modal{
@@ -572,10 +597,6 @@ body{
 }
 
 .modal::-webkit-scrollbar{
-  display:none;
-}
-
-.modal-handle{
   display:none;
 }
 
@@ -597,8 +618,8 @@ body{
   width:34px;
   height:34px;
   border-radius:50%;
-  border:1.5px solid var(--border);
-  background:var(--surface2);
+  border:1.5px solid rgba(126,142,104,0.24);
+  background:rgba(232,239,221,0.66);
   color:var(--text-muted);
   font-size:20px;
   line-height:1;
@@ -612,8 +633,8 @@ body{
 .field label{
   display:block;
   font-size:11px;
-  font-weight:500;
-  letter-spacing:0.06em;
+  font-weight:600;
+  letter-spacing:0.07em;
   text-transform:uppercase;
   color:var(--text-muted);
   margin-bottom:8px;
@@ -621,9 +642,9 @@ body{
 
 .input{
   width:100%;
-  background:var(--surface2);
-  border:1.5px solid var(--border);
-  border-radius:14px;
+  background:rgba(232,239,221,0.66);
+  border:1.5px solid rgba(126,142,104,0.24);
+  border-radius:16px;
   color:var(--text);
   font-family:'DM Sans',sans-serif;
   font-size:16px;
@@ -633,14 +654,14 @@ body{
 }
 
 .input:focus{
-  border-color:var(--green3);
+  border-color:rgba(79,132,48,0.55);
 }
 
 .emoji-trigger{
   width:100%;
-  background:var(--surface2);
-  border:1.5px solid var(--border);
-  border-radius:14px;
+  background:rgba(232,239,221,0.66);
+  border:1.5px solid rgba(126,142,104,0.24);
+  border-radius:16px;
   padding:12px 14px;
   display:flex;
   align-items:center;
@@ -679,8 +700,8 @@ body{
 .pill{
   padding:7px 14px;
   border-radius:20px;
-  border:1.5px solid var(--border);
-  background:var(--surface2);
+  border:1.5px solid rgba(126,142,104,0.24);
+  background:rgba(232,239,221,0.66);
   color:var(--text-muted);
   font-size:13px;
   font-weight:500;
@@ -689,8 +710,8 @@ body{
 }
 
 .pill.selected{
-  background:var(--green4);
-  border-color:var(--green4);
+  background:linear-gradient(180deg, #5f9440, #3f7428);
+  border-color:rgba(63,116,40,0.8);
   color:#fff;
 }
 
@@ -702,9 +723,9 @@ body{
 
 .day-btn{
   aspect-ratio:1;
-  border-radius:10px;
-  border:1.5px solid var(--border);
-  background:var(--surface2);
+  border-radius:12px;
+  border:1.5px solid rgba(126,142,104,0.24);
+  background:rgba(232,239,221,0.66);
   color:var(--text-muted);
   font-size:11px;
   font-weight:600;
@@ -716,8 +737,8 @@ body{
 }
 
 .day-btn.selected{
-  background:var(--green4);
-  border-color:var(--green4);
+  background:linear-gradient(180deg, #5f9440, #3f7428);
+  border-color:rgba(63,116,40,0.8);
   color:#fff;
 }
 
@@ -731,8 +752,8 @@ body{
   width:40px;
   height:40px;
   border-radius:50%;
-  border:1.5px solid var(--border);
-  background:var(--surface2);
+  border:1.5px solid rgba(126,142,104,0.24);
+  background:rgba(232,239,221,0.66);
   color:var(--text);
   font-size:20px;
   cursor:pointer;
@@ -765,16 +786,16 @@ body{
   position:relative;
   width:46px;
   height:28px;
-  background:var(--surface2);
+  background:rgba(232,239,221,0.66);
   border-radius:14px;
   cursor:pointer;
-  border:1.5px solid var(--border);
+  border:1.5px solid rgba(126,142,104,0.24);
   flex-shrink:0;
 }
 
 .toggle.on{
-  background:var(--green4);
-  border-color:var(--green4);
+  background:linear-gradient(180deg, #5f9440, #3f7428);
+  border-color:rgba(63,116,40,0.8);
 }
 
 .toggle::after{
@@ -787,6 +808,7 @@ body{
   top:2px;
   left:2px;
   transition:transform 0.2s;
+  box-shadow:0 2px 8px rgba(0,0,0,0.12);
 }
 
 .toggle.on::after{
@@ -796,8 +818,8 @@ body{
 .btn-primary{
   width:100%;
   padding:15px;
-  border-radius:16px;
-  background:var(--green4);
+  border-radius:17px;
+  background:linear-gradient(180deg, #5f9440, #3f7428);
   color:#fff;
   font-family:'DM Sans',sans-serif;
   font-size:15px;
@@ -807,6 +829,7 @@ body{
   margin-top:10px;
   -webkit-appearance:none;
   transition:background 0.2s;
+  box-shadow:0 10px 20px rgba(63,112,38,0.16);
 }
 
 .btn-primary:active{
@@ -816,13 +839,13 @@ body{
 .btn-danger{
   width:100%;
   padding:15px;
-  border-radius:16px;
-  background:rgba(212,90,74,0.08);
+  border-radius:17px;
+  background:rgba(200,91,75,0.08);
   color:var(--danger);
   font-family:'DM Sans',sans-serif;
   font-size:15px;
   font-weight:500;
-  border:1.5px solid rgba(212,90,74,0.2);
+  border:1.5px solid rgba(200,91,75,0.2);
   cursor:pointer;
   margin-top:8px;
   -webkit-appearance:none;
@@ -831,13 +854,13 @@ body{
 .btn-secondary{
   width:100%;
   padding:15px;
-  border-radius:16px;
-  background:var(--surface2);
+  border-radius:17px;
+  background:rgba(232,239,221,0.66);
   color:var(--text-muted);
   font-family:'DM Sans',sans-serif;
   font-size:15px;
   font-weight:500;
-  border:1.5px solid var(--border);
+  border:1.5px solid rgba(126,142,104,0.24);
   cursor:pointer;
   margin-top:6px;
   -webkit-appearance:none;
@@ -860,21 +883,23 @@ body{
 
 .emoji-inner{
   background:var(--surface);
-  border-radius:28px 28px 0 0;
+  backdrop-filter:blur(18px);
+  border-radius:30px 30px 0 0;
   width:100%;
   height:72dvh;
   overflow:hidden;
   padding:30px 14px calc(env(safe-area-inset-bottom,0px) + 34px);
   display:flex;
   flex-direction:column;
+  border:1px solid rgba(126,142,104,0.18);
 }
 
 .emoji-search{
   width:100%;
   flex-shrink:0;
-  background:var(--surface2);
-  border:1.5px solid var(--border);
-  border-radius:14px;
+  background:rgba(232,239,221,0.66);
+  border:1.5px solid rgba(126,142,104,0.24);
+  border-radius:16px;
   color:var(--text);
   font-family:'DM Sans',sans-serif;
   font-size:16px;
@@ -909,7 +934,7 @@ body{
 }
 
 .emoji-opt:active{
-  background:var(--surface2);
+  background:rgba(232,239,221,0.66);
 }
 
 /* STATS */
@@ -929,9 +954,9 @@ body{
 .month-nav{
   width:34px;
   height:34px;
-  border-radius:10px;
-  border:1.5px solid var(--border);
-  background:var(--surface2);
+  border-radius:11px;
+  border:1.5px solid rgba(126,142,104,0.24);
+  background:rgba(232,239,221,0.66);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -954,9 +979,11 @@ body{
 
 .stat-box{
   background:var(--surface);
-  border:1.5px solid var(--border);
+  backdrop-filter:blur(12px);
+  border:1.5px solid rgba(126,142,104,0.22);
   border-radius:var(--radius);
   padding:16px;
+  box-shadow:0 10px 28px rgba(81,99,63,0.08);
 }
 
 .stat-val{
@@ -988,8 +1015,8 @@ body{
   padding:6px 12px;
   border-radius:20px;
   white-space:nowrap;
-  border:1.5px solid var(--border);
-  background:var(--surface2);
+  border:1.5px solid rgba(126,142,104,0.24);
+  background:rgba(232,239,221,0.66);
   font-size:12px;
   font-weight:500;
   color:var(--text-muted);
@@ -998,8 +1025,8 @@ body{
 }
 
 .filter-chip.active{
-  background:var(--green4);
-  border-color:var(--green4);
+  background:linear-gradient(180deg, #5f9440, #3f7428);
+  border-color:rgba(63,116,40,0.8);
   color:#fff;
 }
 
@@ -1019,8 +1046,8 @@ body{
 
 .cal-day{
   aspect-ratio:1;
-  border-radius:10px;
-  background:var(--surface2);
+  border-radius:12px;
+  background:rgba(232,239,221,0.66);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -1028,6 +1055,7 @@ body{
   color:var(--text-muted);
   flex-direction:column;
   gap:2px;
+  border:1px solid rgba(126,142,104,0.10);
 }
 
 .cal-day.other{
@@ -1037,6 +1065,7 @@ body{
 .cal-day.today{
   border:1.5px solid var(--green4);
   color:var(--green4);
+  background:rgba(255,253,244,0.66);
 }
 
 .cal-dots{
@@ -1059,7 +1088,7 @@ body{
   bottom:calc(130px + env(safe-area-inset-bottom,0px));
   left:50%;
   transform:translateX(-50%) translateY(20px);
-  background:var(--text);
+  background:rgba(53,65,45,0.94);
   color:#fff;
   padding:10px 18px;
   border-radius:20px;
@@ -1088,8 +1117,8 @@ body{
 
 /* INSTALL BANNER */
 .install-banner{
-  background:var(--green1);
-  border:1.5px solid var(--green2);
+  background:rgba(232,241,220,0.76);
+  border:1.5px solid rgba(126,142,104,0.20);
   border-radius:var(--radius);
   padding:14px;
   margin-bottom:16px;
@@ -1140,19 +1169,24 @@ body{
 <body>
 <div class="app">
   <div class="topbar">
-  <div>
-    <div class="topbar-title">mi <span>huerto</span> 🌱</div>
-    <div class="streak-badge" id="streakBadge">🌸 0 días</div>
+    <div>
+      <div class="topbar-title">mi <span>huerto</span> 🌱</div>
+      <div class="streak-badge" id="streakBadge">🌸 0 días</div>
+    </div>
   </div>
-</div>
 
   <div class="scroll-area screen active" id="screenToday">
-    <div class="garden-row-head">
-  <div id="gardenLabel">tu huertito</div>
-  <div id="gardenPct">0%</div>
-</div>
+    <div class="install-banner" id="installBanner">
+      <p>Para tener tu huerto como app, abre el menú de compartir y pulsa “Añadir a pantalla de inicio”.</p>
+      <button onclick="dismissInstall()">Ocultar</button>
+    </div>
 
-<div class="garden-wrap" id="gardenWrap">
+    <div class="garden-row-head">
+      <div id="gardenLabel">tu huertito</div>
+      <div id="gardenPct">0%</div>
+    </div>
+
+    <div class="garden-wrap" id="gardenWrap">
       <div class="garden-sky"></div>
       <div class="garden-grass"></div>
       <div class="garden-ground"></div>
@@ -1192,17 +1226,18 @@ body{
     <div class="filter-row" id="statsFilter"></div>
     <div class="cal-grid" id="statsCal"></div>
   </div>
-    <button class="floating-menu-btn" onclick="openMenu()">
+
+  <button class="floating-menu-btn" onclick="openMenu()" aria-label="Menú">
     <span></span>
     <span></span>
     <span></span>
   </button>
 </div>
 
-  <div class="menu-overlay" id="menuOverlay">
+<div class="menu-overlay" id="menuOverlay">
   <div class="menu-panel" id="menuPanel"></div>
 </div>
-  
+
 <div class="modal-overlay" id="modalHabit">
   <div class="modal">
     <div class="modal-title-row">
@@ -1296,29 +1331,32 @@ body{
 
 <script>
 const EMOJIS = Array.from(
-  '😀😃😄😁😆😅🤣😂🙂🙃😉😊😇🥰😍🤩😘😗😚😙😋😛😜🤪😝🤑🤗🤭🫢🫣🤫🤔🫡🤐🤨😐😑😶🫥😏😒🙄😬😮‍💨🤥😌😔😪🤤😴🫠🥴🤢🤮🤧🥵🥶😵😵‍💫🤯🥳🥸😎🤓🧐😕🫤😟🙁☹️😮😯😲😳🥺🥹😦😧😨😰😥😢😭😱😖😣😞😓😩😫🥱😤😡😠🤬😈👿💀☠️💩🤡👹👺👻👽👾🤖🎃😺😸😹😻😼😽🙀😿😾🙈🙉🙊💋💌💘💝💖💗💓💞💕❤️🩷🧡💛💚🩵💙💜🤎🖤🩶🤍💯💢💥💫💦💨🕳💣💬🗨🗯💭💤👋🤚🖐✋🖖🫱🫲🫳🫴👌🤌🤏✌️🤞🫰🤟🤘🤙👈👉👆🖕👇☝️🫵👍👎✊👊🤛🤜👏🙌🫶👐🤲🤝🙏✍️💅🤳💪🦾🦿🦵🦶👂🦻👃🧠🫀🫁🦷🦴👀👁👅👄🫦👶🧒👦👧🧑👱👨🧔👩🧓👴👵🙍🙎🙅🙆💁🙋🧏🙇🤦🤷👮🕵️💂🥷👷🤴👸👳👲🧕🤵👰🤰🫃🫄🤱👼🎅🧙🧝🧛🧟🧞🧜🧚👹👺🤡💩🐶🐱🐭🐹🐰🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🐔🐧🐦🐤🦆🦅🦉🦇🐺🐗🐴🦄🐝🪲🦋🐌🐞🐢🐍🦎🦂🦀🐙🦑🦐🐠🐟🐬🐳🦈🐊🐅🐆🦓🦍🦧🐘🦛🦏🐪🐫🦒🦘🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐈🪴🌱🌿☘️🍀🎍🪵🌴🌵🌾🌷🌹🥀🌺🌸🌼🌻🌞⭐🌟✨⚡🔥💧🌈☀️🌤⛅🌥☁️🌦🌧⛈🌩🌨❄️☃️🌊🍎🍐🍊🍋🍌🍉🍇🍓🫐🍈🍒🍑🥭🍍🥥🥝🍅🫒🥑🥦🥬🥒🌶🫑🌽🥕🧄🧅🥔🍠🥐🍞🥖🥨🧀🥚🍳🥞🧇🥓🥩🍗🍖🌭🍔🍟🍕🥪🌮🌯🥗🍝🍜🍲🍛🍣🍱🥟🍤🍙🍚🍘🍥🥠🍢🍡🍦🍧🍨🍩🍪🎂🍰🧁🍫🍬🍭🍮🍯🍼☕🍵🧃🥤🍷🍸🍺🍻🥂🥃⚽🏀🏈⚾🥎🎾🏐🏉🥏🎱🏓🏸🥅🏒🏑🥍🏏⛳🏹🎣🥊🥋🎽🛹🛷⛸🥌🎿⛷🏂🪂🏋️🤼🤸⛹️🤺🤾🏌️🏇🧘🏄🏊🤽🚣🧗🚴🚵🎯🎮🕹🎲♟🎨🎭🎬🎤🎧🎼🎹🥁🎷🎺🎸🪕🎻📱💻⌨️🖥🖨🖱🖲💾💿📷📸📹🎥☎️📞🔋🔌💡🔦🕯🧯🛒🚗🚕🚌🚓🚑🚒🚚🚜🏎🚲✈️🚀🛸🚁⛵🚤🚢🏠🏡🏢🏥🏦🏨🏫🏰🗽🗼🎡🎢🎠⛲🏖🏝🏜🌋⛰🏔🗻🏕'
+  '🌱🌿🍀🌾🌵🌲🌳🌴🍃🌺🌸🌼🌻🌹💐🪴🍎🍊🍋🍇🍓🥕🥦🌽🧄🧅🥑🍅🫑🥒🌶🍄🌰🥜😀😃😄😁😆😅🤣😂🙂🙃😉😊😇🥰😍🤩😘😎🤓🧐🥹🥺😌😴💪🧘🏃🏋️🚴🤸🏊🧗🥊🥋🎯🎨🎭🎬🎤🎧🎼🎹🎸🎺🎻📚📖✏️🖊️📝💡🔬🔭🧪🧬🏆🥇🥈🥉🏅⭐✨🌟💫🔥💧🌊❄️🌈☀️🌙⚡🍵☕🥤🧃🥗🍱🐶🐱🐰🦊🐻🐼🦁🐸🦋🐝🌍🌏🗺🏔⛰🏕🏖🏡💤😴🛌🧹🪥💊🩺❤️🧡💛💚💙💜🤍✅🌀🍐🍌🍉🫐🍒🍑🥭🍍🥥🥝🫒🥬🥔🍠🥐🍞🥖🥨🧀🥚🍳🥞🧇🥓🥩🍗🍖🌭🍔🍟🍕🥪🌮🌯🍝🍜🍲🍛🍣🥟🍤🍙🍚🍦🍧🍨🍩🍪🎂🍰🧁🍫🍬🍭🍮🍯🍼⚽🏀🏈⚾🎾🏐🏉🎱🏓🏸🏒🏑🏏⛳🏹🎣🛹🛷⛸🎿⛷🏂🪂🏌️🏇🏄🤽🚣🎮🕹🎲♟📱💻⌨️🖥🖨📷📸📹🎥☎️📞🔋🔌🔦🕯🧯🛒🚗🚕🚌🚓🚑🚒🚚🚜🏎🚲✈️🚀🛸🚁⛵🚤🚢🏠🏢🏥🏦🏨🏫🏰🗽🗼🎡🎢🎠⛲🏝🏜🌋🗻'
 );
 
 const DAYS=['L','M','X','J','V','S','D'];
-const COLORS=['#3f7f25','#4f8f30','#5f9f3a','#356f20','#2f641c','#487f2b','#5a8f36','#285818'];
+const COLORS=['#3f7428','#4f8430','#5d913b','#376823','#2f5b20','#456f2d','#6f9f4a','#365f24'];
 
 function plantSVG(stage, color, size=60){
   const s=size;
-  const c=color || '#5f9f3a';
+  const c=color || '#4f8430';
 
   const plants=[
     `<svg width="${s}" height="${s}" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="30" cy="50" rx="8" ry="4" fill="${c}22"/>
-      <line x1="30" y1="50" x2="30" y2="38" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
-      <ellipse cx="30" cy="36" rx="5" ry="4" fill="${c}88" transform="rotate(-10 30 36)"/>
+      <line x1="30" y1="50" x2="30" y2="38" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>
+      <ellipse cx="30" cy="36" rx="5" ry="4" fill="${c}aa" transform="rotate(-10 30 36)"/>
+      <ellipse cx="28" cy="35" rx="2" ry="1.2" fill="rgba(255,255,255,0.22)"/>
     </svg>`,
 
     `<svg width="${s}" height="${s}" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="30" cy="52" rx="9" ry="4" fill="${c}22"/>
-      <line x1="30" y1="52" x2="30" y2="32" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/>
-      <ellipse cx="22" cy="40" rx="8" ry="5" fill="${c}bb" transform="rotate(-30 22 40)"/>
-      <ellipse cx="38" cy="37" rx="8" ry="5" fill="${c}bb" transform="rotate(30 38 37)"/>
+      <line x1="30" y1="52" x2="30" y2="32" stroke="${c}" stroke-width="2.7" stroke-linecap="round"/>
+      <ellipse cx="22" cy="40" rx="8" ry="5" fill="${c}cc" transform="rotate(-30 22 40)"/>
+      <ellipse cx="38" cy="37" rx="8" ry="5" fill="${c}cc" transform="rotate(30 38 37)"/>
       <ellipse cx="30" cy="30" rx="6" ry="4" fill="${c}" transform="rotate(-5 30 30)"/>
+      <ellipse cx="25" cy="38" rx="2.6" ry="1.5" fill="rgba(255,255,255,0.2)"/>
+      <ellipse cx="35" cy="34" rx="2.6" ry="1.5" fill="rgba(255,255,255,0.18)"/>
     </svg>`,
 
     `<svg width="${s}" height="${s}" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1329,6 +1367,7 @@ function plantSVG(stage, color, size=60){
       <ellipse cx="14" cy="34" rx="9" ry="6" fill="${c}cc" transform="rotate(-20 14 34)"/>
       <ellipse cx="44" cy="28" rx="9" ry="6" fill="${c}cc" transform="rotate(20 44 28)"/>
       <ellipse cx="30" cy="22" rx="10" ry="7" fill="${c}" transform="rotate(-5 30 22)"/>
+      <ellipse cx="26" cy="20" rx="4" ry="2" fill="rgba(255,255,255,0.18)"/>
     </svg>`,
 
     `<svg width="${s}" height="${s}" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1339,23 +1378,26 @@ function plantSVG(stage, color, size=60){
       <ellipse cx="11" cy="34" rx="9" ry="6" fill="${c}cc" transform="rotate(-25 11 34)"/>
       <ellipse cx="48" cy="24" rx="9" ry="6" fill="${c}cc" transform="rotate(25 48 24)"/>
       <ellipse cx="30" cy="16" rx="11" ry="8" fill="${c}"/>
-      <circle cx="30" cy="14" r="5" fill="#f4c678"/>
-      <circle cx="30" cy="14" r="3" fill="#e8916a"/>
+      <ellipse cx="26" cy="14" rx="4" ry="2.4" fill="rgba(255,255,255,0.2)"/>
+      <circle cx="30" cy="14" r="5" fill="#e4bd67"/>
+      <circle cx="30" cy="14" r="3" fill="#dc8d69"/>
     </svg>`,
 
     `<svg width="${s}" height="${s}" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="30" cy="56" rx="12" ry="4" fill="${c}22"/>
-      <rect x="27" y="36" width="6" height="20" rx="3" fill="#8b6840"/>
-      <ellipse cx="30" cy="30" rx="18" ry="16" fill="${c}dd"/>
-      <ellipse cx="18" cy="28" rx="10" ry="9" fill="${c}"/>
-      <ellipse cx="42" cy="28" rx="10" ry="9" fill="${c}"/>
-      <ellipse cx="30" cy="20" rx="12" ry="10" fill="${c}"/>
-      <circle cx="22" cy="26" r="4" fill="#9bd479"/>
-      <circle cx="36" cy="24" r="4" fill="#9bd479"/>
-      <circle cx="28" cy="34" r="3.5" fill="#9bd479"/>
-      <circle cx="22" cy="26" r="2.2" fill="#edf8e7"/>
-      <circle cx="36" cy="24" r="2.2" fill="#edf8e7"/>
-      <circle cx="28" cy="34" r="2" fill="#edf8e7"/>
+      <rect x="27" y="36" width="6" height="20" rx="3" fill="#7c5b36"/>
+      <ellipse cx="30" cy="30" rx="18" ry="16" fill="${c}cc"/>
+      <ellipse cx="18" cy="28" rx="10" ry="9" fill="${c}dd"/>
+      <ellipse cx="42" cy="28" rx="10" ry="9" fill="${c}dd"/>
+      <ellipse cx="30" cy="20" rx="12" ry="10" fill="${c}ee"/>
+      <ellipse cx="24" cy="24" rx="7" ry="5" fill="rgba(255,255,255,0.18)"/>
+      <ellipse cx="38" cy="33" rx="8" ry="5" fill="rgba(47,91,32,0.18)"/>
+      <circle cx="22" cy="26" r="3.7" fill="#d8c36f"/>
+      <circle cx="36" cy="24" r="3.7" fill="#d8c36f"/>
+      <circle cx="28" cy="34" r="3.2" fill="#d8c36f"/>
+      <circle cx="22" cy="26" r="1.8" fill="#fff2b8"/>
+      <circle cx="36" cy="24" r="1.8" fill="#fff2b8"/>
+      <circle cx="28" cy="34" r="1.6" fill="#fff2b8"/>
     </svg>`
   ];
 
@@ -1375,7 +1417,7 @@ let days=[];
 
 let statsMon=new Date(new Date().getFullYear(),new Date().getMonth(),1);
 let statsFilt=null;
-  let currentScreen='today';
+let currentScreen='today';
 
 const load=()=>{
   habits=JSON.parse(localStorage.getItem('hv5') || '[]');
@@ -1580,7 +1622,7 @@ function renderGarden(){
     const size=44+clamped*8;
 
     return `<div class="plant" onclick="toggle('${h.id}')" title="${h.name}">
-  <div class="plant-svg" id="psv_${h.id}">${plantSVG(clamped,h.color,size)}</div>
+      <div class="plant-svg" id="psv_${h.id}">${plantSVG(clamped,h.color,size)}</div>
     </div>`;
   }).join('');
 }
@@ -1623,10 +1665,9 @@ function showScreen(name){
     stats:'screenStats'
   };
 
-
-if(ids[name]){
-  document.getElementById(ids[name]).classList.add('active');
-}
+  if(ids[name]){
+    document.getElementById(ids[name]).classList.add('active');
+  }
 
   if(name==='today'){
     renderToday();
@@ -1637,6 +1678,7 @@ if(ids[name]){
     renderStats();
   }
 }
+
 function openMenu(){
   closeAllModals();
 
@@ -1645,11 +1687,10 @@ function openMenu(){
 
   let items=[];
 
-
   if(currentScreen!=='today'){
     items.push(`<button onclick="showScreen('today');closeMenu()">Hoy</button>`);
   }
-  
+
   items.push(`<button onclick="closeMenu();openHabitModal(null)">Nuevo hábito</button>`);
 
   if(currentScreen!=='habits'){
@@ -1670,7 +1711,7 @@ function openMenu(){
 function closeMenu(){
   document.getElementById('menuOverlay').classList.remove('open');
 }
-  
+
 function closeAllModals(){
   document.getElementById('modalHabit').classList.remove('open');
   document.getElementById('modalNotif').classList.remove('open');
@@ -1775,7 +1816,6 @@ function toggle(id){
       delete logs[t][id];
     }else{
       if(weekCount(h.id) >= h.weeklyTimes){
-      
         return;
       }
 
@@ -1783,7 +1823,6 @@ function toggle(id){
 
       const plantEl=document.getElementById('psv_'+id);
       if(plantEl) showWaterDrops(plantEl);
-
     }
   }else{
     if(doneToday(h)){
@@ -1794,7 +1833,6 @@ function toggle(id){
 
       const plantEl=document.getElementById('psv_'+id);
       if(plantEl) showWaterDrops(plantEl);
-
     }
   }
 
@@ -2243,16 +2281,20 @@ function updateStreak(){
 }
 
 function dismissInstall(){
-  document.getElementById('installBanner').classList.remove('show');
+  const banner=document.getElementById('installBanner');
+  if(banner) banner.classList.remove('show');
   localStorage.setItem('installDismissed2','1');
 }
 
 function checkInstall(){
+  const banner=document.getElementById('installBanner');
+  if(!banner) return;
+
   const iOS=/iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
   const standalone=window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
   if(iOS && !standalone && !localStorage.getItem('installDismissed2')){
-    document.getElementById('installBanner').classList.add('show');
+    banner.classList.add('show');
   }
 }
 
@@ -2268,8 +2310,8 @@ document.getElementById('emojiPopup').addEventListener('click',function(e){
   if(e.target===this) this.classList.remove('open');
 });
 
-  document.getElementById('menuOverlay').addEventListener('click',function(e){
-  if(e.target===this)closeMenu();
+document.getElementById('menuOverlay').addEventListener('click',function(e){
+  if(e.target===this) closeMenu();
 });
 
 load();
